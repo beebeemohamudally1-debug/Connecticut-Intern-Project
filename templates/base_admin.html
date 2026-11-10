@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="app">
+<aside class="sb"><div class="logo"><i></i>HandyConnect</div><nav><a href="#" data-nav="dashboard">Dashboard</a><a href="#" data-nav="payments">Payments</a><a href="#" data-nav="invoices">Invoices</a><a href="#" data-nav="materials">Materials</a><a href="#" data-nav="payouts">Payouts</a><a href="#" data-nav="fees">Listing fees</a><a href="#" data-nav="penalties">Penalties</a><a href="#" data-nav="complaints">Complaints</a><a href="#" data-nav="reports">Reports</a></nav></aside>
+<main class="main">
+{% block content %}{% endblock %}
+</main>
+</div>
+{% endblock %}
