@@ -41,8 +41,12 @@ INSTALLED_APPS = [
     'bookings',
     'payments',
     'dashboard',
+<<<<<<< HEAD
     'jobs',
     'complaints',
+=======
+    'notifications',
+>>>>>>> origin/main
 
 ]
 

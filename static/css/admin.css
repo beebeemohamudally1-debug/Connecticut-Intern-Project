@@ -1,0 +1,858 @@
+/* ==========================================================
+   HandyConnect - Admin portal styles
+   Loaded after style.css, so the variables from that file
+   (--navy, --orange, --line, ...) can be used here.
+
+   Sections (more are added as pages need them):
+     1. Basics: hidden items, screen-reader text, skip link
+     2. Sidebar
+     3. Navbar
+     4. Responsive rules
+     5. Reduced motion
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   1. Basics
+   ---------------------------------------------------------- */
+
+/* Makes the hidden attribute win over display rules such as .btn */
+[hidden] {
+  display: none !important;
+}
+
+/* Text that only screen readers read */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "Skip to main content": off-screen until a keyboard user tabs to it */
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 100;
+  padding: 8px 12px;
+  color: var(--navy);
+  background: var(--white);
+  border-radius: 6px;
+}
+
+.skip:focus {
+  left: 8px;
+}
+
+/* Visible focus ring when moving with the keyboard */
+.app a:focus-visible,
+.app button:focus-visible,
+.app input:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+
+/* ----------------------------------------------------------
+   2. Sidebar (the 240px width and navy colour come from .sb in style.css)
+   ---------------------------------------------------------- */
+
+/* Stays in view while the page scrolls, and scrolls on its own if the
+   screen is too short for all the links (with a thin, quiet scrollbar) */
+.sb.portal {
+  --glow-dark: 0 0 0 3px rgba(37, 99, 235, 0.35);
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+/* Glass finish for the docked sidebar. It cannot be truly see-through here,
+   because nothing scrolls behind it, so it borrows the look: a soft highlight
+   in the top-left corner, a slightly lighter navy at the top fading to the
+   normal navy, a thin bright edge on the right, and a soft shadow onto the
+   page. The phone drawer (section 4) replaces all of this with real glass. */
+.sb.portal {
+  background:
+    radial-gradient(130% 34% at 0% 0%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 8%),
+    radial-gradient(90% 30% at 100% 100%, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0) 70%),
+    linear-gradient(180deg, #24476E 0%, var(--navy) 50%);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.18),
+    inset -14px 0 24px -14px rgba(255, 255, 255, 0.08),
+    8px 0 28px rgba(20, 45, 72, 0.22);
+}
+
+/* Tighter links than style.css, so all 14 plus Help fit on a laptop screen */
+.sb.portal a {
+  margin-bottom: 2px;
+  padding: 9px 12px;
+}
+
+/* Each link: small icon, then the text. Rounded, and fades on hover. */
+.sb.portal nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.sb.portal nav a:hover {
+  box-shadow: var(--glow-dark);
+}
+
+.sb.portal nav a:hover .ico {
+  color: var(--orange);
+}
+
+/* Outline icons (16px, 2px line). Their colour comes from --ico when a link
+   sets it, otherwise from the text colour around them. */
+.ico {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--ico, currentColor);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Logo: orange square with a white house drawn inside it */
+/* Logo and workspace heading are links to the dashboard. They get a little
+   padding (and an equal negative margin) so the hover shape has room
+   without moving the text. */
+.sb.portal a.logo,
+.sb.portal a.sb-ws {
+  margin-right: -8px;
+  margin-left: -8px;
+  padding-right: 8px;
+  padding-left: 8px;
+  text-decoration: none;
+  background: none;
+  border-radius: 8px;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.sb.portal a.logo {
+  margin-bottom: 12px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+}
+
+.sb.portal a.logo:hover,
+.sb.portal a.sb-ws:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--glow-dark);
+}
+
+.sb.portal .logo i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+}
+
+.sb.portal .logo .ico {
+  width: 18px;
+  height: 18px;
+}
+
+/* "WORKSPACE" label with "Administrator portal" under it */
+.sb.portal a.sb-ws {
+  display: block;
+  margin-bottom: 8px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.sb-ws-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--border);
+}
+
+.sb-ws-name {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--white);
+}
+
+.sb.portal nav {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bottom of the sidebar: three quiet lines of small text, lined up with the logo */
+.sb-foot {
+  margin-top: auto;
+  padding: 12px 0 28px;
+}
+
+.sb-help {
+  font-size: 12px;
+  color: var(--border);
+}
+
+.sb.portal .sb-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 14px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--white);
+  background: none;
+}
+
+.sb.portal .sb-foot a:hover {
+  text-decoration: underline;
+  background: none;
+}
+
+.sb-copy {
+  font-size: 11px;
+  color: var(--border);
+}
+
+.sb a:hover {
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Link of the page you are on. A page sets {% block page %} to one of these
+   keys, and the link with the same data-nav is highlighted. */
+body[data-page="dashboard"] .sb [data-nav="dashboard"],
+body[data-page="services"] .sb [data-nav="services"],
+body[data-page="users"] .sb [data-nav="users"],
+body[data-page="skills"] .sb [data-nav="skills"],
+body[data-page="requests"] .sb [data-nav="requests"],
+body[data-page="progress"] .sb [data-nav="progress"],
+body[data-page="labour-quotes"] .sb [data-nav="labour-quotes"],
+body[data-page="material-quotes"] .sb [data-nav="material-quotes"],
+body[data-page="appointments"] .sb [data-nav="appointments"],
+body[data-page="payments"] .sb [data-nav="payments"],
+body[data-page="complaints"] .sb [data-nav="complaints"],
+body[data-page="reports"] .sb [data-nav="reports"],
+body[data-page="notifications"] .sb [data-nav="notifications"],
+body[data-page="reviews"] .sb [data-nav="reviews"],
+body[data-page="help"] .sb [data-nav="help"] {
+  --ico: var(--orange);
+  font-weight: 600;
+  color: var(--white);
+  background:
+    linear-gradient(var(--orange), var(--orange)) left center / 3px 16px no-repeat,
+    rgba(255, 255, 255, 0.12);
+}
+
+
+/* ----------------------------------------------------------
+   3. Navbar (64px high)
+   ---------------------------------------------------------- */
+
+/* Light blue/cyan glow used when hovering things in the navbar */
+.topbar {
+  --glow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
+/* Right-hand column: navbar on top, page below */
+.pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Soft theme-blue light at the top of the page, fixed in place. The glass
+   navbar floats over it, which is what makes the glass visible even before
+   the page has been scrolled. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pane {
+    background:
+      radial-gradient(520px 200px at 12% 0, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0) 70%),
+      radial-gradient(560px 220px at 60% 0, rgba(188, 203, 218, 0.7), rgba(188, 203, 218, 0) 70%),
+      radial-gradient(460px 200px at 100% 0, rgba(37, 99, 235, 0.16), rgba(37, 99, 235, 0) 70%),
+      var(--grey-bg);
+    background-attachment: fixed;
+  }
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 64px;
+  padding: 0 32px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 12px rgba(20, 45, 72, 0.05);
+}
+
+/* Glass navbar (full width, attached to the top edge). The page scrolls underneath it and shows through, blurred.
+   A soft gloss runs along the top, with a thin bright line under the bar and
+   a soft shadow that lifts it off the page. Browsers that cannot blur keep
+   the plain white bar above. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  /* The blur is drawn by a layer behind the bar's contents, not by the bar
+     itself. A blurred parent would stop the menu inside it (below) from
+     seeing, and blurring, the page behind it. */
+  .topbar {
+    background: transparent;
+    border-bottom: 1px solid rgba(188, 203, 218, 0.8);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 8px 24px rgba(20, 45, 72, 0.08);
+  }
+
+  .topbar::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    content: "";
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 60%),
+      rgba(255, 255, 255, 0.5);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
+  }
+
+  /* Search box and page name become little glass pieces too */
+  .search .in {
+    background: rgba(255, 255, 255, 0.55);
+    border-color: rgba(188, 203, 218, 0.8);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .crumb strong {
+    background: rgba(234, 241, 248, 0.75);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+}
+
+.tb-left,
+.tb-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* "Administrator workspace / Page name" */
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+
+/* Home icon + "Administrator workspace": one link to the dashboard */
+.crumb-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* negative left margin keeps the house lined up with the page title below */
+  margin-left: -8px;
+  padding: 4px 10px 4px 8px;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 999px;
+  transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+
+.crumb-home:hover {
+  color: var(--navy);
+  background: var(--light-blue);
+  box-shadow: var(--glow);
+}
+
+/* The house is drawn the same height as the capital letters and sits on
+   the same baseline, with a thin line to match the text weight */
+.crumb-home .ico {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.75;
+  transform: translateY(-1px);
+}
+
+.crumb strong {
+  padding: 4px 12px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--light-blue);
+  border-radius: 999px;
+}
+
+/* Square 40px button (menu toggle and bell) */
+.icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--navy);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--light-blue);
+  box-shadow: var(--glow);
+}
+
+/* The menu button is only for phones */
+.nav-toggle {
+  display: none;
+}
+
+/* Unread count on the bell */
+.count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: var(--white);
+  background: var(--red);
+  border: 2px solid var(--white);
+  border-radius: 999px;
+}
+
+/* Search box with a magnifier inside */
+.search {
+  position: relative;
+  width: 240px;
+}
+
+.search svg {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search .in {
+  padding-left: 38px;
+  background: var(--grey-bg);
+  border-color: transparent;
+  border-radius: 999px;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.search .in:hover,
+.search .in:focus {
+  box-shadow: var(--glow);
+}
+
+.search .in:focus {
+  background: var(--white);
+  border-color: var(--blue);
+}
+
+/* Circle with the admin's initials (40x40) */
+.avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--light-blue);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+/* Admin name button and its drop-down menu */
+.user {
+  position: relative;
+}
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.user-btn {
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.user-btn:hover {
+  background: var(--light-blue);
+  box-shadow: var(--glow);
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 240px;
+  padding: 8px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(20, 45, 72, 0.16);
+}
+
+/* Top of the menu: avatar, name and role on a soft blue strip */
+.menu-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 12px;
+  background: var(--light-blue);
+  border-radius: 6px;
+}
+
+.menu-name,
+.menu-role {
+  display: block;
+}
+
+.menu-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.menu-role {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Menu fades in and slides down a little when it opens */
+.menu:not([hidden]) {
+  animation: menu-in 0.12s ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.menu a .ico {
+  color: var(--muted);
+}
+
+.menu a:hover {
+  color: var(--navy);
+  background: var(--grey-bg);
+}
+
+.menu a:hover .ico {
+  color: var(--blue);
+}
+
+/* Logout turns red on hover so it feels different from the safe links */
+.menu a.danger:hover {
+  color: var(--red);
+  background: #FBEEEE;
+}
+
+.menu a.danger:hover .ico {
+  color: var(--red);
+}
+
+/* Glass finish for the menu: the same navy as the sidebar, slightly
+   see-through. White glass cannot be seen over a light page, but a dark pane
+   still shows a hint of the blurred page behind it. A soft highlight sits in the top-left corner, with a thin
+   bright rim and a shadow. Browsers that cannot blur keep the plain white menu. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .menu {
+    background:
+      radial-gradient(110% 50% at 0% 0%, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 20%),
+      linear-gradient(180deg, rgba(36, 71, 110, 0.82) 0%, rgba(20, 45, 72, 0.86) 100%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+      0 16px 40px rgba(10, 25, 45, 0.35);
+  }
+
+  .menu-head {
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  .menu-name,
+  .menu a {
+    color: var(--white);
+    text-shadow: 0 1px 2px rgba(10, 25, 45, 0.4);
+  }
+
+  .menu-role,
+  .menu a .ico {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .menu .avatar {
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .menu a:hover {
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .menu a:hover .ico {
+    color: var(--orange);
+  }
+
+  .menu a.danger:hover {
+    color: #FFC9C9;
+    background: rgba(201, 80, 80, 0.35);
+  }
+
+  .menu a.danger:hover .ico {
+    color: #FFC9C9;
+  }
+}
+
+/* The arrow next to the name turns over while the menu is open */
+.chev {
+  transition: transform 0.15s;
+}
+
+.user-btn[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+
+
+/* Drawer parts are only used on phones (switched on in the rules below) */
+.scrim,
+.sb-close {
+  display: none;
+}
+
+
+/* ----------------------------------------------------------
+   4. Responsive rules
+   Tablet: 768px to 1023px. Mobile: below 768px.
+   ---------------------------------------------------------- */
+@media (max-width: 1023px) {
+  .topbar {
+    padding: 0 24px;
+  }
+
+  .search {
+    width: 180px;
+  }
+}
+
+@media (max-width: 767px) {
+  /* The sidebar becomes a drawer that slides in from the left over the page.
+     While closed it is moved off-screen and made invisible, so keyboard users
+     cannot tab into it. */
+  .sb.portal {
+    position: fixed;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 50;
+    width: 280px;
+    max-width: calc(85vw - 12px);
+    height: auto;
+    border-radius: 24px;
+    visibility: hidden;
+    transform: translateX(calc(-100% - 12px));
+    transition: transform 0.25s ease, visibility 0.25s;
+  }
+
+  body.nav-open .sb.portal {
+    visibility: visible;
+    transform: none;
+    box-shadow: 8px 0 32px rgba(20, 45, 72, 0.3);
+  }
+
+  /* Glass pane: the drawer floats above the page as a rounded pane of
+     see-through navy. Glass only looks like glass when there is something
+     colourful behind it, so the layer behind the drawer (.scrim, below) is
+     filled with soft blobs of the theme blues. They are blurred
+     through the pane, with a soft highlight in its top-left corner and a thin
+     bright rim around it.
+     Browsers that cannot blur get a solid navy instead. */
+  .sb.portal {
+    background: var(--navy);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .sb.portal {
+      background:
+        radial-gradient(120% 34% at 0% 0%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 70%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 12%),
+        rgba(20, 45, 72, 0.6);
+      -webkit-backdrop-filter: blur(22px) saturate(120%);
+      backdrop-filter: blur(22px) saturate(120%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+        inset -1px -1px 0 rgba(0, 0, 0, 0.2),
+        0 20px 50px rgba(10, 25, 45, 0.45);
+    }
+
+    /* Brighter text with a faint shadow, so it reads over the colours */
+    .sb.portal a,
+    .sb-ws-label,
+    .sb-help,
+    .sb-copy {
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 1px 2px rgba(10, 25, 45, 0.45);
+    }
+  }
+
+  /* Dimmed page behind the open drawer */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: block;
+    /* Soft, calm blobs in the theme's own blues, so the glass has something
+       to show without looking glowy */
+    background:
+      radial-gradient(70% 36% at 20% 10%, rgba(37, 99, 235, 0.38), rgba(37, 99, 235, 0) 70%),
+      radial-gradient(60% 34% at 15% 55%, rgba(188, 203, 218, 0.3), rgba(188, 203, 218, 0) 70%),
+      radial-gradient(70% 40% at 20% 95%, rgba(37, 99, 235, 0.32), rgba(37, 99, 235, 0) 70%),
+      rgba(20, 45, 72, 0.72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  body.nav-open .scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* The page behind does not scroll while the drawer is open */
+  body.nav-open {
+    overflow: hidden;
+  }
+
+  /* X button in the corner of the drawer */
+  .sb-close {
+    position: absolute;
+    top: 16px;
+    right: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: var(--white);
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.08);
+    border: 0;
+    border-radius: 50%;
+  }
+
+  .sb-close:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .crumb .mut {
+    display: none;
+  }
+
+  .search,
+  .user-name {
+    display: none;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   5. People who ask their device for less motion
+   ---------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .sb.portal,
+  .scrim,
+  .sb.portal nav a,
+  .chev {
+    transition: none;
+  }
+
+  .menu:not([hidden]) {
+    animation: none;
+  }
+}
