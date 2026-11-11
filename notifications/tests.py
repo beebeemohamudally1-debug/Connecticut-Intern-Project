@@ -50,7 +50,7 @@ class NotificationTests(TestCase):
         self.client.force_login(self.admin_user)
 
         response = self.client.get(
-            reverse('notification_list')
+            reverse('notifications:notification_list')
         )
 
         self.assertEqual(response.status_code, 200)
@@ -62,7 +62,7 @@ class NotificationTests(TestCase):
         self.client.force_login(self.admin_user)
 
         response = self.client.get(
-            reverse('unread_count')
+            reverse('notifications:unread_count')
         )
 
         self.assertEqual(
@@ -74,7 +74,7 @@ class NotificationTests(TestCase):
 
         response = self.client.post(
             reverse(
-                'mark_as_read',
+                'notifications:mark_as_read',
                 args=[self.notification.id]
             )
         )
@@ -94,7 +94,7 @@ class NotificationTests(TestCase):
         )
 
         response = self.client.post(
-            reverse('mark_all_as_read')
+            reverse('notifications:mark_all_as_read')
         )
 
         self.assertEqual(response.status_code, 200)
@@ -110,7 +110,7 @@ class NotificationTests(TestCase):
         self.client.force_login(self.customer)
 
         response = self.client.get(
-            reverse('notification_list')
+            reverse('notifications:notification_list')
         )
 
         self.assertEqual(response.status_code, 403)
@@ -120,7 +120,7 @@ class NotificationTests(TestCase):
 
         response = self.client.post(
             reverse(
-                'mark_as_read',
+                'notifications:mark_as_read',
                 args=[self.notification.id]
             )
         )
@@ -129,7 +129,7 @@ class NotificationTests(TestCase):
 
     def test_anonymous_user_cannot_access(self):
         response = self.client.get(
-            reverse('notification_list')
+            reverse('notifications:notification_list')
         )
 
         self.assertEqual(response.status_code, 302)
@@ -139,7 +139,7 @@ class NotificationTests(TestCase):
 
         response = self.client.get(
             reverse(
-                'mark_as_read',
+                'notifications:mark_as_read',
                 args=[self.notification.id]
             )
         )
@@ -201,3 +201,17 @@ class NotificationTests(TestCase):
             notifications[0].recipient_id,
             self.admin_user.id
         )
+
+    def test_superuser_can_access_notifications(self):
+        superuser = User.objects.create_superuser(
+            username='superuser_test',
+            password='TestPass123!'
+        )
+
+        self.client.force_login(superuser)
+
+        response = self.client.get(
+            reverse('notifications:notification_list')
+        )
+
+        self.assertEqual(response.status_code, 200)

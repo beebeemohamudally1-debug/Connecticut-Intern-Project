@@ -10,9 +10,10 @@ from .models import Notification
 def is_admin_user(user):
     return (
         user.is_authenticated
-        and user.role == 'admin'
         and user.is_staff
+        and (user.is_superuser or user.role == 'admin')
     )
+    
 
 
 def admin_required(view_func):

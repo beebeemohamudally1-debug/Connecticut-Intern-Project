@@ -1,6 +1,7 @@
 
 from django.contrib.auth import get_user_model
 from .models import Notification
+from django.db.models import Q
 
 
 def notify_admins(notification_type, title, message):
@@ -11,10 +12,11 @@ def notify_admins(notification_type, title, message):
     User = get_user_model()
 
     admins = User.objects.filter(
-        role='admin',
-        is_staff=True,
-        is_active=True
-    )
+    Q(role='admin') | Q(is_superuser=True),
+    is_staff=True,
+    is_active=True
+)
+    
 
     notifications = [
         Notification(
