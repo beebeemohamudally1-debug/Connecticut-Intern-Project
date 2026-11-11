@@ -12,7 +12,7 @@ User = get_user_model()
 class ComplaintTests(TestCase):
     def setUp(self):
         mk = User.objects.create_user
-        self.admin = mk('admin1', password='x', role='admin')
+        self.admin = mk('admin1', password='x', role='admin', is_staff=True)
         self.customer = mk('cust1', password='x', role='customer')
         self.other_customer = mk('cust2', password='x', role='customer')
         self.handyman = mk('hand1', password='x', role='handyman')

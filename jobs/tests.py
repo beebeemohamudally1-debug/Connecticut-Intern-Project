@@ -32,7 +32,7 @@ class JobTests(TestCase):
 
     def setUp(self):
         mk = User.objects.create_user
-        self.admin = mk('admin1', password='x', role='admin')
+        self.admin = mk('admin1', password='x', role='admin', is_staff=True)
         self.customer = mk('cust1', password='x', role='customer')
         self.other_customer = mk('cust2', password='x', role='customer')
         self.handyman = mk('hand1', password='x', role='handyman')
@@ -186,3 +186,14 @@ class JobTests(TestCase):
                   description='x', address='x')
         with self.assertRaises(ValidationError):
             job.full_clean()
+
+    def test_admin_role_without_staff_is_refused(self):
+        no_staff = User.objects.create_user('admin2', password='x', role='admin')
+        self.login(no_staff)
+        self.assertEqual(self.client.get(self.url('list')).status_code, 403)
+
+    def test_superuser_without_admin_role_is_not_admin(self):
+        su = User.objects.create_superuser('root1', password='x')
+        self.login(su)
+        self.assertEqual(
+            self.client.post(self.url('flag', self.job.pk), {'reason': 'x'}).status_code, 403)
