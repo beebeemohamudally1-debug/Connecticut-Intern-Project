@@ -146,7 +146,7 @@
                 <span class="menu-role">Administrator</span>
               </span>
             </div>
-            <a href="#">
+            <a href="{% url 'accounts_admin:profile' %}">
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               View Profile</a>
             <a class="danger" href="#">
@@ -168,5 +168,7 @@
 
 {# Shared Admin scripts #}
 <script src="{% static 'js/admin.js' %}" defer></script>
+{# Page-specific script (a page fills this block when it needs its own JavaScript) #}
+{% block page_js %}{% endblock %}
 {% endwith %}
 {% endblock %}
