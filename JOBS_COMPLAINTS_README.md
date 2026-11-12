@@ -9,7 +9,7 @@
    python manage.py migrate
    python manage.py test jobs complaints
    ```
-4. Create users with `role` set to `admin`, `customer` or `handyman`. A superuser is treated as admin even though `createsuperuser` leaves `role` as `customer`.
+4. Create users with `role` set to `admin`, `customer` or `handyman`. An admin must have `is_staff` on and be either a superuser or have `role='admin'` (same rule as the notifications app). A superuser made with `createsuperuser` counts as admin, because staff is switched on automatically. A user with `role='admin'` but `is_staff` off is refused.
 
 ## URLs
 | Path | Who | What |

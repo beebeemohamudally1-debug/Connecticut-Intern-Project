@@ -192,8 +192,15 @@ class JobTests(TestCase):
         self.login(no_staff)
         self.assertEqual(self.client.get(self.url('list')).status_code, 403)
 
-    def test_superuser_without_admin_role_is_not_admin(self):
+    def test_superuser_counts_as_admin(self):
         su = User.objects.create_superuser('root1', password='x')
+        self.login(su)
+        self.client.post(self.url('flag', self.job.pk), {'reason': 'Photos look reused'})
+        self.job.refresh_from_db()
+        self.assertTrue(self.job.is_flagged)
+
+    def test_superuser_without_staff_is_not_admin(self):
+        su = User.objects.create_user('root2', password='x', is_superuser=True)
         self.login(su)
         self.assertEqual(
             self.client.post(self.url('flag', self.job.pk), {'reason': 'x'}).status_code, 403)
