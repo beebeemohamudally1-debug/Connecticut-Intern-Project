@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import (FileExtensionValidator, MaxValueValidator)
 from django.db import models
 from django.utils import timezone
+from bookings.models import ServiceRequest
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB, as in the registration rules
 
@@ -35,9 +36,13 @@ class Job(models.Model):
     ]
 
     reference = models.CharField(max_length=20, unique=True, editable=False, blank=True)
-    # Link to the booking/quotation made by the bookings app. Replace with a
-    # ForeignKey once bookings.ServiceRequest exists.
-    request_ref = models.CharField(max_length=30, blank=True)
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='jobs',
+    )
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='customer_jobs', limit_choices_to={'role': 'customer'})
