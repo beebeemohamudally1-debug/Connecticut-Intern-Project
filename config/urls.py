@@ -22,4 +22,5 @@ urlpatterns = [
     path('notifications/', include('notifications.urls')),
     path('payments/', include('payments.urls')),
     path('admin-portal/', include('accounts.admin_urls')),
+    path('dashboard/', include('dashboard.urls')),
 ]
