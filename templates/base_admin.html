@@ -15,6 +15,7 @@
 {% block body %}
 {% url 'dashboard:admin_dashboard' as dashboard_url %}
 {% url 'accounts_admin:users' as users_url %}
+{% url 'accounts_admin:notifications' as notifications_url %}
 {# Styles used only by the Admin layout #}
 <link rel="stylesheet" href="{% static 'css/admin.css' %}">
 
@@ -78,7 +79,7 @@
       <a href="#" data-nav="reports">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
         Reports</a>
-      <a href="#" data-nav="notifications">
+      <a href="{{ notifications_url }}" data-nav="notifications">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         Notifications</a>
       <a href="#" data-nav="reviews">
@@ -125,7 +126,7 @@
         </form>
 
         {# Notification bell with the unread count (3 is sample data) #}
-        <a class="icon-btn" href="#" aria-label="Notifications, 3 unread">
+        <a class="icon-btn" href="{{ notifications_url }}" aria-label="Notifications, 3 unread">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
           <span class="count">3</span>
         </a>
