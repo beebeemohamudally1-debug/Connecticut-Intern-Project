@@ -1,0 +1,21 @@
+{% extends "accounts/auth_base.html" %}
+{% comment %}
+  S14 Reset verification.
+  Context: email, attempts_left, expires_in (seconds, 0 if expired), cooldown (seconds until resend),
+           state ("wrong" | "expired" | "locked" | "hourly" | ""), alert (error text), notice (green text).
+  POST: code (6 digits) to verify, or action=resend.
+{% endcomment %}
+{% block title %}Verify reset code | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Verify reset code</h1><p class="au-sub">Enter the six-digit code sent to {{ email }}.</p></div>
+{% if alert %}{% include "accounts/_auth_alert.html" with kind="error" text=alert %}{% elif notice %}{% include "accounts/_auth_alert.html" with kind="success" text=notice %}{% endif %}
+<form method="post" data-au-once>{% csrf_token %}<input type="hidden" name="code" id="code">
+<span class="au-label is-plain" id="otp-label">Verification code</span>
+<div class="au-otp{% if state == 'wrong' %} is-bad{% endif %}" data-au-otp="code" role="group" aria-labelledby="otp-label">{% for i in "012345" %}<input type="text" inputmode="numeric" maxlength="1" aria-label="Digit {{ forloop.counter }}" autocomplete="one-time-code">{% endfor %}</div>
+<div class="au-meta"><span>Code expires in <b data-au-countdown="{{ expires_in|default:0 }}">05:00</b></span><span>Attempts left: {{ attempts_left }}</span></div>
+{% include "accounts/_auth_alert.html" with kind="info" text="Resend cooldown: 60 sec. You can request up to 5 codes per hour." %}
+<button class="au-btn" type="submit" {% if state == "locked" or state == "expired" %}disabled{% endif %}><span class="au-label">Verify</span></button></form>
+<form method="post" style="margin-top:12px" data-au-once>{% csrf_token %}<input type="hidden" name="action" value="resend">
+<button class="au-btn is-secondary" type="submit" data-au-cooldown="{{ cooldown|default:0 }}" {% if state == "hourly" %}disabled{% endif %}><span class="au-label">{% if state == "expired" %}Request new code{% else %}Resend code{% endif %}</span></button></form>
+<p class="au-below"><a href="{% url 'accounts:forgot_password' %}">Back</a></p>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Layout for the sign-in style pages: navy brand panel on the left, one card on the right.
+  Child pages fill:  title, card.
+  Context:  panel = "login" (tagline panel, default) or "story" (photo panel, used by password recovery).
+  On screens under 1024px the panel is replaced by a slim navy bar.
+{% endcomment %}
+{% block page %}auth{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+{% include "accounts/_auth_icons.html" %}
+<div class="au-page au-split{% if panel == 'story' %} is-story{% endif %}">
+  <aside class="au-panel">{% include "accounts/_auth_logo.html" %}
+  {% if panel == 'story' %}
+    <div><h2>A good home starts with good people.</h2><p class="au-lead">Trusted professionals. Clear pricing. A little less on your to-do list.</p></div>
+    <img class="au-photo" src="{% static 'accounts/img/home-service.jpg' %}" alt="A friendly plumber fixing a kitchen sink while a homeowner looks on">
+    <p class="au-copy">Clear quotations. Verified offline payments. Private support from request to resolution.</p>
+    <div class="au-trust"><svg class="au-ic" aria-hidden="true"><use href="#au-i-shield"/></svg>Secure accounts. Private conversations. Real support.</div>
+  {% else %}
+    <div class="au-tagline"><div class="au-tagline-rule"></div><p>Trusted services. Real connections.</p></div>
+  {% endif %}
+  </aside>
+  <header class="au-mbar">{% include "accounts/_auth_logo.html" %}</header>
+  <main class="au-region" id="main"><div class="au-card">{% block card %}{% endblock %}</div></main>
+</div>
+<script src="{% static 'accounts/js/auth.js' %}" defer></script>
+{% endblock %}
