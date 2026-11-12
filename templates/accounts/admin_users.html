@@ -1,0 +1,124 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Users (section 3) - list page.
+
+  Data comes from the view as `page`:
+    page.stats   -> total, customers, handymen, pending
+    page.users   -> name, initials, role, email, status, url
+  BACKEND: replace the sample data with real users. Each user needs a `url`
+  (customer details or handyman profile / verification page).
+  Search, role, status filters and the page buttons work in the browser on the
+  rows sent (5 per page). BACKEND: if you paginate on the server, send one page
+  at a time and replace the page buttons with links.
+{% endcomment %}
+
+{% block title %}Manage Users | HandyConnect{% endblock %}
+{% block page %}users{% endblock %}
+{% block crumb %}Users{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/admin_users.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Manage Users</h1>
+    <p class="sub">Manage customer and handyman accounts, applications and verification.</p>
+  </div>
+</div>
+
+<section class="um-stats" aria-label="User totals">
+  <div class="card um-stat">
+    <p class="um-stat-label">Total Users</p>
+    <p class="um-stat-num">{{ page.stats.total|default:0 }}</p>
+  </div>
+  <div class="card um-stat">
+    <p class="um-stat-label">Customers</p>
+    <p class="um-stat-num">{{ page.stats.customers|default:0 }}</p>
+  </div>
+  <div class="card um-stat">
+    <p class="um-stat-label">Handymen</p>
+    <p class="um-stat-num">{{ page.stats.handymen|default:0 }}</p>
+  </div>
+  <div class="card um-stat">
+    <p class="um-stat-label">Pending Approval</p>
+    <p class="um-stat-num">{{ page.stats.pending|default:0 }}</p>
+  </div>
+</section>
+
+<section class="card um-card" data-users data-page-size="5">
+  <div class="um-head">
+    <h2>Registered Accounts</h2>
+    <button class="btn o s" type="button" data-pending-btn>
+      Pending Registrations ({{ page.stats.pending|default:0 }})
+    </button>
+  </div>
+
+  <div class="um-tools">
+    <label class="um-search">
+      <span class="sr-only">Search by name or email</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search by name or email..." data-search>
+    </label>
+    <label>
+      <span class="sr-only">Filter by role</span>
+      <select class="in" data-role>
+        <option value="">All Roles</option>
+        <option value="customer">Customer</option>
+        <option value="handyman">Handyman</option>
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Filter by status</span>
+      <select class="in" data-status>
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="pending">Pending</option>
+        <option value="suspended">Suspended</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb um-table">
+    <thead>
+      <tr>
+        <th scope="col">User</th>
+        <th scope="col">Role</th>
+        <th scope="col">Email</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in page.users %}
+      <tr data-row data-role="{{ u.role|lower }}" data-status="{{ u.status|lower }}"
+          data-text="{{ u.name|lower }} {{ u.email|lower }}">
+        <td data-label="User">
+          <span class="um-user"><span class="avatar" aria-hidden="true">{{ u.initials }}</span>{{ u.name }}</span>
+        </td>
+        <td data-label="Role">{{ u.role }}</td>
+        <td data-label="Email" class="um-email">{{ u.email }}</td>
+        <td data-label="Status">
+          <span class="b {% if u.status == 'Active' %}gr{% elif u.status == 'Suspended' %}re{% elif u.status == 'Pending' %}ye{% endif %}">{{ u.status }}</span>
+        </td>
+        <td data-label="Actions">
+          <a class="btn o s" href="{{ u.url|default:'#' }}">{% if u.status == 'Pending' %}Verify{% else %}View{% endif %}<span class="sr-only"> {{ u.name }}</span></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="um-empty" data-empty hidden>No accounts match your search.</p>
+
+  <div class="um-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="um-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'accounts/js/admin_users.js' %}"></script>
+{% endblock %}
