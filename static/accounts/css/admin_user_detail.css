@@ -1,0 +1,675 @@
+/* Customer Details, Handyman Profile, Registration Verification and the
+   confirmation pop-ups (section 3, screens 02-07). */
+
+[hidden] { display: none !important; }
+
+/* Shadows used on these pages */
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: none;
+}
+.back:hover { text-decoration: underline; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Two columns: details on the left, summary on the right */
+.ud-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.ud-main, .ud-side { display: grid; gap: 24px; min-width: 0; }
+.card h2 { margin: 0 0 12px; font-size: 18px; }
+
+/* Profile card: avatar, name and badge, then the facts underneath */
+.profile-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.profile-card h2 { margin-bottom: 4px; font-size: 20px; }
+.profile-card .facts { grid-column: 1 / -1; }
+.avatar.big { width: 56px; height: 56px; font-size: 18px; }
+
+/* Label and value pairs */
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 0; }
+.facts.cols { grid-template-columns: repeat(2, 1fr); }
+.facts.one { grid-template-columns: 1fr; }
+.facts dt {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted);
+}
+.facts dd { margin: 4px 0 0; font-size: 14px; overflow-wrap: anywhere; }
+
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h2 { margin-bottom: 12px; }
+
+/* Simple rows with an item on the left and a badge on the right */
+.list { margin: 0; padding: 0; list-style: none; }
+.list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 48px; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.list li:last-child { border-bottom: 0; }
+
+.docs li { justify-content: flex-start; padding: 8px 0; }
+.docs .doc-text { display: grid; flex: 1; min-width: 0; }
+.docs .doc-text span { overflow-wrap: anywhere; font-size: 13px; }
+.doc-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: var(--light-blue); border-radius: 8px;
+}
+.doc-icon .ico { width: 20px; height: 20px; fill: none; stroke: var(--navy); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.note { background: var(--grey-bg); }
+.note .btn { margin-top: 12px; }
+
+.field { display: grid; gap: 6px; margin: 16px 0; font-size: 14px; font-weight: 600; }
+.decision { display: grid; gap: 8px; }
+
+/* Extra button colours for the decisions */
+.btn.green { background: var(--green); border-color: var(--green); }
+.btn.red { background: var(--red); border-color: var(--red); }
+.btn.accent { color: var(--navy); }
+
+/* Message shown after pressing a demo button */
+.demo {
+  margin: 0 0 16px; padding: 12px 16px; font-size: 14px;
+  background: var(--light-blue); border: 1px solid var(--border); border-radius: 8px;
+}
+
+/* Confirmation pop-ups */
+.modal {
+  width: min(440px, calc(100% - 32px));
+  padding: 32px 24px 24px;
+  text-align: center;
+  color: var(--text);
+  background: var(--white);
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(20, 45, 72, 0.3);
+}
+.modal::backdrop { background: rgba(20, 45, 72, 0.55); }
+.modal h2 { margin: 16px 0 8px; font-size: 20px; }
+.modal p { margin: 0 0 8px; }
+.modal-q { font-weight: 600; }
+.modal-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; font-size: 24px; font-weight: 700;
+  border-radius: 50%;
+}
+.modal-icon.warn { background: #FFE6D5; color: #8A3A0B; }
+.modal-icon.ok { background: #DDF3EC; color: var(--green); }
+.modal-icon.bad { background: #F8E1E1; color: var(--red); }
+.modal-actions {
+  display: flex; justify-content: center; gap: 12px;
+  margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line);
+}
+
+.ud-table td, .ud-table th { padding: 0 12px; }
+
+@media (max-width: 1023px) {
+  .ud-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .profile-card { grid-template-columns: auto 1fr; }
+  .profile-card .report { grid-column: 1 / -1; }
+  .facts, .facts.cols, .facts.one { grid-template-columns: 1fr; }
+  .actions { margin-top: 8px; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions .btn { width: 100%; }
+  .ud-table thead { position: absolute; left: -9999px; }
+  .ud-table, .ud-table tbody, .ud-table tr, .ud-table td { display: block; width: 100%; }
+  .ud-table tr { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .ud-table td { display: flex; justify-content: space-between; height: auto; min-height: 32px; align-items: center; border: 0; }
+  .ud-table td::before { content: attr(data-label); font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted); }
+}
+
+/* ----------------------------------------------------------
+   Hover effects (same style as the dashboard)
+   ---------------------------------------------------------- */
+
+/* Cards: raised look at rest, blue glow and a small lift on hover */
+.ud-main .card, .ud-side .card { box-shadow: var(--card-shadow); }
+
+.ud-main .card,
+.ud-side .card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ud-main .card:hover,
+.ud-side .card:hover {
+  box-shadow: var(--card-hover);
+  transform: translateY(-2px);
+}
+
+/* Rows in lists, tables and the summary: light grey band */
+.list li, .ud-table tbody tr, .row { transition: background-color 0.15s ease; }
+.list li:hover,
+.ud-table tbody tr:hover {
+  background: var(--grey-bg);
+  box-shadow: -8px 0 0 var(--grey-bg), 8px 0 0 var(--grey-bg);
+}
+
+.avatar.big { transition: transform 0.15s ease; }
+.profile-card:hover .avatar.big { transform: scale(1.06); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ud-main .card:hover, .ud-side .card:hover, .profile-card:hover .avatar.big { transform: none; }
+}
+
+
+
+/* ----------------------------------------------------------
+   Status badges (match Figma): soft tinted pill, coloured text,
+   no dot, all the same width.
+   ---------------------------------------------------------- */
+.b {
+  justify-content: center;
+  min-width: 96px;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: var(--navy);
+  background: var(--light-blue);
+  border-radius: 16px;
+}
+.b::before { display: none; }
+.b.gr { color: #13866C; background: #E7F6F0; }
+.b.re { color: #C84C55; background: #FDEBEC; }
+.b.ye { color: #B97819; background: #FFF3DF; }
+
+/* Document buttons are all the same size ("View document" and "View image") */
+.docs .btn { min-width: 132px; text-align: center; }
+
+/* ----------------------------------------------------------
+   More breathing room (spacing only, nothing else changes)
+   ---------------------------------------------------------- */
+.bar { margin-bottom: 24px; }
+.back { margin-bottom: 24px; }
+
+.ud-grid { gap: 32px; }
+.ud-main, .ud-side { gap: 32px; }
+.card h2 { margin-bottom: 16px; }
+.profile-card { gap: 24px 16px; }
+.facts { gap: 24px; }
+.facts dd { margin-top: 6px; }
+.list li { min-height: 56px; }
+.docs li { padding: 12px 0; gap: 16px; }
+.row { padding: 16px 0; }
+.field { margin: 20px 0; }
+.decision { gap: 12px; }
+.ud-table td { height: 56px; }
+
+@media (max-width: 767px) {
+  .ud-grid, .ud-main, .ud-side { gap: 24px; }
+  .ud-table td { height: auto; }
+}
+
+/* ----------------------------------------------------------
+   Figma look for Customer Details (and the page buttons)
+   ---------------------------------------------------------- */
+
+/* Back link: Figma blue */
+.back { color: #2A69B5; }
+
+/* Header buttons: soft tinted colours with a light border */
+.btn.soft-warn { color: #B76B27; background: #FFF3E9; border-color: #E5EAF0; }
+.btn.soft-red { color: #B74555; background: #FEEDF0; border-color: #E5EAF0; }
+.btn.soft-green { color: #13866C; background: #E7F6F0; border-color: #E5EAF0; }
+
+/* Profile: bigger avatar and name */
+.avatar.big { width: 70px; height: 70px; font-size: 24px; color: #315D81; background: #E2EDF8; }
+.profile-card h2 { font-size: 24px; }
+
+/* Labels are small and muted, values are bolder (as in Figma) */
+.facts dt { font-size: 11px; color: #73839A; }
+.facts dd { font-size: 15px; font-weight: 600; color: #263D54; }
+.facts.cols dd { font-weight: 400; }
+
+/* Account Overview: light labels, bold numbers */
+.ud-side .row { font-size: 13px; color: #73839A; }
+.ud-side .row strong { font-size: 15px; color: #263D54; }
+
+/* Recent Service Requests: compact list, status shown as coloured text */
+.reqs { margin: 0; padding: 0; list-style: none; }
+.reqs li {
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.reqs li:last-child { border-bottom: 0; }
+.req-id { font-size: 12px; font-weight: 600; color: #2A69B5; text-decoration: none; }
+.req-id:hover { text-decoration: underline; }
+.req-status { font-size: 11px; font-weight: 600; color: var(--muted); }
+.req-status.wait { color: #B97823; }
+.req-status.done { color: #16866D; }
+
+@media (max-width: 767px) {
+  .reqs li { grid-template-columns: 1fr auto; }
+  .reqs li span:nth-child(2) { grid-column: 1 / -1; grid-row: 2; color: var(--muted); }
+}
+
+/* Customer Details: two rows of two cards, each pair the same height */
+.ud-grid.rows { align-items: stretch; }
+.ud-grid.rows > .card { min-width: 0; }
+
+/* Page buttons under the recent requests */
+.reqs { min-height: 144px; }
+.req-status.cancel { color: #C84C55; }
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 12px; }
+.pager button {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  font: inherit; font-size: 13px; color: var(--text); cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+}
+.pager button:hover:not(:disabled):not([aria-current]) { background: var(--grey-bg); border-color: var(--line); }
+.pager button[aria-current="page"] { color: var(--white); background: var(--navy); }
+.pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+
+/* ----------------------------------------------------------
+   Customer Details: spacing, header buttons, raised cards
+   ---------------------------------------------------------- */
+
+/* Header: buttons line up with the bottom of the description, and are a bit bigger */
+.bar { align-items: flex-end; }
+.bar .sub { margin-bottom: 0; }
+.actions .btn.s { padding: 11px 20px; font-size: 14px; }
+
+/* The four cards also get the raised look and the blue glow on hover */
+.ud-grid.rows > .card {
+  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ud-grid.rows > .card:hover {
+  box-shadow: var(--card-hover);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ud-grid.rows > .card:hover { transform: none; }
+}
+
+/* Cards that are taller than their content: the heading stays at the top and
+   the details sit at the bottom, under a thin line, so the space is balanced */
+.profile-card { grid-template-rows: auto 1fr; align-content: stretch; }
+.card.spread { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.card.spread h2 { margin: 0; }
+.profile-card .facts,
+.card.spread .facts {
+  align-self: end;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.facts.three { grid-template-columns: repeat(3, 1fr); }
+.facts.three dd { font-weight: 400; }
+
+@media (max-width: 767px) {
+  .facts.three { grid-template-columns: 1fr; }
+  .actions .btn.s { padding: 10px 16px; }
+}
+
+/* Tidy: details fill the full width of the card, and the right-hand cards are a little tighter
+   so the paired cards are not much taller than their content */
+.card.spread .facts { align-self: stretch; }
+.ud-grid.rows .row { padding: 12px 0; }
+.ud-grid.rows .reqs { min-height: 132px; }
+.ud-grid.rows .reqs li { min-height: 44px; }
+
+/* ----------------------------------------------------------
+   Customer Details: bigger text and evenly spread content
+   (the space is shared equally above, between and below)
+   ---------------------------------------------------------- */
+.ud-grid.rows > .card { padding: 28px 32px; }
+.ud-grid.rows .card h2 { font-size: 20px; }
+
+/* Profile card */
+.profile-card { grid-template-rows: auto auto; align-content: space-evenly; row-gap: 0; }
+.avatar.big { width: 80px; height: 80px; font-size: 28px; }
+.profile-card h2 { font-size: 28px; margin-bottom: 8px; }
+.profile-card .facts { align-self: auto; padding-top: 0; border-top: 0; }
+
+/* Contact card */
+.card.spread { justify-content: center; gap: 32px; padding-bottom: 24px; }
+.card.spread .facts { align-self: stretch; padding-top: 0; border-top: 0; }
+
+/* Facts: larger labels and values */
+.ud-grid.rows .facts dt { font-size: 12px; }
+.ud-grid.rows .facts dd { margin-top: 8px; font-size: 18px; }
+
+/* Right-hand cards */
+.ud-grid.rows .row { padding: 14px 0; font-size: 15px; }
+.ud-grid.rows .row strong { font-size: 18px; }
+.ud-grid.rows .reqs li { min-height: 48px; font-size: 15px; }
+.ud-grid.rows .req-id { font-size: 13px; }
+.ud-grid.rows .req-status { font-size: 12px; }
+.ud-grid.rows .reqs { min-height: 144px; }
+
+@media (max-width: 767px) {
+  .ud-grid.rows > .card { padding: 20px; }
+  .profile-card h2 { font-size: 24px; }
+  .profile-card .facts { margin-top: 20px; }
+  .card.spread .facts { margin-top: 20px; }
+}
+
+/* Tidy: name stays large, and the contact details stay on one line each */
+.ud-grid.rows .profile-card h2 { font-size: 28px; }
+.ud-grid.rows .facts.three { grid-template-columns: 1.4fr 1fr 1.3fr; }
+.ud-grid.rows .facts.three dd { font-size: 16px; overflow-wrap: normal; }
+
+@media (max-width: 767px) {
+  .ud-grid.rows .profile-card h2 { font-size: 24px; }
+  .ud-grid.rows .facts.three { grid-template-columns: 1fr; }
+  .ud-grid.rows .facts.three dd { overflow-wrap: anywhere; }
+}
+
+/* ----------------------------------------------------------
+   Customer Details: polished cards
+   The content fills each card, so there are no large empty areas.
+   ---------------------------------------------------------- */
+.cd-card { display: flex; flex-direction: column; gap: 24px; }
+.cd-card h2 { margin: 0; }
+.cd-card dl, .cd-card dd { margin: 0; }
+
+/* Profile: name at the top, three detail tiles that stretch to fill the rest */
+.cd-id { display: flex; align-items: center; gap: 20px; }
+.cd-id h2 { margin-bottom: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; }
+.tile {
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+  padding: 16px 20px;
+  background: var(--grey-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.tile dt { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.tile dd { font-size: 18px; font-weight: 600; color: #263D54; }
+.tile:hover { background: var(--white); border-color: var(--blue); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18); }
+
+/* Contact: three rows with an icon, evenly filling the card */
+.contact-list { display: flex; flex-direction: column; flex: 1; }
+.contact-row {
+  display: flex; align-items: center; gap: 16px; flex: 1;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.contact-row:last-child { border-bottom: 0; }
+.contact-row:hover { background: var(--grey-bg); box-shadow: -12px 0 0 var(--grey-bg), 12px 0 0 var(--grey-bg); }
+.contact-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; flex-shrink: 0;
+  background: var(--light-blue); border-radius: 50%;
+}
+.contact-ico svg { width: 20px; height: 20px; fill: none; stroke: var(--navy); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.contact-row dt { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.contact-row dd { margin-top: 4px; font-size: 16px; color: #263D54; overflow-wrap: anywhere; }
+
+/* Rows in the right-hand cards: grey band on hover (same as Manage Users) */
+.ud-grid.rows .row,
+.ud-grid.rows .reqs li { transition: background-color 0.15s ease, box-shadow 0.15s ease; }
+.ud-grid.rows .row:hover,
+.ud-grid.rows .reqs li:hover { background: var(--grey-bg); box-shadow: -12px 0 0 var(--grey-bg), 12px 0 0 var(--grey-bg); }
+
+/* The profile icon grows a little when the card is hovered */
+.cd-profile .avatar.big { transition: transform 0.15s ease; }
+.cd-profile:hover .avatar.big { transform: scale(1.06); }
+.ud-grid.rows .cd-id h2 { font-size: 28px; }
+
+@media (max-width: 767px) {
+  .tiles { grid-template-columns: 1fr; }
+  .cd-id { gap: 16px; }
+  .ud-grid.rows .cd-id h2 { font-size: 24px; }
+  .contact-row { padding: 12px 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cd-profile:hover .avatar.big { transform: none; }
+}
+
+/* ----------------------------------------------------------
+   Customer Details: snug fit
+   Every block is only as tall as its content, and the heights are chosen so
+   the two cards in a row are almost the same height - no large empty areas.
+   ---------------------------------------------------------- */
+.ud-grid.rows .reqs { min-height: 0; }
+.ud-grid.rows .reqs li { min-height: 54px; }
+.ud-grid.rows .row { padding: 10px 0; }
+.tiles { flex: none; }
+.tile { padding: 22px 24px; }
+.cd-card { gap: 28px; }
+.contact-row { flex: none; padding: 16px 0; }
+.contact-list { flex: none; }
+
+/* Final fit: details never wrap, and the paired cards end at nearly the same line */
+.tiles { flex: 1; }
+.tile { padding: 20px; }
+.tile dd { font-size: 16px; white-space: nowrap; }
+.contact-list { flex: 1; }
+.contact-row { flex: 1; padding: 12px 0; }
+.ud-grid.rows .row { padding: 9px 0; }
+.ud-grid.rows .reqs li { grid-template-columns: 64px 1fr auto; gap: 10px; min-height: 60px; font-size: 14px; }
+.ud-grid.rows .pager { margin-top: 20px; }
+
+@media (max-width: 767px) {
+  .tile dd { white-space: normal; }
+  .contact-row { flex: none; padding: 14px 0; }
+  .ud-grid.rows .reqs li { min-height: 52px; grid-template-columns: 1fr auto; }
+}
+
+/* Right-hand cards are a little wider so request IDs and names stay on one line */
+.ud-grid.rows { grid-template-columns: 1.5fr 1fr; }
+.ud-grid.rows .req-id { white-space: nowrap; }
+.ud-grid.rows .reqs li { grid-template-columns: 78px 1fr auto; }
+@media (max-width: 1023px) { .ud-grid.rows { grid-template-columns: 1fr; } }
+@media (max-width: 767px) { .ud-grid.rows .reqs li { grid-template-columns: 1fr auto; } }
+
+/* ----------------------------------------------------------
+   Customer Details: compact, so the whole page fits on one
+   screen without scrolling (laptop screens included)
+   ---------------------------------------------------------- */
+.back { margin-bottom: 12px; }
+.bar { margin-bottom: 16px; }
+
+.ud-grid.rows { gap: 20px; }
+.ud-grid.rows > .card { padding: 20px 28px; }
+.ud-grid.rows .card h2 { font-size: 18px; }
+.cd-card { gap: 16px; }
+
+.cd-id { gap: 16px; }
+.avatar.big { width: 64px; height: 64px; font-size: 22px; }
+.ud-grid.rows .cd-id h2 { font-size: 24px; margin-bottom: 6px; }
+.tile { padding: 14px 18px; gap: 6px; }
+
+.contact-ico { width: 36px; height: 36px; }
+.contact-row { padding: 8px 0; gap: 14px; }
+
+.ud-grid.rows .row { padding: 6px 0; }
+.ud-grid.rows .reqs li { min-height: 46px; }
+.ud-grid.rows .pager { margin-top: 12px; }
+
+@media (max-width: 767px) {
+  .ud-grid.rows > .card { padding: 20px; }
+  .ud-grid.rows .cd-id h2 { font-size: 22px; }
+  .contact-row { padding: 12px 0; }
+}
+
+/* ----------------------------------------------------------
+   Handyman Profile (Figma layout), compact so the page fits on
+   one screen: profile + summary, skills + services, verification strip
+   ---------------------------------------------------------- */
+.btn.soft-blue { color: #2A69B5; background: #EAF1F8; border-color: #E5EAF0; }
+
+.hp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; align-items: stretch; }
+.hp-profile { grid-column: span 4; }
+.hp-summary { grid-column: span 2; }
+.hp-skills, .hp-services { grid-column: span 3; }
+.hp-verify { grid-column: span 6; }
+
+.hp-grid > .card {
+  padding: 18px 28px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hp-grid > .card:hover { box-shadow: var(--card-hover); transform: translateY(-2px); }
+.hp-grid .card h2 { margin: 0; font-size: 18px; }
+.hp-grid .cd-card { gap: 12px; }
+.hp-profile .cd-id h2 { font-size: 24px; margin-bottom: 6px; }
+.hp-profile:hover .avatar.big { transform: scale(1.06); }
+
+/* Profile details: two columns */
+.hp-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin: 0; }
+.hp-facts dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.hp-facts dd { margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #263D54; overflow-wrap: anywhere; }
+
+/* Rows and lists */
+.hp-grid .row { padding: 8px 0; font-size: 14px; color: #73839A; }
+.hp-grid .row strong { font-size: 15px; color: #263D54; }
+.hp-grid .list li { min-height: 42px; }
+.hp-grid .list li, .hp-grid .row { transition: background-color 0.15s ease, box-shadow 0.15s ease; }
+.hp-grid .list li:hover,
+.hp-grid .row:hover { background: var(--grey-bg); box-shadow: -12px 0 0 var(--grey-bg), 12px 0 0 var(--grey-bg); }
+.hp-grid .card-head h2 { margin: 0; }
+.hp-grid .card-head { margin-bottom: 0; }
+
+/* Status shown as coloured text (Figma) */
+.state { font-size: 13px; font-weight: 600; }
+.state.ok { color: #16866D; }
+.state.bad { color: #C84C55; }
+
+/* Skills: small diamond before each name */
+.skill { display: inline-flex; align-items: center; gap: 10px; }
+.dia { width: 16px; height: 16px; fill: none; stroke: #2A69B5; stroke-width: 2; stroke-linejoin: round; flex-shrink: 0; }
+
+/* Verification strip across the whole width */
+.hp-verify { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--white); }
+.hp-verify h2 { margin-bottom: 4px; }
+.hp-verify p { margin: 0; font-size: 14px; }
+
+@media (max-width: 1023px) {
+  .hp-profile, .hp-summary, .hp-skills, .hp-services, .hp-verify { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .hp-grid > .card { padding: 18px 16px; }
+  .hp-facts { grid-template-columns: 1fr; }
+  .hp-verify { flex-direction: column; align-items: flex-start; }
+  .actions .btn.soft-green, .actions .btn.soft-blue { flex: 0 0 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hp-grid > .card:hover, .hp-profile:hover .avatar.big { transform: none; }
+}
+
+/* Handyman Profile: final fit (shorter rows, status colours) */
+.hp-grid .row { padding: 5px 0; line-height: 1.3; }
+.hp-grid .row strong.state { font-size: 15px; }
+.hp-grid .row strong.state.ok { color: #16866D; }
+.hp-grid .row strong.state.bad { color: #C84C55; }
+.hp-grid .list li { min-height: 38px; }
+.hp-grid > .card { padding: 16px 28px; }
+.hp-verify { padding: 14px 28px; }
+
+@media (max-width: 767px) {
+  .hp-grid > .card { padding: 18px 16px; }
+}
+
+/* ----------------------------------------------------------
+   Registration Verification (Figma layout), compact, one screen
+   ---------------------------------------------------------- */
+.vf-details { grid-column: span 6; }
+.vf-docs { grid-column: span 4; }
+.vf-decision { grid-column: span 2; }
+
+.hp-facts.four { grid-template-columns: repeat(4, 1fr); }
+.hp-facts.one { grid-template-columns: 1fr; }
+.vf-hint { margin: 4px 0 0; font-size: 14px; }
+
+/* Documents: icon, name and file, with a blue text link on the right */
+.hp-grid .docs li { min-height: 56px; padding: 6px 0; gap: 14px; }
+.doc-link { margin-left: auto; font-size: 13px; font-weight: 600; color: #2A69B5; text-decoration: none; white-space: nowrap; }
+.doc-link:hover { text-decoration: underline; }
+
+/* Decision */
+.vf-notes { display: block; }
+.vf-notes .in { min-height: 84px; }
+.hp-grid .decision { display: grid; gap: 10px; }
+.hp-grid .decision .btn { width: 100%; padding: 12px 16px; text-align: center; }
+.btn.green { color: var(--white); }
+
+@media (max-width: 1023px) {
+  .vf-details, .vf-docs, .vf-decision { grid-column: 1 / -1; }
+  .hp-facts.four { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 767px) {
+  .hp-facts.four { grid-template-columns: 1fr; }
+  .doc-link { margin-left: 0; }
+}
+
+/* Verification: more breathing room, and page buttons under the documents */
+.hp-grid.vf { gap: 24px; }
+.hp-grid.vf > .card { padding: 24px 32px; }
+.hp-grid.vf .cd-card { gap: 16px; }
+.hp-grid.vf .hp-facts.four dd { font-size: 16px; margin-top: 6px; }
+.hp-grid.vf .docs { min-height: 4 * 64px; min-height: 256px; }
+.hp-grid.vf .docs li { min-height: 64px; padding: 8px 0; }
+.hp-grid.vf .vf-notes .in { min-height: 120px; }
+.hp-grid.vf .decision { gap: 12px; }
+.hp-grid.vf .decision .btn { padding: 14px 16px; }
+.hp-grid.vf .vf-docs .pager { margin-top: 0; }
+.hp-grid.vf .vf-decision { justify-content: space-between; }
+
+@media (max-width: 767px) {
+  .hp-grid.vf { gap: 16px; }
+  .hp-grid.vf > .card { padding: 20px 16px; }
+  .hp-grid.vf .docs { min-height: 0; }
+}
+
+/* Decision Recorded: title + short line at the top like the documents card, facts in even rows below */
+.hp-grid.vf .vf-decision { justify-content: flex-start; gap: 16px; }
+.hp-grid.vf .vf-decision .hp-facts.one { display: flex; flex-direction: column; gap: 0; }
+.hp-grid.vf .vf-decision .hp-facts.one > div { min-height: 64px; display: flex; flex-direction: column; justify-content: center; padding: 8px 0; }
+.hp-grid.vf .vf-decision .hp-facts.one dd { font-size: 16px; margin-top: 4px; }
+
+/* Verification: tighter so the cards end higher (about where the 4th document row used to end) */
+.hp-grid.vf { gap: 20px; }
+.hp-grid.vf > .card { padding: 20px 32px; }
+.hp-grid.vf .cd-card { gap: 12px; }
+.hp-grid.vf .docs { min-height: 0; }
+.hp-grid.vf .docs li { min-height: 54px; padding: 5px 0; }
+.hp-grid.vf .vf-decision .hp-facts.one > div { min-height: 54px; padding: 5px 0; }
+.hp-grid.vf .vf-docs .pager { margin-top: 0; }
+@media (max-width: 767px) {
+  .hp-grid.vf > .card { padding: 20px 16px; }
+}
+
+/* Decision Recorded: the whole group (title, line, facts) sits in the middle of the card */
+.hp-grid.vf .vf-decision { justify-content: center; }
+
+/* Verification: a little more space between the cards */
+.hp-grid.vf { gap: 28px; }
+@media (max-width: 767px) { .hp-grid.vf { gap: 16px; } }
+
+/* Decision Recorded: same structure as the documents card (title + line at the top),
+   then three rows with thin dividers that share out the remaining height */
+.hp-grid.vf .vf-decision { justify-content: flex-start; gap: 10px; }
+.hp-grid.vf .vf-decision .hp-facts.one { flex: 1; gap: 0; margin-top: 4px; }
+.hp-grid.vf .vf-decision .hp-facts.one > div { flex: 1; min-height: 54px; padding: 0; justify-content: center; border-top: 1px solid var(--border, #E4EAF0); }
+.hp-grid.vf .vf-decision .hp-facts.one > div:last-child { border-bottom: 1px solid var(--border, #E4EAF0); }
+@media (max-width: 1023px) {
+  .hp-grid.vf .vf-decision .hp-facts.one > div { padding: 10px 0; }
+}
