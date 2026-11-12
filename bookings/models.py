@@ -130,3 +130,99 @@ class ServiceRequestAssignment(models.Model):
     def clean(self):
         if self.handyman_id and self.handyman.role != 'handyman':
             raise ValidationError({'handyman': 'The selected user is not a handyman.'})
+
+
+class Appointment(models.Model):
+    SLOT_CHOICES = ServiceRequest.SLOT_CHOICES
+
+    TYPE_INSPECTION = 'inspection'
+    TYPE_SERVICE = 'service'
+    TYPE_CHOICES = [
+        (TYPE_INSPECTION, 'Inspection visit'),
+        (TYPE_SERVICE, 'Service appointment'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_CONFIRMED = 'confirmed'
+    STATUS_CANCELLED = 'cancelled'
+    STATUS_COMPLETED = 'completed'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_CONFIRMED, 'Confirmed'),
+        (STATUS_CANCELLED, 'Cancelled'),
+        (STATUS_COMPLETED, 'Completed'),
+    ]
+
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        on_delete=models.PROTECT,
+        related_name='appointments',
+    )
+    handyman = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='appointments',
+        limit_choices_to={'role': 'handyman'},
+    )
+    appointment_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default=TYPE_SERVICE)
+    appointment_date = models.DateField()
+    time_slot = models.CharField(max_length=10, choices=SLOT_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    notes = models.TextField(blank=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='appointments_confirmed',
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['appointment_date', 'time_slot']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['handyman', 'appointment_date', 'time_slot'],
+                condition=Q(status='confirmed'),
+                name='no_overlapping_confirmed_handyman_slots',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.service_request.reference} · {self.appointment_date} · {self.handyman}'
+
+    def clean(self):
+        errors = {}
+        if self.handyman_id and self.handyman.role != 'handyman':
+            errors['handyman'] = 'The selected user is not a handyman.'
+
+        if self.service_request_id and self.handyman_id:
+            accepted = ServiceRequestAssignment.objects.filter(
+                service_request_id=self.service_request_id,
+                handyman_id=self.handyman_id,
+                status=ServiceRequestAssignment.STATUS_ACCEPTED,
+            ).exists()
+            if not accepted:
+                errors['handyman'] = 'The handyman must accept this service request first.'
+
+        if self.status == self.STATUS_CONFIRMED and self.service_request_id:
+            service_request = self.service_request
+            if not service_request.full_payment_received_at:
+                errors['status'] = 'Record full payment before confirming this appointment.'
+
+        if self.status == self.STATUS_CONFIRMED and self.handyman_id and self.appointment_date:
+            overlapping = Appointment.objects.filter(
+                handyman_id=self.handyman_id,
+                appointment_date=self.appointment_date,
+                time_slot=self.time_slot,
+                status=self.STATUS_CONFIRMED,
+            )
+            if self.pk:
+                overlapping = overlapping.exclude(pk=self.pk)
+            if overlapping.exists():
+                errors['time_slot'] = 'This handyman already has a confirmed appointment in this slot.'
+
+        if errors:
+            raise ValidationError(errors)
