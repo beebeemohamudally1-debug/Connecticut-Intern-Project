@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Home | HandyConnect{% endblock %}
+
+{% block body %}
+<main class="home-page">
+  <h1>Welcome to HandyConnect</h1>
+  <p>Choose an area to continue.</p>
+  <nav aria-label="Main navigation">
+    <ul>
+      <li><a href="{% url 'dashboard:customer_dashboard' %}">Customer dashboard</a></li>
+      <li><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman dashboard</a></li>
+      <li><a href="{% url 'dashboard:admin_dashboard' %}">Admin dashboard</a></li>
+      <li><a href="{% url 'notifications:notification_list' %}">Notifications</a></li>
+      <li><a href="{% url 'accounts_admin:profile' %}">Admin profile</a></li>
+      <li><a href="{% url 'admin:index' %}">Site administration</a></li>
+    </ul>
+  </nav>
+</main>
+{% endblock %}
