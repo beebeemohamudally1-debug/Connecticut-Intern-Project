@@ -12,4 +12,5 @@ urlpatterns = [
     path('users/handyman/suspended/', views.suspended_handyman, name='suspended_handyman'),
     path('users/handyman/documents/', views.handyman_documents, name='handyman_documents'),
     path('users/handyman/verify/', views.handyman_verify, name='handyman_verify'),
+    path('notifications/', views.notifications, name='notifications'),
 ]

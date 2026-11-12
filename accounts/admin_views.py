@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.shortcuts import render
 
 # Sample data until the real administrator is connected
@@ -178,3 +180,26 @@ def suspended_customer(request):
 def suspended_handyman(request):
     """Handyman Profile for a suspended account."""
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': SUSPENDED_HANDYMAN})
+
+
+# Sample data for the Notifications page. Same names as notifications.models.Notification.
+NOTIFICATIONS = [
+    {'id': 1, 'title': 'New report requires review', 'message': 'C-0152 · Marcus Reed reported a customer access issue.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 13, 45)},
+    {'id': 2, 'title': 'Quotation accepted', 'message': 'JOB-0154 · John Doe accepted the quotation.', 'notification_type': 'quotation', 'is_read': False, 'created_at': datetime(2026, 10, 26, 12, 5)},
+    {'id': 3, 'title': 'New private reply from Emma Wilson', 'message': 'C-0147 · Customer confirmed morning availability.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 11, 42)},
+    {'id': 4, 'title': 'New private reply from Marcus Reed', 'message': 'C-0147 · Handyman confirmed a no-charge follow-up.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 11, 28)},
+    {'id': 5, 'title': 'Appointment rescheduled', 'message': 'AP-3112 · Customer moved the visit to Oct 28 morning.', 'notification_type': 'job', 'is_read': False, 'created_at': datetime(2026, 10, 26, 10, 40)},
+    {'id': 6, 'title': 'Service request awaiting a quote', 'message': 'REQ-1058 · Cabinet hinge repair · Carpentry.', 'notification_type': 'service_request', 'is_read': False, 'created_at': datetime(2026, 10, 26, 10, 20)},
+    {'id': 7, 'title': 'Offline payments verified', 'message': 'Oct 25 batch · 24 offline receipts · MUR 58,200 verified.', 'notification_type': 'other', 'is_read': False, 'created_at': datetime(2026, 10, 26, 8, 0)},
+    {'id': 8, 'title': 'Private feedback awaiting assessment', 'message': 'FB-0834 · REQ-1042 · Private · 4/5. Review internally.', 'notification_type': 'feedback', 'is_read': False, 'created_at': datetime(2026, 10, 24, 11, 8)},
+    {'id': 9, 'title': 'Job assignment confirmed', 'message': 'REQ-1042 · Full payment verified · AP-3106 · Oct 24 morning.', 'notification_type': 'job', 'is_read': True, 'created_at': datetime(2026, 10, 23, 11, 16)},
+    {'id': 10, 'title': 'Complaint resolution recorded', 'message': 'C-0132 · MUR 100 goodwill credit · Customer informed.', 'notification_type': 'complaint', 'is_read': True, 'created_at': datetime(2026, 10, 13, 16, 20)},
+]
+
+
+def notifications(request):
+    """Administrator Notifications."""
+    return render(request, 'notifications/admin_notifications.html', {
+        'notifications': NOTIFICATIONS,
+        'unread_count': 8,
+    })
