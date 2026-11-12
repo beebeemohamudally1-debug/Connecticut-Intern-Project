@@ -78,3 +78,55 @@ class ServiceRequest(models.Model):
         if creating and not self.reference:
             self.reference = f'SR-{1000 + self.pk}'
             super().save(update_fields=['reference'])
+
+
+class ServiceRequestAssignment(models.Model):
+    STATUS_SENT = 'sent'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_REJECTED = 'rejected'
+    STATUS_WITHDRAWN = 'withdrawn'
+    STATUS_CHOICES = [
+        (STATUS_SENT, 'Sent'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_REJECTED, 'Rejected'),
+        (STATUS_WITHDRAWN, 'Withdrawn'),
+    ]
+
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        on_delete=models.PROTECT,
+        related_name='handyman_responses',
+    )
+    handyman = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='service_request_assignments',
+        limit_choices_to={'role': 'handyman'},
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_SENT)
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='service_requests_sent',
+    )
+    sent_at = models.DateTimeField(auto_now_add=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    response_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['service_request', 'handyman'],
+                name='one_handyman_offer_per_request',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.service_request.reference} → {self.handyman}'
+
+    def clean(self):
+        if self.handyman_id and self.handyman.role != 'handyman':
+            raise ValidationError({'handyman': 'The selected user is not a handyman.'})
