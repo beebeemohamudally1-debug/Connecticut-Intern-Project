@@ -13,8 +13,7 @@
 {% endcomment %}
 
 {% block body %}
-{# Where the logo, the home icon and the Dashboard link go. Change it here once the Admin Dashboard has a URL. #}
-{% url 'dashboard_admin:dashboard' as dashboard_url %}
+{% url 'dashboard:admin_dashboard' as dashboard_url %}
 {# Styles used only by the Admin layout #}
 <link rel="stylesheet" href="{% static 'css/admin.css' %}">
 
@@ -169,5 +168,5 @@
 {# Shared Admin scripts #}
 <script src="{% static 'js/admin.js' %}" defer></script>
 {# Page-specific script (a page fills this block when it needs its own JavaScript) #}
-{% block page_js %}{% endblock %}ssssss
+{% block page_js %}{% endblock %}
 {% endblock %}
