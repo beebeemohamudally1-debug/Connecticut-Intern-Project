@@ -54,3 +54,14 @@ class ReportsTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
+
+    def test_invalid_status_returns_all_jobs(self):
+        self.client.force_login(self.admin_user)
+
+        response = self.client.get(
+            self.url,
+            {'status': 'invalid_status'}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_jobs'], 0)
