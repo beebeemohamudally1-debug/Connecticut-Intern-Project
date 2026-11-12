@@ -67,49 +67,49 @@
     <span class="stat-ico orange" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.pending_jobs|default:0 }}</strong><span class="stat-label">Pending Jobs</span></div>
+    <div><strong class="stat-num">{{ stats.assigned_jobs|default:0 }}</strong><span class="stat-label">Pending Jobs</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico blue" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.in_progress|default:0 }}</strong><span class="stat-label">In Progress</span></div>
+    <div><strong class="stat-num">{{ stats.in_progress_jobs|default:0 }}</strong><span class="stat-label">In Progress</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico green" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.completed|default:0 }}</strong><span class="stat-label">Completed</span></div>
+    <div><strong class="stat-num">{{ stats.completed_jobs|default:0 }}</strong><span class="stat-label">Completed</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico orange" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
     </span>
-    <div><strong class="stat-num">MUR {{ stats.total_payments|default:0 }}</strong><span class="stat-label">Total Payments</span></div>
+    <div><strong class="stat-num">MUR {{ stats.total_amount_received|default:0 }}</strong><span class="stat-label">Total Payments</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico orange" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.pending_quotes|default:0 }}</strong><span class="stat-label">Pending Quotes</span></div>
+    <div><strong class="stat-num">{{ stats.sent_quotations|default:0 }}</strong><span class="stat-label">Pending Quotes</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico green" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.accepted_quotes|default:0 }}</strong><span class="stat-label">Accepted Quotes</span></div>
+    <div><strong class="stat-num">{{ stats.accepted_quotations|default:0 }}</strong><span class="stat-label">Accepted Quotes</span></div>
   </li>
 
   <li class="card stat-card">
     <span class="stat-ico red" aria-hidden="true">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg>
     </span>
-    <div><strong class="stat-num">{{ stats.declined_quotes|default:0 }}</strong><span class="stat-label">Declined Quotes</span></div>
+    <div><strong class="stat-num">{{ stats.declined_quotations|default:0 }}</strong><span class="stat-label">Declined Quotes</span></div>
   </li>
 </ul>
 
