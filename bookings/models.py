@@ -226,3 +226,68 @@ class Appointment(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+
+class HandymanProfileRequest(models.Model):
+    TYPE_SERVICE = 'service'
+    TYPE_SKILL = 'skill'
+    TYPE_CHOICES = [
+        (TYPE_SERVICE, 'Service'),
+        (TYPE_SKILL, 'Skill'),
+    ]
+
+    ACTION_ADD = 'add'
+    ACTION_MODIFY = 'modify'
+    ACTION_REMOVE = 'remove'
+    ACTION_CHOICES = [
+        (ACTION_ADD, 'Add'),
+        (ACTION_MODIFY, 'Modify'),
+        (ACTION_REMOVE, 'Remove'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    handyman = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='profile_change_requests',
+        limit_choices_to={'role': 'handyman'},
+    )
+    request_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    current_value = models.CharField(max_length=120, blank=True)
+    requested_value = models.CharField(max_length=120, blank=True)
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    admin_note = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='handyman_profile_requests_reviewed',
+    )
+
+    class Meta:
+        ordering = ['status', '-submitted_at']
+
+    def __str__(self):
+        value = self.requested_value or self.current_value
+        return f'{self.handyman} · {self.get_action_display()} {self.get_request_type_display()}: {value}'
+
+    def clean(self):
+        if self.handyman_id and self.handyman.role != 'handyman':
+            raise ValidationError({'handyman': 'The selected user is not a handyman.'})
+        if self.action in (self.ACTION_ADD, self.ACTION_MODIFY) and not self.requested_value.strip():
+            raise ValidationError({'requested_value': 'Enter the requested service or skill.'})
+        if self.action in (self.ACTION_MODIFY, self.ACTION_REMOVE) and not self.current_value.strip():
+            raise ValidationError({'current_value': 'Enter the current service or skill.'})
