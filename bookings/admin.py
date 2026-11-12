@@ -25,7 +25,6 @@ class ServiceRequestAdmin(admin.ModelAdmin):
         'preferred_date',
         'preferred_slot',
         'status',
-        'full_payment_received_at',
     )
     list_filter = ('status', 'service_category', 'preferred_slot', 'preferred_date')
     search_fields = (

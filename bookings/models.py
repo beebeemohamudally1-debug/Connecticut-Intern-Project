@@ -3,7 +3,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-
 class ServiceRequest(models.Model):
     SLOT_MORNING = 'morning'
     SLOT_AFTERNOON = 'afternoon'
@@ -28,32 +27,17 @@ class ServiceRequest(models.Model):
     ]
 
     reference = models.CharField(max_length=20, unique=True, editable=False, blank=True)
-    customer = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='service_requests',
-        limit_choices_to={'role': 'customer'},
-    )
-    service_category = models.CharField(max_length=100)
-    problem_description = models.TextField()
-    service_address = models.CharField(max_length=255)
-    contact_name = models.CharField(max_length=100)
-    contact_phone = models.CharField(max_length=20)
+    customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_requests', limit_choices_to={'role': 'customer'})
+    service_category = models.CharField(max_length=100, blank=True)
+    problem_description = models.TextField(blank=True)
+    service_address = models.CharField(max_length=255, blank=True)
+    contact_name = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=20, blank=True)
     contact_email = models.EmailField(blank=True)
-    preferred_date = models.DateField()
-    preferred_slot = models.CharField(max_length=10, choices=SLOT_CHOICES)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_SUBMITTED)
+    preferred_date = models.DateField(null=True, blank=True)
+    preferred_slot = models.CharField(max_length=10, choices=SLOT_CHOICES, blank=True)
+    status = models.CharField(max_length=20, choices=[('requested', 'Requested')] + STATUS_CHOICES, default='requested')
 
-    # Payment transactions are not modeled in the payments app yet. These fields
-    # record the admin's confirmation that the full amount has been received.
-    full_payment_received_at = models.DateTimeField(null=True, blank=True)
-    payment_recorded_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='payments_recorded_for_requests',
-    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,10 +51,6 @@ class ServiceRequest(models.Model):
     def clean(self):
         if self.customer_id and self.customer.role != 'customer':
             raise ValidationError({'customer': 'The selected user is not a customer.'})
-        if bool(self.full_payment_received_at) != bool(self.payment_recorded_by_id):
-            raise ValidationError(
-                'Record both the full payment time and the administrator who recorded it.'
-            )
 
     def save(self, *args, **kwargs):
         creating = self.pk is None
@@ -208,9 +188,15 @@ class Appointment(models.Model):
                 errors['handyman'] = 'The handyman must accept this service request first.'
 
         if self.status == self.STATUS_CONFIRMED and self.service_request_id:
-            service_request = self.service_request
-            if not service_request.full_payment_received_at:
-                errors['status'] = 'Record full payment before confirming this appointment.'
+            from payments.models import Quotation
+
+            paid_accepted_quotation = Quotation.objects.filter(
+                request_id=self.service_request_id,
+                status=Quotation.ACCEPTED,
+                payment__isnull=False,
+            ).exists()
+            if not paid_accepted_quotation:
+                errors['status'] = 'An accepted quotation must be fully paid before confirming this appointment.'
 
         if self.status == self.STATUS_CONFIRMED and self.handyman_id and self.appointment_date:
             overlapping = Appointment.objects.filter(
