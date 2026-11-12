@@ -21,11 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('notifications/', include('notifications.urls')),
     path('payments/', include('payments.urls')),
-<<<<<<< HEAD
     path('jobs/', include('jobs.urls')),
     path('complaints/', include('complaints.urls')),
-]
-=======
     path('dashboard/', include('dashboard.urls')),
 ]
->>>>>>> origin/main
