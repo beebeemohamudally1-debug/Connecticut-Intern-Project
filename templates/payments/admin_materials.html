@@ -1,0 +1,6 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin · Materials approval | HandyConnect{% endblock %}
+{% block page %}materials{% endblock %}
+{% block content %}
+<div class="bar"><div><div class="lab">Admin · Materials</div><h1>Materials approval</h1><p class="sub">Approve material costs and receipts before they are added to the invoice.</p></div></div><div class="card"><table class="tb"><thead><tr><th>Job</th><th>Handyman</th><th>Item</th><th>Qty</th><th>Cost (MUR)</th><th>Receipt</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td>JOB-1042</td><td>Kevin L.</td><td>Mixer tap</td><td>1</td><td>950.00</td><td><i class="th"></i></td><td><span class="b ye">Pending</span></td><td><button class="btn s">Approve</button> <button class="btn o s">Reject</button></td></tr><tr><td>JOB-1042</td><td>Kevin L.</td><td>Pipe fittings</td><td>4</td><td>550.00</td><td><i class="th"></i></td><td><span class="b ye">Pending</span></td><td><button class="btn s">Approve</button> <button class="btn o s">Reject</button></td></tr><tr><td>JOB-1038</td><td>Marc D.</td><td>Cable and switch</td><td>2</td><td>1,200.00</td><td><i class="th"></i></td><td><span class="b gr">Approved</span></td><td>-</td></tr></tbody></table></div>
+{% endblock %}
