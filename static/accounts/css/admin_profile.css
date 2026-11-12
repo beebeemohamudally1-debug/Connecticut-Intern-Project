@@ -1,0 +1,279 @@
+/* ==========================================================
+   HandyConnect - Admin Profile page
+   Loaded by templates/accounts/admin_profile.html, after
+   style.css and admin.css, so the shared look (cards, buttons,
+   inputs, status badges) and the colour variables are reused.
+   This file only holds what is specific to this page.
+
+   Sections:
+     1. Card
+     2. Avatar and role
+     3. Details list
+     4. Edit actions and password button
+     5. Tablet and phone
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   1. Card
+   ---------------------------------------------------------- */
+
+.profile {
+  padding: 24px;
+}
+
+.profile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.profile-head h2 {
+  margin: 0;
+}
+
+/* Orange outline and text (white button, common orange #F47939) */
+.profile .btn.orange {
+  color: var(--orange);
+  border-color: var(--orange);
+}
+
+/* Edit and Change Password buttons: icon + text in one row, evenly spaced */
+.profile .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Photo and role on the left, details on the right, thin line between */
+.profile-body {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 12px 16px;
+}
+
+
+/* ----------------------------------------------------------
+   2. Avatar and role
+   ---------------------------------------------------------- */
+
+.profile-id {
+  display: flex;
+  flex: 0 0 180px;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-right: 36px;
+  border-right: 1px solid var(--line);
+  align-self: stretch;
+  justify-content: center;
+}
+
+/* Big version of the 40px avatar, with a soft shadow around it */
+.avatar.xl {
+  width: 110px;
+  height: 110px;
+  font-size: 34px;
+  box-shadow: 0 8px 24px rgba(20, 45, 72, 0.18), 0 2px 6px rgba(20, 45, 72, 0.1);
+}
+
+
+/* ----------------------------------------------------------
+   3. Details list (Full Name, Email, Role, Account Status)
+   ---------------------------------------------------------- */
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.profile-details .row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-details .row:last-child {
+  border-bottom: 0;
+}
+
+/* Left side: icon + label */
+.profile-details dt {
+  display: flex;
+  flex: 0 0 170px;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.profile-details dt label {
+  margin: 0;
+  color: inherit;
+  font-weight: 400;
+}
+
+.profile-details dt .ico {
+  width: 20px;
+  height: 20px;
+  color: var(--orange);
+}
+
+/* Right side: the value (or the input while editing) */
+.profile-details dd {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.profile-details dd .in {
+  max-width: 420px;
+}
+
+/* Active badge: green outline, light green background (no blue tint) */
+.profile-details .b.gr {
+  background: rgba(19, 134, 108, 0.08);
+  border: 1px solid var(--green);
+}
+
+
+/* Red * and error text under a field (only visible while editing) */
+.profile .req {
+  color: var(--red);
+}
+
+.field-error {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--red);
+}
+
+.profile-details dd .in.invalid {
+  border-color: var(--red);
+}
+
+
+/* ----------------------------------------------------------
+   4. Edit actions and password button
+   ---------------------------------------------------------- */
+
+/* Save / Cancel, only visible while editing */
+.profile .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 0 16px;
+}
+
+/* Thin line, then the Change Password button centred */
+.profile-foot {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+
+/* ----------------------------------------------------------
+   5. Tablet and phone
+   ---------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .profile-body {
+    gap: 24px;
+  }
+
+  .profile-id {
+    flex-basis: 150px;
+    padding-right: 24px;
+  }
+
+  .avatar.xl {
+    width: 96px;
+    height: 96px;
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 767px) {
+  .profile {
+    padding: 16px;
+  }
+
+  /* Avatar on top, details below */
+  .profile-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 0;
+  }
+
+  .profile-id {
+    flex-basis: auto;
+    padding: 0 0 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* Label above value so long emails never push the page sideways */
+  .profile-details .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 0;
+  }
+
+  .profile-details dt {
+    flex-basis: auto;
+  }
+
+  .profile-details dd {
+    width: 100%;
+  }
+
+  .profile-details dd .in {
+    max-width: none;
+  }
+
+  .profile .form-actions {
+    padding: 0;
+  }
+
+  .profile .form-actions .btn,
+  .profile-foot .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+
+/* Saved message */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--white);
+  background: var(--green);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(19, 134, 108, 0.25);
+  transform: translateX(-50%);
+}

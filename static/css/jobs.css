@@ -1,0 +1,17 @@
+/* Extra styles for the jobs and complaints pages. */
+.b.gr { background: #E3F4EF; color: var(--green); }
+.b.bl { background: var(--light-blue); color: var(--navy); }
+.b.re { background: #FBE9E9; color: var(--red); }
+body[data-page="jobs"] .sb [data-nav="jobs"] { background: rgba(255,255,255,.12); color: var(--white); }
+.msgs { list-style: none; margin: 0 0 16px; padding: 0; }
+.msgs li { padding: 10px 14px; border-radius: 6px; margin-bottom: 8px; background: var(--light-blue); }
+.msgs li.error { background: #FBE9E9; color: var(--red); }
+.msgs li.success { background: #E3F4EF; color: var(--green); }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px; }
+.filters .in { min-width: 160px; }
+.thread-item { border-left: 3px solid var(--border); padding: 4px 0 4px 12px; margin-bottom: 12px; }
+.thread-item.enquiry { border-color: var(--orange); }
+.flag { background: #FBE9E9; border: 1px solid var(--red); border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 12px; }
+.thumbs img { width: 140px; height: 110px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.stack { display: grid; gap: 16px; }

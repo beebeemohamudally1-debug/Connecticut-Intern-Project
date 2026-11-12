@@ -1,0 +1,81 @@
+{% extends base_template %}
+{% block title %}{{ job.reference }} | HandyConnect{% endblock %}
+{% block page %}jobs{% endblock %}
+{% block content %}
+{% include "jobs/_messages.html" %}
+<div class="bar"><div>
+  <div class="lab"><a href="{% url 'jobs:list' %}">← Jobs</a></div>
+  <h1>{{ job.reference }} · {{ job.service_name }}</h1>
+  <p class="sub"><span class="b {{ job.badge }}">{{ job.get_status_display }}</span>
+    {% if job.is_delayed %}<span class="b re">Delayed</span>{% endif %}
+    {% if job.payout_stage != 'none' %}<span class="b bl">{{ job.get_payout_stage_display }}</span>{% endif %}</p>
+</div></div>
+
+{% if job.is_flagged and role == 'admin' %}<div class="flag"><b>Flagged</b> by {{ job.flagged_by.get_full_name|default:job.flagged_by.username }} on {{ job.flagged_at|date:"d/m/Y H:i" }}: {{ job.flag_reason }}</div>{% endif %}
+
+<div class="g2">
+<div class="stack">
+  <div class="card"><h2>Job details</h2>
+    <div class="row"><span class="mut">Description</span><span>{{ job.description }}</span></div>
+    <div class="row"><span class="mut">Address</span><span>{{ job.address }}</span></div>
+    <div class="row"><span class="mut">Customer</span><span>{{ job.customer.get_full_name|default:job.customer.username }}{% if role != 'customer' %} · {{ job.customer.phone }}{% endif %}</span></div>
+    <div class="row"><span class="mut">Handyman</span><span>{{ job.handyman.get_full_name|default:job.handyman.username }}{% if role == 'customer' %} · {{ job.handyman.phone }}{% endif %}</span></div>
+    <div class="row"><span class="mut">Appointment</span><span>{{ job.scheduled_start|date:"d/m/Y H:i"|default:"-" }}</span></div>
+    <div class="row"><span class="mut">Due date</span><span>{{ job.due_date|date:"d/m/Y"|default:"-" }}</span></div>
+    {% if job.status == 'completed' %}<div class="row"><span class="mut">Completion notes</span><span>{{ job.completion_notes }}</span></div>
+    <div class="row"><span class="mut">Completed</span><span>{{ job.completed_at|date:"d/m/Y H:i" }}</span></div>{% endif %}
+  </div>
+
+  <div class="card"><h2>Work reports</h2>
+    {% for r in reports %}<div class="thread-item"><b>{{ r.report_date|date:"d/m/Y" }}</b> · {{ r.percent_complete }}% complete<br>{{ r.details }}</div>
+    {% empty %}<p class="mut">No reports yet.</p>{% endfor %}
+  </div>
+
+  <div class="card"><h2>Photos</h2>
+    <div class="thumbs">{% for e in evidence %}<a href="{% url 'jobs:evidence_file' e.pk %}" title="{{ e.caption }}"><img src="{% url 'jobs:evidence_file' e.pk %}" alt="{{ e.caption|default:'Work photo' }}"></a>{% empty %}<p class="mut">No photos uploaded.</p>{% endfor %}</div>
+  </div>
+</div>
+
+<div class="stack">
+  <div class="card"><h2>Time on site</h2>
+    <table class="tb"><thead><tr><th>Arrived</th><th>Clocked out</th><th>Hours</th></tr></thead><tbody>
+    {% for t in time_logs %}<tr><td>{{ t.arrived_at|date:"d/m/Y H:i" }}</td><td>{{ t.clocked_out_at|date:"d/m/Y H:i"|default:"On site" }}</td><td>{{ t.hours|default:"-" }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="mut">No time recorded.</td></tr>{% endfor %}</tbody></table>
+    {% if role == 'handyman' and job.is_open %}
+    <form method="post" style="margin-top:12px">{% csrf_token %}
+      {% if open_log %}<button class="btn o" formaction="{% url 'jobs:clock_out' job.pk %}">Clock out</button>
+      {% else %}<button class="btn" formaction="{% url 'jobs:clock_in' job.pk %}">Record arrival</button>{% endif %}
+    </form>{% endif %}
+  </div>
+
+  {% if role == 'handyman' and job.is_open %}
+  <div class="card"><h2>Today's work report</h2>
+    <form method="post" action="{% url 'jobs:report' job.pk %}">{% csrf_token %}{% include "jobs/_form_fields.html" with form=report_form %}<button class="btn">Save report</button></form></div>
+  <div class="card"><h2>Upload a photo</h2>
+    <form method="post" enctype="multipart/form-data" action="{% url 'jobs:evidence' job.pk %}">{% csrf_token %}{% include "jobs/_form_fields.html" with form=evidence_form %}<button class="btn">Upload</button></form></div>
+  <div class="card"><h2>Finish the job</h2>
+    <form method="post" action="{% url 'jobs:complete' job.pk %}">{% csrf_token %}{% include "jobs/_form_fields.html" with form=complete_form %}<button class="btn accent">Submit as completed</button></form></div>
+  {% endif %}
+
+  {% if role == 'handyman' and job.status == 'completed' %}
+  <div class="card"><h2>Payout</h2>
+    <form method="post">{% csrf_token %}
+    {% if job.payout_stage == 'none' %}<button class="btn" formaction="{% url 'jobs:payout' job.pk 'waiting' %}">Mark as waiting for payout</button>
+    {% elif job.payout_stage == 'waiting_for_payout' %}<button class="btn" formaction="{% url 'jobs:payout' job.pk 'finished' %}">Payment received: mark as finished work</button>
+    {% else %}<p class="mut">Finished work.</p>{% endif %}</form></div>
+  {% endif %}
+
+  {% if role == 'admin' %}
+  <div class="card"><h2>Review</h2>
+    <form method="post" action="{% url 'jobs:flag' job.pk %}">{% csrf_token %}
+    {% if job.is_flagged %}<button class="btn o">Remove flag</button>
+    {% else %}{% include "jobs/_form_fields.html" with form=flag_form %}<button class="btn o">Flag suspicious submission</button>{% endif %}</form></div>
+  <div class="card"><h2>Complaints on this job</h2>
+    {% for c in complaints %}<div class="row"><a href="{% url 'complaints:detail' c.pk %}">{{ c.reference }} · {{ c.subject }}</a><span class="b {{ c.badge }}">{{ c.get_status_display }}</span></div>
+    {% empty %}<p class="mut">None.</p>{% endfor %}</div>
+  {% endif %}
+
+  {% if role != 'admin' %}<div><a class="btn o" href="{% url 'complaints:create' %}?job={{ job.pk }}">Report a problem with this job</a></div>{% endif %}
+</div>
+</div>
+{% endblock %}
