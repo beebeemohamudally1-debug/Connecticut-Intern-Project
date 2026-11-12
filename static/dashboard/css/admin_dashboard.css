@@ -1,0 +1,469 @@
+/* ==========================================================
+   HandyConnect - Administrator Dashboard
+   Loaded by templates/dashboard/admin_dashboard.html, after
+   style.css and admin.css, so the shared look (cards, buttons,
+   tables) and the colour variables are reused.
+
+   Sections:
+     1. Summary cards
+     2. Tabs (Recent Activities / Pending Tasks)
+     3. Pending tasks
+     4. Tablet and phone
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   1. Summary cards
+   ---------------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+/* Round coloured square holding the 24px icon */
+.stat-ico {
+  display: flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.stat-ico .ico {
+  width: 24px;
+  height: 24px;
+}
+
+.stat-ico.blue   { color: var(--blue);   background: rgba(37, 99, 235, 0.1); }
+.stat-ico.orange { color: var(--orange); background: rgba(244, 121, 57, 0.12); }
+.stat-ico.green  { color: var(--green);  background: rgba(19, 134, 108, 0.1); }
+.stat-ico.red    { color: var(--red);    background: rgba(201, 80, 80, 0.1); }
+
+.stat-num {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--navy);
+}
+
+.stat-label {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+
+/* ----------------------------------------------------------
+   2. Tabs (Recent Activities / Pending Tasks)
+   ---------------------------------------------------------- */
+
+.tabs-card {
+  padding-top: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 -8px 16px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  margin-bottom: -1px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--navy);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--navy);
+  border-bottom-color: var(--orange);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* Small orange number next to "Pending Tasks" */
+.tab-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  color: var(--white);
+  background: var(--orange);
+  border-radius: 10px;
+}
+
+.activities {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activities li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  border-bottom: 1px solid var(--line);
+}
+
+.activities li:last-child {
+  border-bottom: 0;
+}
+
+.act-ico {
+  display: flex;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--orange);
+  background: rgba(244, 121, 57, 0.12);
+  border-radius: 8px;
+}
+
+.act-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.act-time {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.act-empty {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+
+/* ----------------------------------------------------------
+   3. Pending tasks
+   ---------------------------------------------------------- */
+
+.tasks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.task:last-child {
+  border-bottom: 0;
+}
+
+.task-ico {
+  display: flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--blue);
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 10px;
+}
+
+.task-ico .ico {
+  width: 20px;
+  height: 20px;
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-body strong {
+  display: block;
+  font-size: 14px;
+  color: var(--navy);
+}
+
+.task-body span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Orange number, or a quiet "All clear" when nothing is waiting */
+.task-count {
+  flex-shrink: 0;
+  min-width: 28px;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  color: var(--orange);
+  background: rgba(244, 121, 57, 0.12);
+  border-radius: 14px;
+}
+
+.task-clear {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--green);
+}
+
+.task .btn {
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: center;
+}
+
+
+
+/* Filter buttons inside Pending Tasks (All, Users, Appointments, ...) */
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 8px;
+}
+
+.subtab {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.subtab:hover {
+  color: var(--navy);
+  border-color: var(--navy);
+}
+
+.subtab[aria-pressed="true"] {
+  color: var(--white);
+  background: var(--navy);
+  border-color: var(--navy);
+}
+
+.subtab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.task[hidden],
+.tasks[hidden],
+.pay-detail[hidden] {
+  display: none;
+}
+
+.sub-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--orange);
+  background: var(--white);
+  border-radius: 10px;
+}
+
+.more {
+  margin: 16px 0 0;
+  text-align: right;
+}
+
+/* Payments: four small numbers, then the "needs action" table */
+.pay-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-box {
+  padding: 12px 16px;
+  background: var(--bg, #F5F7FA);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.pay-num {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.pay-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+/* ----------------------------------------------------------
+   Hover effects (cards, activity rows, task rows, payments)
+   ---------------------------------------------------------- */
+
+.stat-card,
+.pay-box,
+.act-ico,
+.task-ico {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Summary cards and payment numbers: lift slightly, orange border */
+.stat-card:hover,
+.pay-box:hover {
+  border-color: var(--orange);
+  box-shadow: 0 6px 16px rgba(20, 45, 72, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Activity and task rows: light grey band that extends a little past the text */
+.activities li,
+.task {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.activities li:hover,
+.task:hover {
+  background: var(--grey-bg);
+  box-shadow: -8px 0 0 var(--grey-bg), 8px 0 0 var(--grey-bg);
+}
+
+.activities li:hover .act-ico,
+.task:hover .task-ico {
+  transform: scale(1.06);
+}
+
+/* Payments table rows */
+.pay-detail .tb tbody tr:hover {
+  background: var(--grey-bg);
+}
+
+/* People who ask their device for less motion get no movement */
+@media (prefers-reduced-motion: reduce) {
+  .stat-card:hover,
+  .pay-box:hover,
+  .activities li:hover .act-ico,
+  .task:hover .task-ico {
+    transform: none;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   4. Tablet and phone
+   ---------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+}
+
+@media (max-width: 575px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .pay-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Task rows: text on top, count and button underneath */
+  .task {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .task-body {
+    flex-basis: calc(100% - 52px);
+  }
+
+  .task-count,
+  .task-clear {
+    margin-left: 52px;
+  }
+
+  .task .btn {
+    margin-left: auto;
+  }
+
+  .activities li {
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+
+  .act-text {
+    flex-basis: calc(100% - 44px);
+  }
+
+  .act-time {
+    margin-left: 44px;
+  }
+}
