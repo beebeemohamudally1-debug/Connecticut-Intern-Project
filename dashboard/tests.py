@@ -11,7 +11,12 @@ from payments.models import Quotation, Payment
 from decimal import Decimal
 
 from .permissions import role_required
-from .services import get_admin_dashboard_stats
+from .services import (
+    get_admin_dashboard_stats,
+    get_recent_activities,
+    get_admin_pending_tasks,
+    get_admin_payment_details,
+)
 
 
 User = get_user_model()
@@ -347,4 +352,267 @@ class DashboardTests(TestCase):
         self.assertEqual(
             stats['total_amount_received'],
             Decimal('2500.00')
+        )
+
+
+    def test_recent_activities_empty(self):
+        activities = get_recent_activities()
+        self.assertEqual(activities, [])
+
+    def test_recent_service_request_activity(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe'
+        )
+
+        activities = get_recent_activities()
+
+        self.assertEqual(len(activities), 1)
+        self.assertEqual(activities[0]['kind'], 'request')
+        self.assertIn(service_request.reference, activities[0]['text'])
+
+    def test_recent_activities_multiple_types(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe'
+        )
+
+        Quotation.objects.create(
+            request=service_request,
+            work_description='Repair leaking pipe',
+            total_amount=Decimal('1500.00'),
+            status=Quotation.SENT,
+            created_by=self.admin_user
+        )
+
+        job = Job.objects.create(
+            customer=self.customer,
+            handyman=self.handyman,
+            service_name='Plumbing',
+            description='Repair leaking pipe',
+            address='Test Address',
+            status=Job.ASSIGNED
+        )
+
+        Complaint.objects.create(
+            submitted_by=self.customer,
+            against=self.handyman,
+            job=job,
+            subject='Service issue',
+            description='Customer complaint',
+            status=Complaint.PENDING
+        )
+
+        Appointment.objects.create(
+            service_request=service_request,
+            handyman=self.handyman,
+            appointment_date=timezone.localdate() + timedelta(days=2),
+            time_slot='morning',
+            status=Appointment.STATUS_PENDING
+        )
+
+        activities = get_recent_activities()
+        kinds = [activity['kind'] for activity in activities]
+
+        self.assertEqual(len(activities), 4)
+        self.assertCountEqual(
+            kinds,
+            ['request', 'quotation', 'complaint', 'appointment']
+        )
+
+    def test_recent_activities_newest_first(self):
+        first = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='First request'
+        )
+
+        second = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Electrical',
+            problem_description='Second request'
+        )
+
+        activities = get_recent_activities()
+
+        self.assertEqual(len(activities), 2)
+        self.assertIn(second.reference, activities[0]['text'])
+        self.assertIn(first.reference, activities[1]['text'])
+
+    def test_recent_activities_limit(self):
+        for index in range(12):
+            ServiceRequest.objects.create(
+                customer=self.customer,
+                service_category='Plumbing',
+                problem_description=f'Test request {index}'
+            )
+
+        activities = get_recent_activities(limit=10)
+
+        self.assertEqual(len(activities), 10)
+
+
+    def test_recent_payment_activity(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Fix leaking pipe'
+        )
+
+        quotation = Quotation.objects.create(
+            request=service_request,
+            work_description='Plumbing repair',
+            total_amount=Decimal('2500.00'),
+            status=Quotation.ACCEPTED,
+            created_by=self.admin_user
+        )
+
+        Payment.objects.create(
+            quotation=quotation,
+            amount=Decimal('2500.00'),
+            date_received=timezone.localdate(),
+            method='cash',
+            recorded_by=self.admin_user
+        )
+
+        activities = get_recent_activities()
+
+        payment_activities = [
+            activity for activity in activities
+            if activity['kind'] == 'payment'
+        ]
+
+        self.assertEqual(len(payment_activities), 1)
+        self.assertIn(
+            'MUR 2500.00',
+            payment_activities[0]['text']
+        )
+
+
+    def test_pending_tasks_empty(self):
+        result = get_admin_pending_tasks()
+
+        self.assertEqual(result['tasks'], [])
+        self.assertEqual(result['tasks_total'], 0)
+        self.assertEqual(result['categories'], [])
+
+    def test_pending_service_request(self):
+        ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe',
+            status='requested'
+        )
+
+        result = get_admin_pending_tasks()
+
+        self.assertEqual(result['tasks_total'], 1)
+        self.assertEqual(len(result['tasks']), 1)
+        self.assertEqual(
+            result['tasks'][0]['title'],
+            'New Service Requests'
+        )
+        self.assertEqual(result['tasks'][0]['count'], 1)
+
+    def test_pending_multiple_categories(self):
+        ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe',
+            status='requested'
+        )
+
+        job = Job.objects.create(
+            customer=self.customer,
+            handyman=self.handyman,
+            service_name='Plumbing',
+            description='Fix leaking pipe',
+            address='Test Address',
+            status=Job.ASSIGNED
+        )
+
+        Complaint.objects.create(
+            submitted_by=self.customer,
+            against=self.handyman,
+            job=job,
+            subject='Service issue',
+            description='Customer complaint',
+            status=Complaint.PENDING
+        )
+
+        result = get_admin_pending_tasks()
+
+        self.assertEqual(result['tasks_total'], 2)
+        self.assertEqual(len(result['tasks']), 2)
+
+        categories = [
+            task['cat'] for task in result['tasks']
+        ]
+
+        self.assertCountEqual(
+            categories,
+            ['requests', 'complaints']
+        )
+
+
+    def test_payment_details_empty(self):
+        result = get_admin_payment_details()
+
+        self.assertEqual(result['payment_actions'], [])
+        self.assertEqual(
+            result['payment_summary'][0]['value'],
+            0
+        )
+        self.assertEqual(
+            result['payment_summary'][1]['value'],
+            0
+        )
+
+    def test_payment_details_with_unpaid_quotation(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Fix leaking pipe'
+        )
+
+        quotation = Quotation.objects.create(
+            request=service_request,
+            work_description='Plumbing repair',
+            total_amount=Decimal('2500.00'),
+            status=Quotation.ACCEPTED,
+            created_by=self.admin_user
+        )
+
+        result = get_admin_payment_details()
+
+        self.assertEqual(
+            result['payment_summary'][0]['value'],
+            1
+        )
+        self.assertEqual(
+            result['payment_summary'][1]['value'],
+            Decimal('2500.00')
+        )
+        self.assertEqual(len(result['payment_actions']), 1)
+        self.assertEqual(
+            result['payment_actions'][0]['ref'],
+            f'Q-{quotation.pk}'
+        )
+
+        Payment.objects.create(
+            quotation=quotation,
+            amount=Decimal('2500.00'),
+            date_received=timezone.localdate(),
+            method='cash',
+            recorded_by=self.admin_user
+        )
+
+        updated = get_admin_payment_details()
+
+        self.assertEqual(updated['payment_actions'], [])
+        self.assertEqual(
+            updated['payment_summary'][0]['value'],
+            0
         )
