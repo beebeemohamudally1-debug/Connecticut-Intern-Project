@@ -1,0 +1,26 @@
+{% extends base_template %}
+{% block title %}Complaints | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block content %}
+{% include "jobs/_messages.html" %}
+<div class="bar"><div>
+  <div class="lab">{% if role == 'admin' %}Admin · Complaints{% else %}Complaints{% endif %}</div>
+  <h1>Complaints</h1>
+  <p class="sub">{% if role == 'admin' %}Review, investigate and resolve complaints from customers and handymen.{% else %}Complaints you sent or that involve you.{% endif %}</p>
+</div>{% if role != 'admin' %}<a class="btn" href="{% url 'complaints:create' %}">New complaint</a>{% endif %}</div>
+<form method="get" class="filters card">
+  <div><label for="q">Search</label><input class="in" id="q" name="q" value="{{ f.q }}"></div>
+  <div><label for="status">Status</label><select class="in" id="status" name="status"><option value="">All</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  {% if role == 'admin' %}<div><label for="by">Submitted by</label><select class="in" id="by" name="by"><option value="">Anyone</option><option value="customer" {% if f.by == 'customer' %}selected{% endif %}>Customers</option><option value="handyman" {% if f.by == 'handyman' %}selected{% endif %}>Handymen</option></select></div>{% endif %}
+  <button class="btn s">Filter</button>
+</form>
+<div class="card"><table class="tb"><thead><tr><th>Reference</th><th>Subject</th><th>Job</th><th>From</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>
+{% for c in complaints %}<tr>
+  <td>{{ c.reference }}</td><td>{{ c.subject }}</td><td>{{ c.job.reference }}</td>
+  <td>{% if c.submitted_by_id == user_id %}You{% else %}{{ c.submitted_by.get_full_name|default:c.submitted_by.username }}{% endif %}</td>
+  <td>{{ c.created_at|date:"d/m/Y" }}</td>
+  <td><span class="b {{ c.badge }}">{{ c.get_status_display }}</span></td>
+  <td><a class="btn s o" href="{% url 'complaints:detail' c.pk %}">Open</a></td>
+</tr>{% empty %}<tr><td colspan="7" class="mut">No complaints.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

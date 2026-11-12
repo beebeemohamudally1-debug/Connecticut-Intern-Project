@@ -1,0 +1,35 @@
+{% extends base_template %}
+{% block title %}Jobs | HandyConnect{% endblock %}
+{% block page %}jobs{% endblock %}
+{% block content %}
+{% include "jobs/_messages.html" %}
+<div class="bar"><div>
+  <div class="lab">{% if role == 'admin' %}Admin · Monitor work{% elif role == 'handyman' %}Handyman · Jobs{% else %}Customer · Jobs{% endif %}</div>
+  <h1>{% if role == 'admin' %}Jobs{% else %}My jobs{% endif %}</h1>
+  <p class="sub">{% if role == 'admin' %}Progress, delays and history of every job.{% else %}Status and progress of your jobs.{% endif %}</p>
+</div></div>
+<form method="get" class="filters card">
+  <div><label for="q">Search</label><input class="in" id="q" name="q" value="{{ f.q }}" placeholder="Reference, service or name"></div>
+  <div><label for="status">Status</label><select class="in" id="status" name="status"><option value="">All</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+  {% if role == 'admin' %}
+  <div><label for="handyman">Handyman</label><select class="in" id="handyman" name="handyman"><option value="">All</option>{% for h in handymen %}<option value="{{ h.pk }}" {% if f.handyman == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.get_full_name|default:h.username }}</option>{% endfor %}</select></div>
+  <label style="font-weight:400"><input type="checkbox" name="delayed" value="1" {% if f.delayed %}checked{% endif %}> Delayed only</label>
+  <label style="font-weight:400"><input type="checkbox" name="flagged" value="1" {% if f.flagged %}checked{% endif %}> Flagged only</label>
+  {% endif %}
+  <button class="btn s">Filter</button>
+</form>
+<div class="card"><table class="tb"><thead><tr>
+  <th>Job</th><th>Service</th>{% if role != 'customer' %}<th>Customer</th>{% endif %}{% if role != 'handyman' %}<th>Handyman</th>{% endif %}<th>Due</th><th>Status</th><th></th>
+</tr></thead><tbody>
+{% for j in jobs %}<tr>
+  <td>{{ j.reference }}</td><td>{{ j.service_name }}</td>
+  {% if role != 'customer' %}<td>{{ j.customer.get_full_name|default:j.customer.username }}</td>{% endif %}
+  {% if role != 'handyman' %}<td>{{ j.handyman.get_full_name|default:j.handyman.username }}</td>{% endif %}
+  <td>{{ j.due_date|date:"d/m/Y"|default:"-" }}</td>
+  <td><span class="b {{ j.badge }}">{{ j.get_status_display }}</span>
+    {% if j.is_delayed %}<span class="b re">Delayed</span>{% endif %}
+    {% if j.is_flagged and role == 'admin' %}<span class="b re">Flagged</span>{% endif %}</td>
+  <td><a class="btn s o" href="{% url 'jobs:detail' j.pk %}">Open</a></td>
+</tr>{% empty %}<tr><td colspan="7" class="mut">No jobs found.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}
