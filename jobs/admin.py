@@ -10,9 +10,24 @@ class TimeLogInline(admin.TabularInline):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ('reference', 'service_name', 'customer', 'handyman', 'status', 'due_date', 'is_flagged')
+    list_display = (
+        'reference',
+        'service_request',
+        'service_name',
+        'customer',
+        'handyman',
+        'status',
+        'due_date',
+        'is_flagged',
+    )
     list_filter = ('status', 'is_flagged', 'payout_stage')
-    search_fields = ('reference', 'service_name', 'customer__username', 'handyman__username')
+    search_fields = (
+        'reference',
+        'service_request__reference',
+        'service_name',
+        'customer__username',
+        'handyman__username',
+    )
     inlines = [TimeLogInline]
 
 
