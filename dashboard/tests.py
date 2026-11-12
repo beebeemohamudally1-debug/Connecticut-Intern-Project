@@ -3,6 +3,12 @@ from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from jobs.models import Job
 from complaints.models import Complaint
+from bookings.models import ServiceRequest
+from datetime import timedelta
+from django.utils import timezone
+from bookings.models import Appointment
+from payments.models import Quotation, Payment
+from decimal import Decimal
 
 from .permissions import role_required
 from .services import get_admin_dashboard_stats
@@ -205,3 +211,140 @@ class DashboardTests(TestCase):
         self.assertEqual(stats['pending_complaints'], 1)
         self.assertEqual(stats['in_progress_complaints'], 1)
         self.assertEqual(stats['resolved_complaints'], 1)
+
+
+    def test_booking_statistics_with_records(self):
+        ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe',
+            status='requested'
+        )
+
+        ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Electrical',
+            problem_description='Broken light',
+            status=ServiceRequest.STATUS_REVIEWING
+        )
+
+        ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Painting',
+            problem_description='Paint bedroom',
+            status=ServiceRequest.STATUS_BOOKED
+        )
+
+        stats = get_admin_dashboard_stats()
+
+        self.assertEqual(stats['total_service_requests'], 3)
+        self.assertEqual(stats['new_service_requests'], 1)
+        self.assertEqual(stats['reviewing_requests'], 1)
+        self.assertEqual(stats['booked_requests'], 1)
+
+
+    def test_appointment_statistics_with_records(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Leaking pipe'
+        )
+
+        Appointment.objects.create(
+            service_request=service_request,
+            handyman=self.handyman,
+            appointment_date=timezone.localdate() + timedelta(days=2),
+            time_slot='morning',
+            status=Appointment.STATUS_CONFIRMED
+        )
+
+        Appointment.objects.create(
+            service_request=service_request,
+            handyman=self.handyman,
+            appointment_date=timezone.localdate() + timedelta(days=3),
+            time_slot='afternoon',
+            status=Appointment.STATUS_PENDING
+        )
+
+        stats = get_admin_dashboard_stats()
+
+        self.assertEqual(stats['total_appointments'], 2)
+        self.assertEqual(stats['pending_appointments'], 1)
+        self.assertEqual(stats['confirmed_appointments'], 1)
+        self.assertEqual(stats['upcoming_appointments'], 1)
+
+
+    def test_quotation_statistics_with_records(self):
+        statuses = [
+            Quotation.DRAFT,
+            Quotation.SENT,
+            Quotation.ACCEPTED,
+            Quotation.DECLINED,
+        ]
+
+        for index, status in enumerate(statuses):
+            service_request = ServiceRequest.objects.create(
+                customer=self.customer,
+                service_category='Plumbing',
+                problem_description=f'Test problem {index}'
+            )
+
+            Quotation.objects.create(
+                request=service_request,
+                work_description='Plumbing repair',
+                total_amount=Decimal('1500.00'),
+                status=status,
+                created_by=self.admin_user
+            )
+
+        stats = get_admin_dashboard_stats()
+
+        self.assertEqual(stats['total_quotations'], 4)
+        self.assertEqual(stats['draft_quotations'], 1)
+        self.assertEqual(stats['sent_quotations'], 1)
+        self.assertEqual(stats['accepted_quotations'], 1)
+        self.assertEqual(stats['declined_quotations'], 1)
+        self.assertEqual(stats['awaiting_payment'], 1)
+        self.assertEqual(stats['total_payments'], 0)
+
+
+    def test_payment_statistics_with_records(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Fix leaking pipe'
+        )
+
+        quotation = Quotation.objects.create(
+            request=service_request,
+            work_description='Plumbing repair',
+            total_amount=Decimal('2500.00'),
+            status=Quotation.ACCEPTED,
+            created_by=self.admin_user
+        )
+
+        # Before payment
+        stats = get_admin_dashboard_stats()
+
+        self.assertEqual(stats['awaiting_payment'], 1)
+        self.assertEqual(stats['total_payments'], 0)
+        self.assertEqual(stats['total_amount_received'], 0)
+
+        # Administrator records full offline payment
+        Payment.objects.create(
+            quotation=quotation,
+            amount=Decimal('2500.00'),
+            date_received=timezone.localdate(),
+            method='cash',
+            recorded_by=self.admin_user
+        )
+
+        # After payment
+        stats = get_admin_dashboard_stats()
+
+        self.assertEqual(stats['awaiting_payment'], 0)
+        self.assertEqual(stats['total_payments'], 1)
+        self.assertEqual(
+            stats['total_amount_received'],
+            Decimal('2500.00')
+        )
