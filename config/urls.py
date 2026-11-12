@@ -23,5 +23,6 @@ urlpatterns = [
     path('payments/', include('payments.urls')),
     path('jobs/', include('jobs.urls')),
     path('complaints/', include('complaints.urls')),
+    path('admin-portal/', include('accounts.admin_urls')),
     path('dashboard/', include('dashboard.urls')),
 ]
