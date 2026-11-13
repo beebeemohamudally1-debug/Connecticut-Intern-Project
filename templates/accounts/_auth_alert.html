@@ -1,0 +1,2 @@
+{# include with: kind (error|success|info), text #}
+<div class="au-alert is-{{ kind }}" role="{% if kind == 'error' %}alert{% else %}status{% endif %}"><svg class="au-ic" aria-hidden="true"><use href="#au-i-{% if kind == 'error' %}alert{% elif kind == 'success' %}check{% else %}info{% endif %}"/></svg><div>{{ text }}</div></div>

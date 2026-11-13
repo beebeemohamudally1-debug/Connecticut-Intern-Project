@@ -1,0 +1,11 @@
+{% extends "accounts/auth_base.html" %}
+{# S21 Admin MFA (authenticator app). Context: error (string). POST: code (6 digits). #}
+{% block title %}Verify admin login | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Verify your admin login</h1><p class="au-sub">Enter the 6-digit code from your authenticator app to continue after logging in.</p></div>
+<form method="post" data-au-once>{% csrf_token %}<input type="hidden" name="code" id="code">
+<span class="au-label" id="otp-label">Authenticator code</span>
+<div class="au-otp{% if error %} is-bad{% endif %}" data-au-otp="code" role="group" aria-labelledby="otp-label">{% for i in "012345" %}<input type="text" inputmode="numeric" maxlength="1" aria-label="Digit {{ forloop.counter }}" autocomplete="one-time-code">{% endfor %}</div>
+<div class="au-help{% if error %} is-error{% endif %}" style="margin-bottom:20px" aria-live="polite">{% if error %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ error }}{% endif %}</div>
+<button class="au-btn" type="submit" data-au-gate disabled><span class="au-label">Verify and continue</span></button></form>
+{% endblock %}

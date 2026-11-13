@@ -1,0 +1,7 @@
+{% extends "accounts/auth_top.html" %}
+{# S01 Visitor home. #}
+{% block title %}HandyConnect{% endblock %}
+{% block card %}<h1>Welcome</h1><p class="au-sub" style="margin-bottom:20px">Connect with the services you need. Please log in or register a new account.</p>
+{% url 'accounts:register' as register_url %}
+<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="au-btn is-compact" href="{% url 'accounts:login' %}">Log in</a>{% if register_url %}<a class="au-btn is-secondary is-compact" href="{{ register_url }}">Register</a>{% endif %}</div>
+{% endblock %}
