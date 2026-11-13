@@ -1,0 +1,164 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Monitor Work Progress (section 5) - Work Evidence & Completion Notes.
+
+  Data comes from the view as `page`:
+    reference, title -> jobs.Job reference and description (short)
+    reports_url      -> the Daily Work Reports page (back link)
+    report_date      -> the report's report_date (a date)
+    updated_at       -> the report's updated_at (gives the time)
+    handyman         -> handyman full name
+    status, status_label -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
+                            ('delayed' = job.is_delayed)
+    photos           -> one per jobs.WorkEvidence:
+        caption      -> evidence.caption
+        filename     -> file name of evidence.image
+        url          -> jobs:evidence_file for that photo (empty = placeholder)
+    notes            -> job.completion_notes
+    is_flagged, flag_reason -> job.is_flagged and job.flag_reason
+  The Flag pop-up is at the bottom of this page. It posts to jobs:flag:
+    flag_url -> the jobs:flag URL for this job (the form needs it as its
+                action; the csrf token is already in the form)
+  The form sends one field, `reason` (required). If the job is already
+  flagged, jobs:flag removes the flag instead, so the pop-up then asks to
+  remove it (no reason needed).
+  BACKEND: replace the sample data with the real job. Photos are shown 3 per
+  page with page buttons in the browser; send them all.
+{% endcomment %}
+
+{% block title %}Work Evidence | HandyConnect{% endblock %}
+{% block page %}progress{% endblock %}
+{% block crumb %}Work Progress{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'jobs/css/admin_work_evidence.css' %}">
+
+<a class="we-back" href="{{ page.reports_url|default:'#' }}">&larr; Daily Work Reports</a>
+
+<div class="bar">
+  <div>
+    <h1>Work Evidence &amp; Completion Notes</h1>
+    <p class="sub">{{ page.reference }} &middot; {{ page.title }}</p>
+  </div>
+  <button class="we-flag" type="button" data-open="flag">
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+    {% if page.is_flagged %}Remove Flag{% else %}Flag Submission{% endif %}
+  </button>
+</div>
+
+<p class="we-demo" role="status" data-demo hidden></p>
+
+<section class="we-strip" aria-label="Submission details">
+  <div><span>Job ID</span><strong>{{ page.reference }}</strong></div>
+  <div><span>Report Date</span><strong>{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}</strong></div>
+  <div><span>Handyman</span><strong>{{ page.handyman }}</strong></div>
+  <span class="b wp-{{ page.status }}">{{ page.status_label }}</span>
+</section>
+
+<section class="card we-card" data-photos data-page-size="3" aria-label="Uploaded site photographs">
+  <div class="we-head">
+    <h2>Uploaded site photographs</h2>
+    <p class="mut">{{ page.photos|length }} photo{{ page.photos|length|pluralize }} uploaded</p>
+  </div>
+
+  <div class="we-grid">
+    {% for p in page.photos %}
+    <figure class="we-photo" data-item>
+      {% if p.url %}
+      <a class="we-img" href="{{ p.url }}" target="_blank" rel="noopener"><img src="{{ p.url }}" alt="{{ p.caption|default:'Site photograph' }}"></a>
+      {% else %}
+      <div class="we-img we-placeholder" role="img" aria-label="Photograph not available in this preview">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+      </div>
+      {% endif %}
+      <figcaption>
+        <strong>{{ p.caption|default:"No caption" }}</strong>
+        <span class="mut">{{ p.filename }}</span>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+
+  <div class="we-foot" data-foot hidden>
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="we-pages" aria-label="Photo pages" data-pages></nav>
+  </div>
+</section>
+
+<section class="card we-card" aria-label="Completion notes">
+  <h2>Completion notes</h2>
+  <div class="we-notes">
+    <p class="we-by">SUBMITTED BY {{ page.handyman|upper }}</p>
+    <p>{{ page.notes|default:"No completion notes have been submitted yet." }}</p>
+  </div>
+
+  <hr class="we-line">
+
+  <div class="we-review">
+    <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+    <div>
+      <p class="we-review-top">
+        <strong>Administrator review</strong>
+        {% if page.is_flagged %}<span class="we-state flagged">Flagged for review</span>{% else %}<span class="we-state clear">No concerns raised</span>{% endif %}
+      </p>
+      <p class="we-review-text">{% if page.is_flagged %}{{ page.flag_reason }}{% else %}Nothing has been flagged on this job. Use Flag Submission if the evidence does not match the reported work.{% endif %}</p>
+    </div>
+  </div>
+</section>
+
+{# ---------- Flag Work Submission pop-up ---------- #}
+<dialog class="fl-modal" id="modal-flag" aria-labelledby="fl-title">
+  <form method="post" action="{{ page.flag_url }}" data-flag-form novalidate>
+    {% csrf_token %}
+    <div class="fl-head">
+      <span class="fl-icon" aria-hidden="true">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+      </span>
+      <div>
+        <h2 id="fl-title">{% if page.is_flagged %}Remove Flag{% else %}Flag Work Submission{% endif %}</h2>
+        <p class="mut">{% if page.is_flagged %}This submission is currently marked for review.{% else %}Mark this submission for further administrator review.{% endif %}</p>
+      </div>
+    </div>
+
+    <hr class="fl-line">
+
+    <dl class="fl-ids">
+      <div><dt>Job ID</dt><dd>{{ page.reference }}</dd></div>
+      <div><dt>Report Date</dt><dd>{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}</dd></div>
+    </dl>
+
+    {% if page.is_flagged %}
+    <div class="fl-field">
+      <p class="fl-label">Current flag reason</p>
+      <p class="fl-current">{{ page.flag_reason }}</p>
+    </div>
+    {% else %}
+    <div class="fl-field">
+      <label class="fl-label" for="fl-reason">Flag reason</label>
+      <textarea class="in" id="fl-reason" name="reason" rows="4" required
+        placeholder="Explain what looks wrong with this submission..." data-reason></textarea>
+      <p class="fl-error" id="fl-error" data-error hidden>Please give a reason to flag this submission.</p>
+    </div>
+    <div class="fl-field">
+      <p class="fl-label">Review State</p>
+      <p class="fl-state">Flagged for review</p>
+    </div>
+    {% endif %}
+
+    <hr class="fl-line">
+
+    <div class="fl-actions">
+      <button class="fl-cancel" type="button" data-close>Cancel</button>
+      <button class="fl-submit" type="submit">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+        {% if page.is_flagged %}Remove Flag{% else %}Flag{% endif %}
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'jobs/js/admin_work_evidence.js' %}"></script>
+{% endblock %}

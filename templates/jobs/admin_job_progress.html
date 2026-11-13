@@ -1,0 +1,123 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Monitor Work Progress (section 5) - Job Progress Details.
+
+  Data comes from the view as `job`. Names follow jobs.Job:
+    reference       -> job.reference               (JOB-1042)
+    title           -> job.description (short)     shown next to the reference
+    handyman        -> job.handyman full name
+    customer        -> job.customer full name
+    started         -> first TimeLog.arrived_at    (empty if not started yet)
+    due             -> job.due_date                (a date, no time)
+    service         -> job.service_name
+    request_ref     -> job.service_request.reference
+    scheduled       -> job.scheduled_start         (date)
+    status          -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
+                       ('delayed' = job.is_delayed, not a stored status)
+    status_label    -> text shown in the pill
+    percent         -> latest ProgressReport.percent_complete (0 if none)
+    overdue         -> text such as "1 day overdue" (empty if not late),
+                       worked out from job.due_date
+    latest_note     -> latest ProgressReport.details
+    last_report     -> latest ProgressReport.updated_at
+    timeline        -> list of events, oldest first: kind ('assigned',
+                       'started', 'report', 'delay'), title, when, text.
+                       Built from job.created_at, the first TimeLog and
+                       each ProgressReport.
+    reports_url / evidence_url -> the Daily Work Reports and Work Evidence pages
+  The Flag Report button opens the Work Evidence page with the Flag pop-up
+  already open (the pop-up lives on that page and posts to jobs:flag).
+  BACKEND: replace the sample data with the real job.
+{% endcomment %}
+
+{% block title %}Job Progress Details | HandyConnect{% endblock %}
+{% block page %}progress{% endblock %}
+{% block crumb %}Work Progress{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'jobs/css/admin_job_progress.css' %}">
+{% url 'accounts_admin:work_progress' as overview_url %}
+
+<a class="jd-back" href="{{ overview_url|default:'#' }}">&larr; Work Progress Overview</a>
+
+<div class="bar">
+  <div>
+    <h1>Job Progress Details</h1>
+    <p class="sub">{{ job.reference }} &middot; {{ job.title }}</p>
+  </div>
+  <div class="jd-actions">
+    <a class="jd-btn jd-flag" href="{{ job.evidence_url|default:'#' }}#flag">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+      Flag Report
+    </a>
+    <a class="jd-btn jd-evidence" href="{{ job.evidence_url|default:'#' }}">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>
+      View Evidence
+    </a>
+  </div>
+</div>
+
+<div class="jd-top">
+  <section class="card jd-card" aria-label="Job details">
+    <h2>Job details</h2>
+    <dl class="jd-facts">
+      <div><dt>Handyman</dt><dd>{{ job.handyman }}</dd></div>
+      <div><dt>Customer</dt><dd>{{ job.customer }}</dd></div>
+      <div><dt>Job Started</dt><dd>{% if job.started %}{{ job.started|date:"d M Y · H:i" }}{% else %}Not started yet{% endif %}</dd></div>
+      <div><dt>Expected Completion</dt><dd>{{ job.due|date:"d M Y" }}</dd></div>
+      <div class="jd-line"><dt>Service</dt><dd>{{ job.service }}</dd></div>
+      <div class="jd-line"><dt>Appointment</dt><dd>{{ job.request_ref|default:"-" }}{% if job.scheduled %} &middot; {{ job.scheduled|date:"d M Y" }}{% endif %}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card jd-card jd-snap" aria-label="Progress snapshot">
+    <div class="jd-snap-head">
+      <h2>Progress Snapshot</h2>
+      <span class="b wp-{{ job.status }}">{{ job.status_label }}</span>
+    </div>
+    <p class="jd-pct"><strong>{{ job.percent }}%</strong> Complete</p>
+    <progress class="jd-track jd-{{ job.status }}" value="{{ job.percent }}" max="100" aria-label="{{ job.percent }} percent complete"></progress>
+    {% if job.overdue %}
+    <div class="jd-delay">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div>
+        <p class="jd-delay-title">{{ job.overdue }}</p>
+        <p class="jd-delay-text">{{ job.latest_note }}</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if job.last_report %}<p class="mut jd-last">Last report: {{ job.last_report|date:"d M Y · H:i" }}</p>{% endif %}
+  </section>
+</div>
+
+<section class="card jd-card jd-time" aria-label="Job timeline">
+  <div class="jd-time-head">
+    <div>
+      <h2>Job timeline</h2>
+      <p class="mut">Assignment history, daily updates and delays.</p>
+    </div>
+    <a class="jd-btn jd-outline" href="{{ job.reports_url|default:'#' }}">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+      Daily Work Reports
+    </a>
+  </div>
+
+  <ol class="jd-events">
+    {% for e in job.timeline %}
+    <li class="jd-event {{ e.kind }}">
+      <span class="jd-marker" aria-hidden="true">
+        {% if e.kind == 'assigned' %}<svg class="ico" viewBox="0 0 24 24"><path d="m16 11 2 2 4-4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        {% elif e.kind == 'started' %}<svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></svg>
+        {% elif e.kind == 'delay' %}<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        {% else %}<svg class="ico" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>{% endif %}
+      </span>
+      <div class="jd-ev-body">
+        <p class="jd-ev-top"><strong>{{ e.title }}</strong><span class="mut">{{ e.when|date:"d M Y · H:i" }}</span></p>
+        <p class="jd-ev-text">{{ e.text }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}
