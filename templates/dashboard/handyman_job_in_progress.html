@@ -1,0 +1,242 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job Completion | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_in_progress.css' %}">
+</head>
+<body>
+<div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+            </span>
+            HandyConnect
+        </a>
+
+        <div class="workspace">
+            <span class="workspace-label">Workspace</span>
+            <strong>Handyman Dashboard</strong>
+        </div>
+
+        <nav class="nav">
+            <a href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}">Job requests</a>
+            <a href="{% url 'dashboard:job_tracking' %}">Job tracking</a>
+            <a href="{% url 'dashboard:job_completed' %}" class="active" aria-current="page">Job completion</a>
+            <a href="{% url 'dashboard:report_customer' %}">Complaints</a>
+        </nav>
+
+        <div class="sidebar-foot">
+            <p>Need a hand?</p>
+            <a href="#">Help &amp; support</a>
+            <p class="copyright">HandyConnect &copy; 2026</p>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs">
+                <a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Job Completion
+            </div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" aria-label="Notifications, 4 unread">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge">4</span>
+                </a>
+                <div class="user">
+                    <span class="avatar">MR</span>
+                    <span>{{ request.user.get_full_name|default:"Marcus Reed" }}</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="content">
+
+            <!-- Collapsed job -->
+            <details class="job">
+                <summary>
+                    <span>
+                        <span class="job-title">Outlet repair</span>
+                        <span class="job-code">Code: R761</span>
+                    </span>
+                    <span class="chevron" aria-hidden="true"></span>
+                </summary>
+                <p class="job-collapsed-note">Open this job from Assigned Jobs to complete it.</p>
+            </details>
+
+            <!-- Active job -->
+            <details class="job" open>
+                <summary>
+                    <span>
+                        <span class="job-title">Kitchen sink leak repair</span>
+                        <span class="job-code">Code: H232</span>
+                    </span>
+                    <span class="chevron" aria-hidden="true"></span>
+                </summary>
+
+                <div class="notice">
+                    <strong>Work started &middot; Oct 24, 9:12 AM</strong>
+                    <p>Keep your notes up to date. Only complete the job after testing and cleanup.</p>
+                </div>
+
+                <form id="complete-form" method="post" enctype="multipart/form-data" action="">
+                    {% csrf_token %}
+
+                    <!-- Requirements -->
+                    <section class="card">
+                        <h2>Requirements for completion</h2>
+
+                        <div class="tags">
+                            <span class="tag">In progress</span>
+                            <span class="tag">Plumbing &middot; Leak repair</span>
+                        </div>
+
+                        <p class="muted small">Attachment</p>
+                        <p class="attachment">
+                            <a href="#">sink-leak.jpg &middot; View file</a>
+                            <span>P-trap seal kit &middot; 1 kit</span>
+                        </p>
+                        <p class="description">
+                            Water is dripping from the pipe below the kitchen sink whenever the tap runs.
+                            Inspect the P-trap and replace the seal if needed.
+                        </p>
+
+                        <div class="two-col">
+                            <div class="col">
+                                <h3>Task list</h3>
+                                <label class="check"><input type="checkbox" class="task" name="tasks" value="inspect"> Inspect the drain assembly and connection</label>
+                                <label class="check"><input type="checkbox" class="task" name="tasks" value="replace"> Replace the worn P-trap seal</label>
+                                <label class="check"><input type="checkbox" class="task" name="tasks" value="test"> Reset the connection and run a 10-minute leak test</label>
+                                <label class="check"><input type="checkbox" class="task" name="tasks" value="clean"> Clean the work area and explain the repair</label>
+                                <p class="footnote">Any additional work requires a revised quote. Contact the service team before changing the scope.</p>
+                            </div>
+                            <div class="col">
+                                <h3>Requirements met</h3>
+                                <label class="check"><input type="checkbox" class="req" name="appointment_done"> Appointment done</label>
+                                <label class="check"><input type="checkbox" class="req" name="materials_covered"> Materials covered</label>
+                                <label class="check locked"><input type="checkbox" class="req" id="req-tasks" tabindex="-1" disabled> Task list completed</label>
+                                <label class="check"><input type="checkbox" class="req" name="mark_done"> Mark as done</label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Finish -->
+                    <section class="card">
+                        <h2>Finish the job</h2>
+
+                        <label class="field-label" for="summary">Completion summary <span aria-hidden="true">*</span></label>
+                        <textarea id="summary" name="summary" rows="4" required
+                            placeholder="Describe what you did, what you tested and the final result."></textarea>
+
+                        <span class="field-label" id="evidence-label">After-work evidence</span>
+                        <div class="dropzone" id="dropzone">
+                            <input type="file" id="evidence" name="evidence" multiple
+                                   accept="image/*,application/pdf" aria-labelledby="evidence-label" hidden>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                            <p><button type="button" class="link-btn" id="browse">Choose files</button> or drag them here</p>
+                            <p class="muted small">Photos or PDF &middot; up to 10 MB each</p>
+                        </div>
+                        <p class="error" id="file-error" role="alert" hidden></p>
+                        <ul class="files" id="file-list"></ul>
+
+                        <button type="submit" class="primary" id="complete-btn" disabled>Complete work</button>
+                        <p class="muted small" id="hint">Tick every requirement and write a summary to finish the job.</p>
+                    </section>
+                </form>
+            </details>
+        </main>
+    </div>
+</div>
+
+<script>
+(function () {
+    var MAX = 10 * 1024 * 1024;
+    var form = document.getElementById('complete-form');
+    var tasks = form.querySelectorAll('.task');
+    var reqs = form.querySelectorAll('.req');
+    var reqTasks = document.getElementById('req-tasks');
+    var summary = document.getElementById('summary');
+    var btn = document.getElementById('complete-btn');
+    var input = document.getElementById('evidence');
+    var drop = document.getElementById('dropzone');
+    var list = document.getElementById('file-list');
+    var err = document.getElementById('file-error');
+    var store = new DataTransfer();
+
+    function refresh() {
+        reqTasks.checked = Array.prototype.every.call(tasks, function (t) { return t.checked; });
+        var ready = Array.prototype.every.call(reqs, function (r) { return r.checked; }) &&
+                    summary.value.trim().length > 0;
+        btn.disabled = !ready;
+    }
+
+    function size(n) {
+        return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+    }
+
+    function render() {
+        list.innerHTML = '';
+        Array.prototype.forEach.call(store.files, function (f, i) {
+            var li = document.createElement('li');
+            var name = document.createElement('span');
+            name.textContent = f.name + ' \u00b7 ' + size(f.size);
+            var rm = document.createElement('button');
+            rm.type = 'button';
+            rm.className = 'link-btn';
+            rm.textContent = 'Remove';
+            rm.setAttribute('aria-label', 'Remove ' + f.name);
+            rm.addEventListener('click', function () {
+                var next = new DataTransfer();
+                Array.prototype.forEach.call(store.files, function (g, j) { if (j !== i) next.items.add(g); });
+                store = next;
+                input.files = store.files;
+                render();
+            });
+            li.appendChild(name);
+            li.appendChild(rm);
+            list.appendChild(li);
+        });
+    }
+
+    function addFiles(files) {
+        var problems = [];
+        Array.prototype.forEach.call(files, function (f) {
+            var okType = f.type.indexOf('image/') === 0 || f.type === 'application/pdf';
+            if (!okType) { problems.push(f.name + ' is not a photo or PDF.'); return; }
+            if (f.size > MAX) { problems.push(f.name + ' is over 10 MB.'); return; }
+            store.items.add(f);
+        });
+        input.files = store.files;
+        err.hidden = problems.length === 0;
+        err.textContent = problems.join(' ');
+        render();
+    }
+
+    document.getElementById('browse').addEventListener('click', function () { input.click(); });
+    input.addEventListener('change', function () {
+        var picked = Array.prototype.slice.call(input.files);
+        input.files = store.files;
+        addFiles(picked);
+    });
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+    });
+    drop.addEventListener('drop', function (e) { addFiles(e.dataTransfer.files); });
+
+    form.addEventListener('change', refresh);
+    summary.addEventListener('input', refresh);
+    refresh();
+})();
+</script>
+</body>
+</html>

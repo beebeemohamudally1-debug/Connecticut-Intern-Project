@@ -1,0 +1,163 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job Completion | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_in_progress.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_completed.css' %}">
+</head>
+<body>
+<div class="layout">
+
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+            </span>
+            HandyConnect
+        </a>
+
+        <div class="workspace">
+            <span class="workspace-label">Workspace</span>
+            <strong>Handyman Dashboard</strong>
+        </div>
+
+        <nav class="nav">
+            <a href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}">Job requests</a>
+            <a href="{% url 'dashboard:job_tracking' %}">Job tracking</a>
+            <a href="{% url 'dashboard:job_completed' %}" class="active" aria-current="page">Job completion</a>
+            <a href="{% url 'dashboard:report_customer' %}">Complaints</a>
+        </nav>
+
+        <div class="sidebar-foot">
+            <p>Need a hand?</p>
+            <a href="#">Help &amp; support</a>
+            <p class="copyright">HandyConnect &copy; 2026</p>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs">
+                <a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Job Completion
+            </div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" aria-label="Notifications, 4 unread">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge">4</span>
+                </a>
+                <div class="user">
+                    <span class="avatar">MR</span>
+                    <span>{{ request.user.get_full_name|default:"Marcus Reed" }}</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="content wide">
+
+            <div class="job-head">
+                <span class="job-title">Outlet repair</span>
+                <span class="job-code">Code: R761</span>
+            </div>
+
+            <div class="done-wrap">
+
+                <div class="success">
+                    <span class="tick" aria-hidden="true">&#10003;</span>
+                    <div>
+                        <strong>Job completed &middot; Oct 24, 10:42 AM</strong>
+                        <p>Completion notes saved. Emma receives a completion update and private feedback invitation. Payment is already verified.</p>
+                    </div>
+                </div>
+
+                <div class="done-grid">
+
+                    <!-- Left column -->
+                    <div class="stack">
+                        <section class="card">
+                            <h2>Job brief</h2>
+                            <div class="tags">
+                                <span class="tag tag-done">Completed</span>
+                                <span class="tag">Plumbing &middot; Leak repair</span>
+                            </div>
+                            <p class="description plain">
+                                Water is dripping from the pipe below the kitchen sink whenever the tap runs.
+                                Inspect the P-trap and replace the seal if needed.
+                            </p>
+
+                            <h3 class="divided">Task list</h3>
+                            <ul class="ticks">
+                                <li>Inspect the drain assembly and connection</li>
+                                <li>Replace the worn P-trap seal</li>
+                                <li>Reset the connection and run a 10-minute leak test</li>
+                                <li>Clean the work area and explain the repair</li>
+                            </ul>
+
+                            <dl class="kv">
+                                <div><dt>Parts</dt><dd>P-trap seal kit &middot; 1 kit</dd></div>
+                                <div><dt>Attachment</dt><dd>sink-leak.jpg &middot; <a href="#">View file</a></dd></div>
+                            </dl>
+                            <p class="footnote">Any additional work requires a revised quote. Contact the service team before changing the scope.</p>
+                        </section>
+
+                        <section class="card">
+                            <h2>Completion record</h2>
+                            <p class="description plain">
+                                Replaced the worn P-trap seal and reseated the drain connection. Tested with running water
+                                for 10 minutes; no visible leaks. Work area cleaned.
+                            </p>
+                            <dl class="kv">
+                                <div><dt>Started</dt><dd>Oct 24 &middot; 9:12 AM</dd></div>
+                                <div><dt>Completed</dt><dd>Oct 24 &middot; 10:42 AM</dd></div>
+                                <div><dt>Work photos</dt><dd>repair-after.jpg &middot; 1.9 MB</dd></div>
+                            </dl>
+                            <a class="outline-btn" href="#">View completed job</a>
+                        </section>
+                    </div>
+
+                    <!-- Right column -->
+                    <div class="stack">
+                        <section class="card">
+                            <h2>Job information</h2>
+                            <div class="person">
+                                <span class="avatar big">EW</span>
+                                <div>
+                                    <strong>Emma Wilson</strong>
+                                    <span class="muted small">Customer &middot; Member since 2025</span>
+                                </div>
+                            </div>
+                            <dl class="kv stacked">
+                                <div><dt>Contact channel</dt><dd>Via service team</dd></div>
+                                <div><dt>Address</dt><dd>124 Maple St, Port Louis, Mauritius</dd></div>
+                                <div><dt>Access</dt><dd>Ring doorbell &middot; Street parking</dd></div>
+                            </dl>
+                            <a class="outline-btn block" href="#">Message administrator</a>
+                        </section>
+
+                        <section class="card">
+                            <h2>Job milestones</h2>
+                            <ol class="milestones">
+                                <li><strong>Assigned</strong><span>Oct 23, 11:16 AM</span></li>
+                                <li><strong>Scheduled</strong><span>Oct 24, Morning &middot; 09:00&ndash;12:00</span></li>
+                                <li><strong>In progress</strong><span>Oct 24, 9:12 AM</span></li>
+                                <li><strong>Completed</strong><span>Oct 24, 10:42 AM</span></li>
+                            </ol>
+                        </section>
+
+                        <a class="outline-btn block flat" href="{% url 'dashboard:report_customer' %}">Report a customer concern</a>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="page-foot">
+                <span>Secure workspace &middot; Your information stays private</span>
+                <span><a href="#">Help center</a> &middot; <a href="#">Privacy policy</a></span>
+            </footer>
+        </main>
+    </div>
+</div>
+</body>
+</html>
