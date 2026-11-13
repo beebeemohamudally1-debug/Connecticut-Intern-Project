@@ -856,3 +856,136 @@ body[data-page="help"] .sb [data-nav="help"] {
     animation: none;
   }
 }
+
+
+/* Administrator notification dropdown */
+
+/* Modern notification dropdown */
+
+.notification-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.notification-popup {
+    position: absolute;
+    top: calc(100% + 16px);
+    right: -12px;
+    width: 360px;
+    max-width: calc(100vw - 24px);
+    background: #ffffff;
+    border: 1px solid #e5eaf1;
+    border-radius: 16px;
+    box-shadow: 0 16px 45px rgba(25, 45, 75, 0.16);
+    z-index: 2000;
+    overflow: hidden;
+    color: #20344e;
+}
+
+.notification-popup[hidden],
+.notification-dropdown [hidden] {
+    display: none !important;
+}
+
+.notification-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.notification-popup-header strong {
+    font-size: 17px;
+    font-weight: 700;
+    color: #20344e;
+}
+
+.notification-popup-header button {
+    border: none;
+    background: transparent;
+    color: #f47735;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 0;
+    white-space: nowrap;
+}
+
+.notification-popup-header button:hover {
+    color: #d95a20;
+}
+
+.notification-popup-list {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.notification-popup-list > p {
+    margin: 0;
+    padding: 42px 16px;
+    text-align: center;
+    color: #8190a5;
+    font-size: 13px;
+}
+
+.notification-popup-item {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    border: 0;
+    border-bottom: 1px solid #f0f3f7;
+    background: #ffffff;
+    color: #20344e;
+    text-align: left;
+    cursor: pointer;
+}
+
+.notification-popup-item.unread {
+    background: #fff6f0;
+}
+
+.notification-popup-item:hover {
+    background: #f5f8fc;
+}
+
+.notification-popup-item strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.notification-popup-item span {
+    display: block;
+    font-size: 12px;
+    color: #75859a;
+    margin-top: 5px;
+    line-height: 1.5;
+}
+
+.notification-popup-footer {
+    display: block;
+    padding: 15px;
+    text-align: center;
+    background: #f8fafc;
+    color: #f47735;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border-top: 1px solid #edf1f5;
+}
+
+.notification-popup-footer:hover {
+    background: #fff3eb;
+    color: #d95a20;
+    text-decoration: none;
+}
+
+@media (max-width: 480px) {
+    .notification-popup {
+        width: min(340px, calc(100vw - 24px));
+        right: -55px;
+    }
+}
