@@ -1,0 +1,41 @@
+{% comment %}
+  The three confirmation pop-ups (screens 05, 06, 07). Shared by the Customer
+  Details and Handyman Profile pages with {% include %}.
+  Needs `person.name` and `person.kind` ("customer" or "handyman").
+  Each one is a <dialog>: the browser draws the dark backdrop, traps the
+  keyboard focus and closes it with the Esc key for us.
+  BACKEND: turn each Confirm button into a form that posts to the real view.
+{% endcomment %}
+
+<dialog class="modal" id="modal-suspend" aria-labelledby="modal-suspend-title">
+  <div class="modal-icon warn" aria-hidden="true">!</div>
+  <h2 id="modal-suspend-title">Suspend {{ person.kind|capfirst }} Account?</h2>
+  <p class="modal-q">Are you sure you want to suspend {{ person.name }}?</p>
+  <p class="mut">The {{ person.kind }} will temporarily lose access to their account.</p>
+  <div class="modal-actions">
+    <button class="btn o" type="button" data-close>Cancel</button>
+    <button class="btn accent" type="button" data-confirm="suspended">Confirm Suspension</button>
+  </div>
+</dialog>
+
+<dialog class="modal" id="modal-reactivate" aria-labelledby="modal-reactivate-title">
+  <div class="modal-icon ok" aria-hidden="true">!</div>
+  <h2 id="modal-reactivate-title">Reactivate {{ person.kind|capfirst }} Account?</h2>
+  <p class="modal-q">Reactivate {{ person.name }}'s account?</p>
+  <p class="mut">The {{ person.kind }} will regain normal access to the platform.</p>
+  <div class="modal-actions">
+    <button class="btn o" type="button" data-close>Cancel</button>
+    <button class="btn green" type="button" data-confirm="active">Confirm Reactivation</button>
+  </div>
+</dialog>
+
+<dialog class="modal" id="modal-delete" aria-labelledby="modal-delete-title">
+  <div class="modal-icon bad" aria-hidden="true">!</div>
+  <h2 id="modal-delete-title">Delete {{ person.kind|capfirst }} Account?</h2>
+  <p class="modal-q">Are you sure you want to delete {{ person.name }}?</p>
+  <p class="mut">This action may be permanent. Review the account before proceeding.</p>
+  <div class="modal-actions">
+    <button class="btn o" type="button" data-close>Cancel</button>
+    <button class="btn red" type="button" data-confirm="deleted">Delete Account</button>
+  </div>
+</dialog>

@@ -1,0 +1,17 @@
+{% extends "accounts/auth_base.html" %}
+{% comment %}
+  S12 Login. Context: email (re-fill), errors {email, password}, alert (one string), optional title.
+  BACKEND: see FRONTEND_AUTH_README.md for every state and the keys each one needs.
+{% endcomment %}
+{% block title %}Log in | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>{{ title|default:"Log in" }}</h1><p class="au-sub">Enter your email and password to access your account.</p></div>
+{% if alert %}{% include "accounts/_auth_alert.html" with kind="error" text=alert %}{% endif %}
+<form method="post" novalidate data-au-once>{% csrf_token %}
+{% include "accounts/_auth_field.html" with id="email" name="email" label="Email address" type="email" value=email error=errors.email autocomplete="email" placeholder="you@example.com" %}
+{% include "accounts/_auth_field.html" with id="password" name="password" label="Password" type="password" error=errors.password autocomplete="current-password" placeholder="Enter password" %}
+<div class="au-forgot"><a href="{% url 'accounts:forgot_password' %}">Forgot password?</a></div>
+<button class="au-btn" type="submit"><span class="au-label">Log in</span></button></form>
+{% url 'accounts:register' as register_url %}
+<p class="au-below">Don't have an account?<a href="{{ register_url|default:'#' }}">Register</a></p>
+{% endblock %}

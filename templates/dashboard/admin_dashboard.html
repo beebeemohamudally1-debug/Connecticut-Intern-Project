@@ -1,0 +1,242 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Administrator Dashboard (section 2).
+
+  The sidebar and navbar come from base_admin.html, so this file only holds the
+  page itself: the heading, nine summary cards and two tabs
+  (Recent Activities, Pending Tasks).
+
+  Data comes from the view:
+    stats        - the nine numbers (customers, handymen, pending_jobs, ...)
+    activities   - the latest events: kind, text, time
+    tasks        - things waiting for the admin: key, title, text, count, url
+    tasks_total  - the sum of all task counts (shown on the tab)
+    Only `stats` (total_customers, total_handymen) comes from the real view so far;
+    anything missing shows 0 or an empty message instead of breaking.
+  BACKEND: replace the sample values with real counts and real activity.
+{% endcomment %}
+
+{% block title %}Administrator Dashboard | HandyConnect{% endblock %}
+{% block page %}dashboard{% endblock %}
+{% block crumb %}Dashboard{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'dashboard/css/admin_dashboard.css' %}">
+
+{# Icons for the Pending Tasks list, drawn once and reused below #}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ti-applications" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></symbol>
+  <symbol id="ti-requests" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="ti-services" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="ti-skills" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></symbol>
+  <symbol id="ti-labour" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+  <symbol id="ti-material" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m7.5 4.27 9 5.15M3.3 7 12 12l8.7-5M12 22V12"/></symbol>
+  <symbol id="ti-appointments" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="ti-work" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="ti-complaints" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+  <symbol id="ti-feedback" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+  <symbol id="ti-payments" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+</svg>
+
+{% firstof request.user.get_full_name request.user.username "Admin" as welcome_name %}
+<div class="bar">
+  <div>
+    <h1>Administrator Dashboard</h1>
+    <p class="sub">Welcome back, {{ welcome_name }}!</p>
+  </div>
+</div>
+
+{# ---------- Summary cards ---------- #}
+<ul class="stats" aria-label="Summary">
+  <li class="card stat-card">
+    <span class="stat-ico blue" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.total_customers|default:0 }}</strong><span class="stat-label">Customers</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico blue" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.total_handymen|default:0 }}</strong><span class="stat-label">Handymen</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico orange" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.assigned_jobs|default:0 }}</strong><span class="stat-label">Pending Jobs</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico blue" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.in_progress_jobs|default:0 }}</strong><span class="stat-label">In Progress</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico green" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.completed_jobs|default:0 }}</strong><span class="stat-label">Completed</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico orange" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+    </span>
+    <div><strong class="stat-num">MUR {{ stats.total_amount_received|default:0 }}</strong><span class="stat-label">Total Payments</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico orange" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.sent_quotations|default:0 }}</strong><span class="stat-label">Pending Quotes</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico green" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.accepted_quotations|default:0 }}</strong><span class="stat-label">Accepted Quotes</span></div>
+  </li>
+
+  <li class="card stat-card">
+    <span class="stat-ico red" aria-hidden="true">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+    </span>
+    <div><strong class="stat-num">{{ stats.declined_quotations|default:0 }}</strong><span class="stat-label">Declined Quotes</span></div>
+  </li>
+</ul>
+
+{# ---------- Tabs: Recent Activities / Pending Tasks (dashboard/js/admin_dashboard.js) ---------- #}
+<section class="card tabs-card" data-tabs>
+
+  <div class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab" type="button" role="tab" id="tab-activities" aria-controls="panel-activities" aria-selected="true">
+      Recent Activities
+    </button>
+    <button class="tab" type="button" role="tab" id="tab-pending" aria-controls="panel-pending" aria-selected="false" tabindex="-1">
+      Pending Tasks
+      {% if tasks_total %}<span class="tab-count">{{ tasks_total }}</span>{% endif %}
+    </button>
+  </div>
+
+  {# ----- Recent Activities ----- #}
+  <div class="tab-panel" role="tabpanel" id="panel-activities" aria-labelledby="tab-activities">
+    <ul class="activities">
+      {% for a in activities %}
+      <li>
+        <span class="act-ico" aria-hidden="true">
+          {% if a.kind == 'request' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>
+          {% elif a.kind == 'quotation' %}
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+          {% elif a.kind == 'payment' %}
+          <svg class="ico" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          {% elif a.kind == 'user' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          {% elif a.kind == 'complaint' %}
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          {% elif a.kind == 'appointment' %}
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          {% else %}
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+          {% endif %}
+        </span>
+        <span class="act-text">{{ a.text }}</span>
+        <span class="act-time">{{ a.time }}</span>
+      </li>
+      {% empty %}
+      <li class="act-empty">No recent activity yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {# ----- Pending Tasks: every task, with filter buttons (dashboard/js/admin_dashboard.js) ----- #}
+  <div class="tab-panel" role="tabpanel" id="panel-pending" aria-labelledby="tab-pending">
+
+    {% if tasks %}
+    <div class="subtabs" role="group" aria-label="Filter tasks by category" data-filters>
+      <button class="subtab" type="button" data-filter="all" aria-pressed="true">
+        All <span class="sub-count">{{ tasks_total }}</span>
+      </button>
+      {% for c in categories %}
+      <button class="subtab" type="button" data-filter="{{ c.key }}" aria-pressed="false">
+        {{ c.name }}
+        {% if c.count %}<span class="sub-count">{{ c.count }}</span>{% endif %}
+      </button>
+      {% endfor %}
+    </div>
+
+    <ul class="tasks" data-task-list>
+      {% for t in tasks %}
+      <li class="task" data-cat="{{ t.cat }}">
+        <span class="task-ico" aria-hidden="true">
+          <svg class="ico" viewBox="0 0 24 24"><use href="#ti-{{ t.key }}"/></svg>
+        </span>
+        <div class="task-body">
+          <strong>{{ t.title }}</strong>
+          <span>{{ t.text }}</span>
+        </div>
+        {% if t.count %}
+        <span class="task-count"><span class="sr-only">Waiting: </span>{{ t.count }}</span>
+        {% else %}
+        <span class="task-clear">All clear</span>
+        {% endif %}
+        {# t.url is # until that page exists #}
+        <a class="btn o s" href="{{ t.url }}">Review</a>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {# Payments details: only shown when the Payments filter is selected #}
+    <div class="pay-detail" data-pay-detail hidden>
+      <ul class="pay-summary">
+        {% for p in payment_summary %}
+        <li class="pay-box">
+          <span class="pay-num">{{ p.value }}</span>
+          <span class="pay-label">{{ p.label }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+
+      <div class="table-wrap">
+        <table class="tb">
+          <caption class="sr-only">Payments that need action</caption>
+          <thead>
+            <tr>
+              <th>Invoice</th><th>Customer</th><th>Amount (MUR)</th>
+              <th>Issue</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in payment_actions %}
+            <tr>
+              <td>{{ r.ref }}</td>
+              <td>{{ r.customer }}</td>
+              <td>{{ r.amount }}</td>
+              <td>{{ r.issue }}</td>
+              <td><span class="b {{ r.tone }}">{{ r.status }}</span></td>
+              <td><a class="btn o s" href="{{ payments_url|default:'/payments/admin-dashboard/' }}">{{ r.action }}</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="more"><a class="btn o s" href="{{ payments_url|default:'/payments/admin-dashboard/' }}">View all payments</a></p>
+    </div>
+    {% else %}
+    <p class="act-empty">Nothing is waiting for you right now.</p>
+    {% endif %}
+
+  </div>
+
+</section>
+{% endblock %}
+
+{% block page_js %}<script src="{% static 'dashboard/js/admin_dashboard.js' %}" defer></script>{% endblock %}

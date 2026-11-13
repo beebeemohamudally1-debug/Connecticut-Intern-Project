@@ -1,9 +1,174 @@
 {% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Admin layout: sidebar on the left, top navbar and page content on the right.
+  Every Admin page extends this file and fills these blocks:
+    title    - text in the browser tab
+    page     - which sidebar link to highlight (must match a data-nav value below)
+    crumb    - page name shown in the navbar, after "Administrator workspace /"
+    content  - the page itself
+
+  Icons are small outline SVG drawings written directly in the HTML.
+  Their size and line style come from the .ico class in admin.css.
+{% endcomment %}
+
 {% block body %}
+{% url 'dashboard:admin_dashboard' as dashboard_url %}
+{% url 'accounts_admin:users' as users_url %}
+{% url 'accounts_admin:notifications' as notifications_url %}
+{# Styles used only by the Admin layout #}
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+
+<a class="skip" href="#main">Skip to main content</a>
+
 <div class="app">
-<aside class="sb"><div class="logo"><i></i>HandyConnect</div><nav><a href="#" data-nav="dashboard">Dashboard</a><a href="#" data-nav="payments">Payments</a><a href="#" data-nav="invoices">Invoices</a><a href="#" data-nav="materials">Materials</a><a href="#" data-nav="payouts">Payouts</a><a href="#" data-nav="fees">Listing fees</a><a href="#" data-nav="penalties">Penalties</a><a href="#" data-nav="complaints">Complaints</a><a href="#" data-nav="reports">Reports</a></nav></aside>
-<main class="main">
-{% block content %}{% endblock %}
-</main>
+
+  {# Dark layer behind the sidebar drawer on phones. Tapping it closes the drawer. #}
+  <div class="scrim" data-nav-close></div>
+
+  {# ---------- Sidebar (a slide-in drawer on phones) ---------- #}
+  <aside class="sb portal" id="admin-sidebar" aria-label="Admin navigation">
+    <button class="sb-close" type="button" data-nav-close aria-label="Close navigation">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <a class="logo" href="{{ dashboard_url }}" aria-label="HandyConnect, go to dashboard">
+      <i><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></i>
+      HandyConnect
+    </a>
+
+    <a class="sb-ws" href="{{ dashboard_url }}">
+      <span class="sb-ws-label">Workspace</span>
+      <span class="sb-ws-name">Administrator portal</span>
+    </a>
+
+    <nav>
+      {# href="#" means the page is not built yet. Replace each one with its real URL when that page exists. #}
+      <a href="{{ dashboard_url }}" data-nav="dashboard">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Dashboard</a>
+      <a href="#" data-nav="services">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Services</a>
+      <a href="{{ users_url }}" data-nav="users">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Users</a>
+      <a href="#" data-nav="skills">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/></svg>
+        Skills</a>
+      <a href="#" data-nav="requests">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+        Service Requests</a>
+      <a href="#" data-nav="progress">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
+        Work Progress</a>
+      <a href="#" data-nav="labour-quotes">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        Service Quotations</a>
+      <a href="#" data-nav="material-quotes">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m7.5 4.27 9 5.15M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+        Material Quotations</a>
+      <a href="#" data-nav="appointments">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Appointments</a>
+      <a href="/payments/admin-dashboard/" data-nav="payments">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Payments</a>
+      <a href="#" data-nav="complaints">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        Complaints</a>
+      <a href="#" data-nav="reports">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        Reports</a>
+      <a href="{{ notifications_url }}" data-nav="notifications">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        Notifications</a>
+      <a href="#" data-nav="reviews">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        Reviews</a>
+    </nav>
+
+    <div class="sb-foot">
+      <div class="sb-help">Need a hand?</div>
+      <a href="#" data-nav="help">
+        Help &amp; support
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+      </a>
+      <div class="sb-copy">HandyConnect &copy; {% now "Y" %}</div>
+    </div>
+  </aside>
+
+  {# ---------- Right-hand side: navbar + page ---------- #}
+  <div class="pane">
+
+    <header class="topbar">
+      <div class="tb-left">
+        {# Only visible on phones: shows or hides the sidebar #}
+        <button class="icon-btn nav-toggle" type="button" data-nav-toggle
+                aria-controls="admin-sidebar" aria-expanded="false" aria-label="Show or hide navigation">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+
+        <div class="crumb">
+          <a class="crumb-home mut" href="{{ dashboard_url }}">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+            Administrator workspace
+          </a>
+          <span class="mut" aria-hidden="true">/</span>
+          <strong>{% block crumb %}Payments{% endblock %}</strong>
+        </div>
+      </div>
+
+      <div class="tb-right">
+        {# Search box: not connected to anything yet #}
+        <form class="search" role="search" action="#" data-demo="Search is not connected yet.">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="in" type="search" placeholder="Search..." aria-label="Search">
+        </form>
+
+        {# Notification bell with the unread count (3 is sample data) #}
+        <a class="icon-btn" href="{{ notifications_url }}" aria-label="Notifications, 3 unread">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="count">3</span>
+        </a>
+
+        {# Admin name and initials. Uses the logged-in user's name, or "Admin" when nobody is logged in yet. #}
+        {% firstof request.user.get_full_name request.user.username "Admin" as admin_name %}
+        <div class="user">
+          <button class="user-btn" type="button" data-user-menu-btn aria-haspopup="true" aria-expanded="false">
+            <span class="avatar">{{ admin_name|slice:":2"|upper }}</span>
+            <span class="user-name">{{ admin_name }}</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="menu" data-user-menu hidden>
+            <div class="menu-head">
+              <span class="avatar">{{ admin_name|slice:":2"|upper }}</span>
+              <span>
+                <span class="menu-name">{{ admin_name }}</span>
+                <span class="menu-role">Administrator</span>
+              </span>
+            </div>
+            <a href="{% url 'accounts_admin:profile' %}">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              View Profile</a>
+            <a class="danger" href="#">
+              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+              Logout</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main" id="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
 </div>
+
+{# Small message that appears at the bottom of the screen (used by the JavaScript step) #}
+<div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+
+{# Shared Admin scripts #}
+<script src="{% static 'js/admin.js' %}" defer></script>
+{# Page-specific script (a page fills this block when it needs its own JavaScript) #}
+{% block page_js %}{% endblock %}
 {% endblock %}

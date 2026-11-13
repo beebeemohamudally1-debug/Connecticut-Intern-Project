@@ -1,0 +1,2 @@
+{% load static %}<link rel="stylesheet" href="{% static 'css/jobs.css' %}">
+{% if messages %}<ul class="msgs" role="status">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}

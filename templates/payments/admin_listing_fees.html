@@ -1,0 +1,6 @@
+{% extends "base_admin.html" %}
+{% block title %}Admin · Listing fees | HandyConnect{% endblock %}
+{% block page %}fees{% endblock %}
+{% block content %}
+<div class="bar"><div><div class="lab">Admin · Listing fees</div><h1>Handyman listing fees</h1><p class="sub">Handymen are listed in search only while their fee is active.</p></div><button class="btn">Record fee</button></div><div class="card"><table class="tb"><thead><tr><th>Handyman</th><th>Skill</th><th>Fee (MUR)</th><th>Period covered</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td>Kevin L.</td><td>Plumbing</td><td>1,500.00</td><td>Nov 2026</td><td><span class="b gr">Active</span></td><td><button class="btn o s">Deactivate</button></td></tr><tr><td>Marc D.</td><td>Electrical</td><td>1,500.00</td><td>Oct 2026</td><td><span class="b re">Lapsed</span></td><td><button class="btn s">Record fee</button></td></tr><tr><td>Sofia P.</td><td>Painting</td><td>1,500.00</td><td>Nov 2026</td><td><span class="b gr">Active</span></td><td><button class="btn o s">Deactivate</button></td></tr><tr><td>Raj K.</td><td>Carpentry</td><td>-</td><td>-</td><td><span class="b ye">Pending approval</span></td><td><button class="btn s">Record fee</button></td></tr></tbody></table></div>
+{% endblock %}

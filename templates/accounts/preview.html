@@ -1,0 +1,5 @@
+{% extends "accounts/auth_top.html" %}
+{# Dev-only gallery of every screen state. Delete with accounts/frontend_stubs.py. #}
+{% block title %}Screen states | HandyConnect{% endblock %}
+{% block card %}<h1>Screen state gallery</h1><p class="au-sub" style="margin-bottom:20px">Frontend preview only. Each link shows one state of a screen.</p>
+{% for title, links in rows %}<h2 style="font-size:16px;margin:16px 0 8px">{{ title }}</h2><div style="display:flex;flex-wrap:wrap;gap:8px">{% for name, url in links %}<a class="au-btn is-secondary is-compact" href="{{ url }}">{{ name }}</a>{% endfor %}</div>{% endfor %}{% endblock %}

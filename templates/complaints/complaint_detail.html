@@ -1,0 +1,48 @@
+{% extends base_template %}
+{% block title %}{{ c.reference }} | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block content %}
+{% include "jobs/_messages.html" %}
+<div class="bar"><div>
+  <div class="lab"><a href="{% url 'complaints:list' %}">← Complaints</a></div>
+  <h1>{{ c.reference }} · {{ c.subject }}</h1>
+  <p class="sub"><span class="b {{ c.badge }}">{{ c.get_status_display }}</span> Submitted {{ c.created_at|date:"d/m/Y H:i" }}</p>
+</div></div>
+<div class="g2">
+<div class="stack">
+  <div class="card"><h2>Complaint</h2>
+    <div class="row"><span class="mut">Submitted by</span><span>{{ c.submitted_by.get_full_name|default:c.submitted_by.username }} ({{ c.submitted_by.role }})</span></div>
+    <div class="row"><span class="mut">Regarding</span><span>{{ c.against.get_full_name|default:c.against.username|default:"-" }}</span></div>
+    <div class="row"><span class="mut">Job</span><span>{% if role == 'admin' %}<a href="{% url 'jobs:detail' c.job.pk %}">{{ c.job.reference }}</a>{% else %}{{ c.job.reference }}{% endif %} · {{ c.job.service_name }}</span></div>
+    <p>{{ c.description }}</p>
+    {% for e in evidence %}<p><a href="{% url 'complaints:evidence_file' e.pk %}">Attachment {{ forloop.counter }}</a> <span class="mut">({{ e.uploaded_by.get_full_name|default:e.uploaded_by.username }})</span></p>{% endfor %}
+  </div>
+
+  {% if c.outcome %}<div class="card"><h2>Decision</h2><p>{{ c.outcome }}</p>
+    {% if c.is_resolved %}<p class="mut">Resolved {{ c.resolved_at|date:"d/m/Y H:i" }}</p>{% endif %}</div>{% endif %}
+
+  <div class="card"><h2>Communication</h2>
+    {% for m in thread %}<div class="thread-item {{ m.kind }}"><b>{{ m.author.get_full_name|default:m.author.username }}</b>
+      {% if m.kind == 'enquiry' %}asked {{ m.recipient.get_full_name|default:m.recipient.username }}{% else %}responded{% endif %}
+      <span class="mut">· {{ m.created_at|date:"d/m/Y H:i" }}</span><br>{{ m.body }}</div>
+    {% empty %}<p class="mut">No messages yet.</p>{% endfor %}
+    {% if reply_form %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'complaints:reply' c.pk %}">{% csrf_token %}
+      {% include "jobs/_form_fields.html" with form=reply_form %}<button class="btn">Send response</button></form>{% endif %}
+  </div>
+</div>
+
+<div class="stack">
+  {% if role == 'admin' and enquiry_form %}
+  <div class="card"><h2>Ask for information</h2>
+    <form method="post" action="{% url 'complaints:enquiry' c.pk %}">{% csrf_token %}{% include "jobs/_form_fields.html" with form=enquiry_form %}<button class="btn o">Send enquiry</button></form></div>
+  <div class="card"><h2>Update status and record outcome</h2>
+    <form method="post" action="{% url 'complaints:resolution' c.pk %}">{% csrf_token %}{% include "jobs/_form_fields.html" with form=resolution_form %}<button class="btn">Save</button></form>
+    <p class="sub" style="margin:12px 0 0">A resolved complaint can no longer be changed.</p></div>
+  {% endif %}
+  <div class="card"><h2>History</h2>
+    {% for l in log %}<div class="thread-item">{{ l.created_at|date:"d/m/Y H:i" }} · {{ l.actor.get_full_name|default:l.actor.username }}<br>{% if l.from_status %}{{ l.from_status }} → {% endif %}{{ l.to_status }} {{ l.note }}</div>{% endfor %}
+  </div>
+</div>
+</div>
+{% endblock %}

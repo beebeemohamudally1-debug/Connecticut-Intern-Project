@@ -1,0 +1,13 @@
+{% extends "accounts/auth_base.html" %}
+{# S22 Admin first-login password change. Same context as reset_new.html. #}
+{% block title %}Change temporary password | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Change your temporary password</h1><p class="au-sub">You must set a new password before accessing the admin dashboard.</p></div>
+{% include "accounts/_auth_alert.html" with kind="info" text="Required on your first login with a temporary password." %}
+<form method="post" novalidate data-au-once>{% csrf_token %}
+{% include "accounts/_auth_field.html" with id="password" name="password" label="New password" type="password" error=errors.password autocomplete="new-password" placeholder="Enter password" %}
+{% include "accounts/_auth_rules.html" %}
+{% include "accounts/_auth_field.html" with id="confirm" name="confirm" label="Confirm password" type="password" error=errors.confirm autocomplete="new-password" placeholder="Re-enter password" %}
+<p class="au-sub au-note">Pasting is allowed in both password fields.</p>
+<button class="au-btn" type="submit"><span class="au-label">Change password and continue</span></button></form>
+{% endblock %}

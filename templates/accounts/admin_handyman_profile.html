@@ -1,0 +1,106 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Handyman Profile (section 3, screen 03).
+  Data comes from the view as `handyman`: name, initials, id, kind, email,
+  phone, areas, availability, status, verified, registered, completed,
+  assigned, skills (list of names) and services (list of names).
+  The three pop-ups live in _user_modals.html (screens 05, 06, 07).
+{% endcomment %}
+
+{% block title %}Handyman Profile | HandyConnect{% endblock %}
+{% block page %}users{% endblock %}
+{% block crumb %}Users{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}">
+{% url 'accounts_admin:users' as users_url %}
+
+<a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
+
+<div class="bar">
+  <div>
+    <h1>Handyman Profile</h1>
+    <p class="sub">{{ handyman.id }} &bull; {% if handyman.verified %}Verified handyman{% else %}Unverified handyman{% endif %}</p>
+  </div>
+  <div class="actions" data-actions>
+    {# BACKEND: link to this handyman's daily work report #}
+    <a class="btn soft-green s" href="#">View Daily Work Report</a>
+    <button class="btn soft-red s" type="button" data-open="delete">Delete Account</button>
+    {% if handyman.status == 'Suspended' %}
+      <button class="btn soft-green s" type="button" data-open="reactivate">Reactivate Account</button>
+    {% else %}
+      <button class="btn soft-warn s" type="button" data-open="suspend">Suspend Account</button>
+    {% endif %}
+    <a class="btn soft-blue s" href="#">Job history</a>
+  </div>
+</div>
+
+<p class="demo" role="status" data-demo hidden></p>
+
+{# Three rows (as in Figma): profile + job summary, skills + services, verification strip #}
+<div class="hp-grid">
+  <section class="card cd-card hp-profile" aria-label="Handyman overview">
+    <div class="cd-id">
+      <span class="avatar big" aria-hidden="true">{{ handyman.initials }}</span>
+      <div>
+        <h2>{{ handyman.name }}</h2>
+        {% if handyman.verified %}<span class="b gr">Verified</span>{% else %}<span class="b ye">Not verified</span>{% endif %}
+      </div>
+    </div>
+    <dl class="hp-facts">
+      <div><dt>Email</dt><dd>{{ handyman.email }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ handyman.phone }}</dd></div>
+      <div><dt>Service areas</dt><dd>{{ handyman.areas }}</dd></div>
+      <div><dt>Availability</dt><dd>{{ handyman.availability }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card cd-card hp-summary">
+    <h2>Job Summary</h2>
+    <div class="row"><span>Completed jobs</span><strong>{{ handyman.completed }}</strong></div>
+    <div class="row"><span>Assigned jobs</span><strong>{{ handyman.assigned }}</strong></div>
+    <div class="row"><span>Account status</span><strong class="state {% if handyman.status == 'Suspended' %}bad{% else %}ok{% endif %}" data-status>{{ handyman.status }}</strong></div>
+    <div class="row"><span>Registered</span><strong>{{ handyman.registered }}</strong></div>
+  </section>
+
+  <section class="card cd-card hp-skills">
+    <div class="card-head">
+      <h2>Approved Skills</h2>
+      <span class="b">{{ handyman.skills|length }} skills</span>
+    </div>
+    <ul class="list">
+      {% for s in handyman.skills %}
+      <li>
+        <span class="skill"><svg class="dia" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/><path d="M12 8l4 4-4 4-4-4z"/></svg>{{ s }}</span>
+        <span class="b gr">Approved</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card cd-card hp-services">
+    <h2>Services Offered</h2>
+    <ul class="list">
+      {% for s in handyman.services %}
+      <li><span>{{ s }}</span><strong class="state ok">Active</strong></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card hp-verify">
+    <div>
+      <h2>Registration verification</h2>
+      <p class="mut">Identity document and qualification records are available for administrator review.</p>
+    </div>
+    {% url 'accounts_admin:handyman_documents' as verify_url %}
+    <a class="btn soft-blue s" href="{{ verify_url|default:'#' }}">View documents</a>
+  </section>
+</div>
+
+{% include "accounts/_user_modals.html" with person=handyman %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'accounts/js/admin_user_detail.js' %}"></script>
+{% endblock %}

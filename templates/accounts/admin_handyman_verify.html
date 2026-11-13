@@ -1,0 +1,105 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Handyman Registration Verification (section 3, screen 04).
+  Data comes from the view as `applicant`: id, name, email, submitted, status
+  ("Pending", "Approved" or "Rejected"), decided (date), notes and
+  documents (list of title, file, action).
+  Only a Pending applicant can be approved or rejected. For anyone already
+  decided, the page shows the documents and the decision, with no buttons.
+  Approve and Reject only show a demo message until the backend connects them.
+{% endcomment %}
+
+{% block title %}Registration Verification | HandyConnect{% endblock %}
+{% block page %}users{% endblock %}
+{% block crumb %}Users{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}">
+{% url 'accounts_admin:users' as users_url %}
+
+<a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
+
+<div class="bar">
+  <div>
+    <h1>Handyman Registration Verification</h1>
+    <p class="sub">{% if applicant.status == 'Pending' %}Review submitted registration details and verification documents before approval.{% else %}Registration documents and the decision already recorded for this handyman.{% endif %}</p>
+  </div>
+  {% if applicant.status == 'Approved' %}
+    <span class="b gr">Approved</span>
+  {% elif applicant.status == 'Rejected' %}
+    <span class="b re">Rejected</span>
+  {% else %}
+    <span class="b ye">Awaiting Review</span>
+  {% endif %}
+</div>
+
+<p class="demo" role="status" data-demo hidden></p>
+
+{# Rows (as in Figma): applicant details across the top, then documents beside the decision #}
+<div class="hp-grid vf">
+  <section class="card cd-card vf-details">
+    <h2>Applicant Details</h2>
+    <dl class="hp-facts four">
+      <div><dt>Handyman ID</dt><dd>{{ applicant.id }}</dd></div>
+      <div><dt>Full name</dt><dd>{{ applicant.name }}</dd></div>
+      <div><dt>Email address</dt><dd>{{ applicant.email }}</dd></div>
+      <div><dt>Submitted</dt><dd>{{ applicant.submitted }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card cd-card vf-docs">
+    <div>
+      <h2>Submitted Documents</h2>
+      <p class="mut vf-hint">{% if applicant.status == 'Pending' %}Check the uploaded files for completeness and validity.{% else %}Uploaded files kept for reference.{% endif %}</p>
+    </div>
+    <ul class="list docs" data-paged data-page-size="4">
+      {% for d in applicant.documents %}
+      <li>
+        <span class="doc-icon" aria-hidden="true">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        </span>
+        <span class="doc-text"><strong>{{ d.title }}</strong><span class="mut">{{ d.file }}</span></span>
+        <a class="doc-link" href="#">{{ d.action }}<span class="sr-only"> {{ d.title }}</span></a>
+      </li>
+      {% endfor %}
+    </ul>
+    {# 4 documents per page; page buttons are built by admin_user_detail.js #}
+    <nav class="pager" aria-label="Document pages" data-list-pages></nav>
+  </section>
+
+  {% if applicant.status == 'Pending' %}
+  <section class="card cd-card vf-decision">
+    <div>
+      <h2>Verification Decision</h2>
+      <p class="mut vf-hint">Confirm the documents are valid and match the applicant's profile.</p>
+    </div>
+    <label class="vf-notes">
+      <span class="sr-only">Review notes (optional)</span>
+      <textarea class="in" rows="3" placeholder="Review notes (optional)" data-notes></textarea>
+    </label>
+    <div class="decision">
+      <button class="btn green" type="button" data-decide="approved">Approve Registration</button>
+      <button class="btn soft-red" type="button" data-decide="rejected">Reject Registration</button>
+    </div>
+  </section>
+  {% else %}
+  <section class="card cd-card vf-decision">
+    <div>
+      <h2>Decision Recorded</h2>
+      <p class="mut vf-hint">Outcome of the review.</p>
+    </div>
+    <dl class="hp-facts one">
+      <div><dt>Decision</dt><dd>{{ applicant.status }}</dd></div>
+      <div><dt>Decided on</dt><dd>{{ applicant.decided }}</dd></div>
+      <div><dt>Review notes</dt><dd>{{ applicant.notes|default:"No notes were added." }}</dd></div>
+    </dl>
+  </section>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'accounts/js/admin_user_detail.js' %}"></script>
+{% endblock %}
