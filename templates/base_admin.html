@@ -125,11 +125,51 @@
           <input class="in" type="search" placeholder="Search..." aria-label="Search">
         </form>
 
-        {# Notification bell with the unread count (3 is sample data) #}
-        <a class="icon-btn" href="{{ notifications_url }}" aria-label="Notifications, 3 unread">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-          <span class="count">3</span>
-        </a>
+        
+{# Notification dropdown #}
+<div class="notification-dropdown" data-notification-dropdown
+     data-list-url="{% url 'notifications:notification_list' %}"
+     data-count-url="{% url 'notifications:unread_count' %}"
+     data-read-all-url="{% url 'notifications:mark_all_as_read' %}"
+     data-read-url-template="{% url 'notifications:mark_as_read' 0 %}">
+
+  <button class="icon-btn" type="button"
+          data-notification-toggle
+          aria-label="Notifications"
+          aria-expanded="false"
+          aria-controls="notification-popup">
+    <svg width="20" height="20" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+    </svg>
+    <span class="count" data-notification-count hidden>0</span>
+  </button>
+
+  <div class="notification-popup" id="notification-popup"
+       data-notification-popup hidden>
+
+    <div class="notification-popup-header">
+      <strong>Notifications</strong>
+      <button type="button" data-notification-read-all>
+        Mark all as read
+      </button>
+    </div>
+
+    <div class="notification-popup-list"
+         data-notification-list
+         aria-live="polite">
+      <p>Loading notifications...</p>
+    </div>
+
+    <a class="notification-popup-footer" href="{{ notifications_url }}">
+      View all notifications
+    </a>
+  </div>
+</div>
+
 
         {# Admin name and initials. Uses the logged-in user's name, or "Admin" when nobody is logged in yet. #}
         {% firstof request.user.get_full_name request.user.username "Admin" as admin_name %}
@@ -169,6 +209,7 @@
 
 {# Shared Admin scripts #}
 <script src="{% static 'js/admin.js' %}" defer></script>
+<script src="{% static 'js/notification_dropdown.js' %}" defer></script>
 {# Page-specific script (a page fills this block when it needs its own JavaScript) #}
 {% block page_js %}{% endblock %}
 {% endblock %}

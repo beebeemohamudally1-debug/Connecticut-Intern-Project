@@ -40,6 +40,7 @@ def notification_list(request):
             'id': n.id,
             'title': n.title,
             'message': n.message,
+            'url': n.url,
             'type': n.notification_type,
             'is_read': n.is_read,
             'created_at': n.created_at.isoformat(),

@@ -1,5 +1,6 @@
 from datetime import datetime
-
+from notifications.models import Notification
+from dashboard.permissions import role_required
 from django.shortcuts import render
 
 # Sample data until the real administrator is connected
@@ -197,9 +198,24 @@ NOTIFICATIONS = [
 ]
 
 
+
+@role_required('admin')
 def notifications(request):
-    """Administrator Notifications."""
-    return render(request, 'notifications/admin_notifications.html', {
-        'notifications': NOTIFICATIONS,
-        'unread_count': 8,
-    })
+    """Display real notifications for the administrator."""
+
+    notifications_list = Notification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+
+    unread_count = notifications_list.filter(
+        is_read=False
+    ).count()
+
+    return render(
+        request,
+        'notifications/admin_notifications.html',
+        {
+            'notifications': notifications_list,
+            'unread_count': unread_count,
+        }
+    )
