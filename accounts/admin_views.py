@@ -314,3 +314,96 @@ WORK_EVIDENCE = {
 def work_evidence(request):
     """Monitor Work Progress - Work Evidence & Completion Notes."""
     return render(request, 'jobs/admin_work_evidence.html', {'page': WORK_EVIDENCE})
+
+# Sample data for the Complaint Queue until the real complaints are connected
+COMPLAINT_QUEUE = {
+    'stats': {'total': 12, 'pending': 4, 'in_progress': 5, 'resolved': 3},
+    'complaints': [
+        {'reference': 'CMP-1152', 'subject': 'Access issue', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1051', 'created_at': datetime(2026, 10, 26, 9, 15), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1151', 'subject': 'Payment query', 'filed_by': 'Daniel Brooks', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1046', 'created_at': datetime(2026, 10, 26, 8, 40), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1150', 'subject': 'Invoice copy', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-0998', 'created_at': datetime(2026, 10, 25, 16, 5), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1149', 'subject': 'Missed appointment', 'filed_by': 'Amy Lee', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1043', 'created_at': datetime(2026, 10, 25, 13, 30), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1147', 'subject': 'Work quality', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1042', 'created_at': datetime(2026, 10, 25, 8, 50), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1146', 'subject': 'Customer not home', 'filed_by': 'Sofia Martinez', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1039', 'created_at': datetime(2026, 10, 24, 11, 20), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1144', 'subject': 'Billing question', 'filed_by': 'Rachel Kim', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1032', 'created_at': datetime(2026, 10, 22, 10, 10), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1141', 'subject': 'Damaged tile', 'filed_by': 'David Park', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1028', 'created_at': datetime(2026, 10, 20, 15, 45), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1138', 'subject': 'Parking access', 'filed_by': 'James Carter', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1022', 'created_at': datetime(2026, 10, 18, 9, 0), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1132', 'subject': 'Late arrival', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1016', 'created_at': datetime(2026, 10, 14, 14, 25), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+        {'reference': 'CMP-1128', 'subject': 'Wrong materials', 'filed_by': 'Priya Nair', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1011', 'created_at': datetime(2026, 10, 10, 12, 0), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+        {'reference': 'CMP-1124', 'subject': 'Access delay', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-0980', 'created_at': datetime(2026, 10, 6, 10, 30), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+    ],
+}
+
+
+def complaint_queue(request):
+    """Complaints - Complaint Queue."""
+    return render(request, 'complaints/admin_complaint_queue.html', {'page': COMPLAINT_QUEUE})
+
+# ---------- Complaints: case pages (sample data until the real complaint is connected) ----------
+CASE_BASE = '/admin-portal/complaints/case/'
+
+_CASE = {
+    'reference': 'CMP-1147', 'subject': 'Work quality',
+    'description': 'The sink no longer leaks, but the cabinet floor still feels damp. I’m concerned there may be trapped moisture. Could someone inspect it and confirm it is safe?',
+    'job': 'JOB-1042', 'filed_by': 'Emma Wilson', 'against': 'Marcus Reed',
+    'created_at': datetime(2026, 10, 25, 8, 50),
+    'evidence': [{'name': 'cabinet-moisture.jpg', 'size': '1.8 MB', 'url': '#'}, {'name': 'repair-after.jpg', 'size': '1.9 MB', 'url': '#'}],
+    'customer_msgs': 2, 'customer_last': datetime(2026, 10, 25, 11, 10),
+    'handyman_msgs': 2, 'handyman_last': datetime(2026, 10, 25, 10, 35),
+    'queue_url': '/admin-portal/complaints/', 'customer_url': CASE_BASE + 'customer/', 'handyman_url': CASE_BASE + 'handyman/',
+    'resolve_url': CASE_BASE + 'resolve/', 'status_url': '',
+}
+
+_ACTIVITY = [
+    {'title': 'Complaint received', 'at': datetime(2026, 10, 25, 8, 50), 'done': True},
+    {'title': 'Investigation opened', 'at': datetime(2026, 10, 25, 10, 0), 'done': True},
+    {'title': 'Enquiry sent to customer', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
+    {'title': 'Enquiry sent to handyman', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
+    {'title': 'Customer replied', 'at': datetime(2026, 10, 25, 11, 10), 'done': True},
+]
+
+CASE_OPEN = dict(_CASE, status='in_progress', status_label='In progress', is_resolved=False,
+                 activity=_ACTIVITY + [{'title': 'Resolved', 'detail': 'Awaiting outcome', 'done': False}])
+
+CASE_RESOLVED = dict(_CASE, status='resolved', status_label='Resolved', is_resolved=True,
+                     outcome='No-charge follow-up completed on 27 Oct. No active leak; moisture readings normal. Drying guidance provided and the customer confirmed the cabinet is dry. Original payment unchanged.',
+                     resolved_by='Olivia Chen', resolved_at=datetime(2026, 10, 27, 15, 30),
+                     activity=_ACTIVITY + [{'title': 'Resolved', 'at': datetime(2026, 10, 27, 15, 30), 'done': True}])
+
+CONVERSATIONS = {
+    'customer': dict(CASE_OPEN, who='Customer', other_label='Handyman', other_url=CASE_BASE + 'handyman/', case_url=CASE_BASE,
+        person={'name': 'Emma Wilson', 'first_name': 'Emma', 'initials': 'EW', 'email': 'emma.wilson@email.com'}, recipient_id=1, enquiry_url='',
+        messages=[
+            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Thanks for letting us know, Emma. Is there fresh water under the sink, or does the wood feel damp from before the repair? A current photo would help.'},
+            {'author': 'Emma Wilson', 'role': 'Customer', 'from_admin': False, 'at': datetime(2026, 10, 25, 11, 10), 'body': 'There’s no fresh drip. The wood feels damp near the back. I’ve attached a photo taken this morning.'},
+        ]),
+    'handyman': dict(CASE_OPEN, who='Handyman', other_label='Customer', other_url=CASE_BASE + 'customer/', case_url=CASE_BASE,
+        person={'name': 'Marcus Reed', 'first_name': 'Marcus', 'initials': 'MR', 'email': 'marcus.reed@email.com'}, recipient_id=2, enquiry_url='',
+        messages=[
+            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Hi Marcus. We are reviewing a moisture concern after the sink repair. Please describe your leak test and whether any moisture remained at handover.'},
+            {'author': 'Marcus Reed', 'role': 'Handyman', 'from_admin': False, 'at': datetime(2026, 10, 25, 10, 35), 'body': 'The connection stayed dry during a 10-minute test. The rear panel was still damp from the original leak. I can return for a moisture check on Oct 27 at no charge.'},
+        ]),
+}
+
+CASE_RESOLVE = dict(CASE_OPEN, case_url=CASE_BASE, resolution_url='',
+                    checks={'customer_replied': True, 'handyman_replied': True, 'has_evidence': True})
+
+
+def complaint_case(request):
+    """Complaints - Case Overview."""
+    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_OPEN})
+
+
+def complaint_case_resolved(request):
+    """Complaints - Case Overview of a resolved complaint."""
+    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_RESOLVED})
+
+
+def complaint_conversation(request, who):
+    """Complaints - private conversation ('customer' or 'handyman')."""
+    return render(request, 'complaints/admin_complaint_conversation.html', {'page': CONVERSATIONS[who]})
+
+
+def complaint_resolve(request):
+    """Complaints - Resolve case."""
+    return render(request, 'complaints/admin_complaint_resolve.html', {'page': CASE_RESOLVE})

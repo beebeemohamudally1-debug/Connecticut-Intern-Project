@@ -1,0 +1,138 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Complaints (section 12) - Complaint Queue.
+
+  Data comes from the view as `page`:
+    page.stats       -> total, pending, in_progress, resolved (counts of complaints)
+    page.complaints  -> one row per complaints.Complaint, newest first:
+        reference    -> complaint.reference        (CMP-1147)
+        subject      -> complaint.subject
+        filed_by     -> complaint.submitted_by full name
+        role         -> complaint.submitted_by.role ('customer' | 'handyman')
+        role_label   -> 'Customer' | 'Handyman'
+        job          -> complaint.job.reference     (JOB-1042)
+        created_at   -> complaint.created_at
+        status       -> 'pending' | 'in_progress' | 'resolved'
+        status_label -> 'Pending' | 'In progress' | 'Resolved'
+        url          -> that complaint's investigation page
+  BACKEND: replace the sample data with real complaints (all admins see all
+  complaints). Search, tabs, filters and the page buttons work in the browser
+  on the rows sent (5 per page). If you paginate on the server, send one page
+  at a time, send the counts in page.stats, and swap the buttons for links.
+{% endcomment %}
+
+{% block title %}Complaints | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block crumb %}Complaints{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_queue.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Every concern deserves a fair hearing.</h1>
+    <p class="sub">Complaint queue &middot; Review, investigate and resolve with care.</p>
+  </div>
+</div>
+
+<section class="cq-stats" aria-label="Complaint totals">
+  <div class="card cq-stat cq-s-pending">
+    <div class="cq-stat-top"><p class="cq-stat-label">Pending</p>
+      <span class="cq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span></div>
+    <p class="cq-stat-num">{{ page.stats.pending|default:0 }}</p>
+    <p class="cq-stat-hint">Waiting for someone to look</p>
+  </div>
+  <div class="card cq-stat cq-s-progress">
+    <div class="cq-stat-top"><p class="cq-stat-label">In progress</p>
+      <span class="cq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg></span></div>
+    <p class="cq-stat-num">{{ page.stats.in_progress|default:0 }}</p>
+    <p class="cq-stat-hint">Being looked into</p>
+  </div>
+  <div class="card cq-stat cq-s-resolved">
+    <div class="cq-stat-top"><p class="cq-stat-label">Resolved</p>
+      <span class="cq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="cq-stat-num">{{ page.stats.resolved|default:0 }}</p>
+    <p class="cq-stat-hint">Sorted out</p>
+  </div>
+  <div class="card cq-stat cq-s-total">
+    <div class="cq-stat-top"><p class="cq-stat-label">All complaints</p>
+      <span class="cq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg></span></div>
+    <p class="cq-stat-num">{{ page.stats.total|default:0 }}</p>
+    <p class="cq-stat-hint">Customers and handymen</p>
+  </div>
+</section>
+
+<section class="card cq-card" data-queue data-page-size="5">
+  <div class="cq-tabs" role="group" aria-label="Filter by status">
+    <button type="button" data-tab="" aria-pressed="true">All complaints &middot; {{ page.stats.total|default:0 }}</button>
+    <button type="button" data-tab="pending" aria-pressed="false">Pending &middot; {{ page.stats.pending|default:0 }}</button>
+    <button type="button" data-tab="in_progress" aria-pressed="false">In Progress &middot; {{ page.stats.in_progress|default:0 }}</button>
+    <button type="button" data-tab="resolved" aria-pressed="false">Resolved &middot; {{ page.stats.resolved|default:0 }}</button>
+  </div>
+
+  <div class="cq-tools">
+    <label class="cq-search">
+      <span class="sr-only">Search by complaint ID, name or job</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Complaint ID, name or job..." data-search>
+    </label>
+    <label>
+      <span class="sr-only">Submitted by</span>
+      <select class="in" data-by>
+        <option value="">All submitters</option>
+        <option value="customer">Customers</option>
+        <option value="handyman">Handymen</option>
+      </select>
+    </label>
+    <label class="cq-date">
+      <span>From</span>
+      <input class="in" type="date" data-from>
+    </label>
+    <label class="cq-date">
+      <span>To</span>
+      <input class="in" type="date" data-to>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb cq-table">
+    <thead>
+      <tr>
+        <th scope="col">Complaint</th>
+        <th scope="col">From</th>
+        <th scope="col">Job</th>
+        <th scope="col">Submitted</th>
+        <th scope="col">Status</th>
+        <th scope="col"><span class="sr-only">Action</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in page.complaints %}
+      <tr data-row data-status="{{ c.status }}" data-role="{{ c.role }}" data-date="{{ c.created_at|date:'Y-m-d' }}"
+          data-text="{{ c.reference|lower }} {{ c.subject|lower }} {{ c.filed_by|lower }} {{ c.job|lower }}">
+        <td data-label="Complaint"><span class="cq-subj">{{ c.subject }}</span><span class="cq-ref">{{ c.reference }}</span></td>
+        <td data-label="From"><span class="cq-who"><span class="cq-av cq-av-{{ c.role }}" aria-hidden="true">{{ c.filed_by|slice:":1" }}</span><span>{{ c.filed_by }}<span class="cq-role">{{ c.role_label }}</span></span></span></td>
+        <td data-label="Job">{{ c.job }}</td>
+        <td data-label="Submitted">{{ c.created_at|date:"d M Y" }}</td>
+        <td data-label="Status"><span class="b cq-{{ c.status }}">{{ c.status_label }}</span></td>
+        <td data-label="">
+          <a class="btn o s" href="{{ c.url|default:'#' }}">View case<span class="sr-only"> {{ c.reference }}</span></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="cq-empty" data-empty hidden>Nothing matches that search. Try clearing the filters.</p>
+
+  <div class="cq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="cq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'complaints/js/admin_complaint_queue.js' %}"></script>
+{% endblock %}

@@ -17,4 +17,10 @@ urlpatterns = [
     path('work-progress/job/', views.job_progress, name='work_progress_job'),
     path('work-progress/reports/', views.daily_reports, name='work_progress_reports'),
     path('work-progress/evidence/', views.work_evidence, name='work_progress_evidence'),
+    path('complaints/', views.complaint_queue, name='complaints'),
+    path('complaints/case/', views.complaint_case, name='complaint_case'),
+    path('complaints/case/resolved/', views.complaint_case_resolved, name='complaint_case_resolved'),
+    path('complaints/case/resolve/', views.complaint_resolve, name='complaint_resolve'),
+    path('complaints/case/customer/', views.complaint_conversation, {'who': 'customer'}, name='complaint_customer'),
+    path('complaints/case/handyman/', views.complaint_conversation, {'who': 'handyman'}, name='complaint_handyman'),
 ]

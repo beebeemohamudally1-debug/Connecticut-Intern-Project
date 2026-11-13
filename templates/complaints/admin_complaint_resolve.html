@@ -1,0 +1,60 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Complaints (section 12) - Resolve case.
+
+  Data comes from the view as `page`: reference, subject, job, filed_by, against,
+  case_url (back link), resolution_url (complaints:resolution),
+  checks -> three True/False values the admin can see were done:
+            customer_replied, handyman_replied, has_evidence (optional, for the ticks).
+  The form POSTs status=resolved and outcome (required) to complaints:resolution.
+  The backend notifies both parties separately. A resolved case cannot be changed.
+{% endcomment %}
+
+{% block title %}Resolve {{ page.reference }} | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block crumb %}Complaints / {{ page.reference }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Close this case</h1>
+    <p class="sub">{{ page.subject }} &middot; {{ page.reference }}</p>
+  </div>
+  <a class="btn o s" href="{{ page.case_url|default:'#' }}">&larr; Back to case</a>
+</div>
+
+<div class="cc-top">
+  <section class="card cc-card">
+    <h2>What was decided?</h2>
+    <p class="mut">Explain the outcome in plain words. Please don't copy anything from the private chats.</p>
+    <form method="post" action="{{ page.resolution_url|default:'#' }}" data-demo="Resolving is not connected yet." data-resolve>
+      {% csrf_token %}
+      <input type="hidden" name="status" value="resolved">
+      <label class="sr-only" for="outcome">Resolution outcome</label>
+      <textarea class="in cc-outcome" id="outcome" name="outcome" rows="7" required placeholder="For example: We arranged a free follow-up visit and the problem is fixed..."></textarea>
+      <p class="cc-notice">After this, the case is closed and can't be changed.</p>
+      <div class="cc-actions">
+        <button class="btn accent" type="submit">Resolve &amp; notify both people</button>
+        <a class="btn o" href="{{ page.case_url|default:'#' }}">Not yet</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card cc-card">
+    <h2>Before you close it</h2>
+    <ul class="cc-check">
+      <li class="{% if page.checks.customer_replied %}ok{% endif %}">You heard from {{ page.filed_by }}</li>
+      <li class="{% if page.checks.handyman_replied %}ok{% endif %}">You heard from {{ page.against }}</li>
+      <li class="{% if page.checks.has_evidence %}ok{% endif %}">You looked at the photos</li>
+    </ul>
+    <p class="cc-quote">Both {{ page.filed_by }} and {{ page.against }} will get the outcome as a separate notification.</p>
+  </section>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'complaints/js/admin_complaint_case.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Complaints (section 12) - Private conversation (one template for Customer AND Handyman).
+
+  Data comes from the view as `page`:
+    reference, subject, status, status_label, is_resolved, job, description -> complaint
+    who            -> 'Customer' | 'Handyman'
+    person         -> name, initials, email of that person (the message recipient)
+    messages       -> ComplaintMessage rows for THAT person only, oldest first:
+                      author, role ('Administrator' | 'Customer' | 'Handyman'),
+                      at (created_at), body, from_admin (True/False)
+    enquiry_url    -> complaints:enquiry (POST: recipient, body)
+    recipient_id   -> id of the person (hidden field "recipient")
+    case_url, other_url, other_label -> links back and to the other conversation
+  BACKEND: send only the messages for this person, never both threads together.
+  A resolved complaint cannot receive new messages, so the reply box is hidden.
+{% endcomment %}
+
+{% block title %}{{ page.who }} chat | {{ page.reference }} | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block crumb %}Complaints / {{ page.reference }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Private chat with {{ page.person.first_name }}</h1>
+    <p class="sub">{{ page.subject }} &middot; {{ page.reference }}</p>
+  </div>
+  <a class="btn o s" href="{{ page.case_url|default:'#' }}">&larr; Back to case</a>
+</div>
+
+<div class="cc-chat">
+  <section class="card cc-card cc-thread">
+    <div class="cc-person">
+      <span class="cc-av {% if page.who == 'Handyman' %}orange{% endif %}" aria-hidden="true">{{ page.person.initials }}</span>
+      <div><strong>{{ page.person.name }}</strong><br><span class="mut">{{ page.who }} &middot; {{ page.person.email }}</span></div>
+      <span class="cc-lock">Only you and {{ page.person.first_name }} can see this</span>
+    </div>
+
+    <div class="cc-msgs" data-msgs tabindex="0" aria-label="Messages">
+      {% for m in page.messages %}
+      <div class="cc-msg {% if m.from_admin %}admin{% endif %}">
+        <small>{{ m.author }} &middot; {{ m.at|date:"d M · H:i" }}</small>
+        {{ m.body }}
+      </div>
+      {% empty %}
+      <p class="mut">Nothing here yet. Say hello below.</p>
+      {% endfor %}
+    </div>
+
+    {% if page.is_resolved %}
+    <p class="cc-tip mut">This case is closed, so new messages can't be sent.</p>
+    {% else %}
+    <form class="cc-reply" method="post" action="{{ page.enquiry_url|default:'#' }}" data-demo="Sending is not connected yet.">
+      {% csrf_token %}
+      <input type="hidden" name="recipient" value="{{ page.recipient_id }}">
+      <label class="sr-only" for="body">Message {{ page.person.first_name }}</label>
+      <textarea class="in" id="body" name="body" rows="2" required placeholder="Write a private message to {{ page.person.first_name }}..."></textarea>
+      <button class="btn accent" type="submit">Send</button>
+    </form>
+    {% endif %}
+  </section>
+
+  <aside class="card cc-card">
+    <h2>About this case</h2>
+    <span class="b cc-{{ page.status }}">{{ page.status_label }}</span>
+    <blockquote class="cc-quote">&ldquo;{{ page.description|truncatechars:110 }}&rdquo;</blockquote>
+    <p class="cc-notice">{{ page.other_label }} can't see this chat. Each person has their own.</p>
+    <a class="btn o s" href="{{ page.other_url|default:'#' }}">Open {{ page.other_label|lower }} chat</a>
+  </aside>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'complaints/js/admin_complaint_case.js' %}"></script>
+{% endblock %}
