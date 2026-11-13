@@ -11,7 +11,7 @@
     started         -> first TimeLog.arrived_at    (empty if not started yet)
     due             -> job.due_date                (a date, no time)
     service         -> job.service_name
-    request_ref     -> job.request_ref
+    request_ref     -> job.service_request.reference
     scheduled       -> job.scheduled_start         (date)
     status          -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
                        ('delayed' = job.is_delayed, not a stored status)
