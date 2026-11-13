@@ -16,6 +16,7 @@
 {% url 'dashboard:admin_dashboard' as dashboard_url %}
 {% url 'accounts_admin:users' as users_url %}
 {% url 'accounts_admin:notifications' as notifications_url %}
+{% url 'accounts_admin:work_progress' as work_progress_url %}
 {# Styles used only by the Admin layout #}
 <link rel="stylesheet" href="{% static 'css/admin.css' %}">
 
@@ -58,7 +59,7 @@
       <a href="#" data-nav="requests">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
         Service Requests</a>
-      <a href="#" data-nav="progress">
+      <a href="{{ work_progress_url }}" data-nav="progress">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
         Work Progress</a>
       <a href="#" data-nav="labour-quotes">
