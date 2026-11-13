@@ -1,0 +1,6 @@
+{% extends "base_customer.html" %}
+{% block title %}Customer · Payment history | HandyConnect{% endblock %}
+{% block page %}history{% endblock %}
+{% block content %}
+<div class="bar"><div><div class="lab">Your account</div><h1>Payment history</h1><p class="sub">All your invoices and receipts.</p></div></div><div class="card"><table class="tb"><thead><tr><th>Invoice</th><th>Service</th><th>Amount (MUR)</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody><tr><td>INV-2026-0042</td><td>Plumbing</td><td>12,500.00</td><td>03/11/2026</td><td><span class="b gr">Cleared</span></td><td><a href="#">View receipt</a></td></tr><tr><td>INV-2026-0037</td><td>Electrical</td><td>6,200.00</td><td>22/10/2026</td><td><span class="b ye">Awaiting payment</span></td><td><a href="#">View invoice</a></td></tr><tr><td>INV-2026-0031</td><td>Painting</td><td>18,900.00</td><td>10/10/2026</td><td><span class="b re">Lapsed</span></td><td><a href="#">View invoice</a></td></tr><tr><td>INV-2026-0024</td><td>Carpentry</td><td>9,400.00</td><td>28/09/2026</td><td><span class="b gr">Cleared</span></td><td><a href="#">View receipt</a></td></tr></tbody></table></div>
+{% endblock %}
