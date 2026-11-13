@@ -1,0 +1,9 @@
+{% extends "accounts/auth_top.html" %}
+{# S18 Application status. Context: display_name, email, account_status (PENDING_APPROVAL | REJECTED | ACTIVE), rejection_reason. #}
+{% block title %}Application status | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Application status</h1><p class="au-sub">{{ display_name }} · {{ email }}</p></div>
+{% if account_status == "PENDING_APPROVAL" %}<p style="margin-bottom:16px"><span class="au-badge is-pending"><svg class="au-ic" aria-hidden="true"><use href="#au-i-clock"/></svg>Status: Pending</span></p>{% include "accounts/_auth_alert.html" with kind="info" text="Your application is under review" %}
+{% elif account_status == "REJECTED" %}<p style="margin-bottom:16px"><span class="au-badge is-rejected"><svg class="au-ic" aria-hidden="true"><use href="#au-i-x"/></svg>Status: Rejected</span></p>{% include "accounts/_auth_alert.html" with kind="error" text=rejection_reason %}
+{% else %}<p style="margin-bottom:20px"><span class="au-badge is-active"><svg class="au-ic" aria-hidden="true"><use href="#au-i-check"/></svg>Status: Active</span></p><a class="au-btn is-compact" href="{% url 'dashboard:handyman_dashboard' %}">Go to dashboard</a>{% endif %}
+{% endblock %}

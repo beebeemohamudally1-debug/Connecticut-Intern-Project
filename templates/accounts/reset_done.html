@@ -1,0 +1,7 @@
+{% extends "accounts/auth_base.html" %}
+{# S15 success. Context: message. #}
+{% block title %}Password changed | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Password changed</h1></div>{% include "accounts/_auth_alert.html" with kind="success" text=message %}
+<a class="au-btn" href="{% url 'accounts:login' %}">Go to login</a>
+{% endblock %}

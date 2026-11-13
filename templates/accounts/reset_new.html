@@ -1,0 +1,15 @@
+{% extends "accounts/auth_base.html" %}
+{% comment %}
+  S15 New password. Context: errors {password, confirm}, rules = [(key, label, met)].
+  Rule keys: len upper lower digit common. The page checks the first four live; the server decides all five.
+{% endcomment %}
+{% block title %}New password | HandyConnect{% endblock %}
+{% block card %}
+<div class="au-intro"><h1>Create your new password</h1><p class="au-sub">Choose a password to secure your account.</p></div>
+<form method="post" novalidate data-au-once>{% csrf_token %}
+{% include "accounts/_auth_field.html" with id="password" name="password" label="Password" type="password" error=errors.password autocomplete="new-password" placeholder="Enter password" %}
+{% include "accounts/_auth_rules.html" %}
+{% include "accounts/_auth_field.html" with id="confirm" name="confirm" label="Confirm password" type="password" error=errors.confirm autocomplete="new-password" placeholder="Re-enter password" %}
+<p class="au-sub au-note">Pasting is allowed in both password fields.</p>
+<button class="au-btn" type="submit"><span class="au-label">Change password</span></button></form>
+{% endblock %}
