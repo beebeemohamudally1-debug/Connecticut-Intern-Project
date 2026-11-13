@@ -1,9 +1,175 @@
-{% extends "base.html" %}
 {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handyman Dashboard</title>
 
-{% block content %}
-<link rel="stylesheet" href="{% static 'dashboard/css/handyman_dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_dashboard.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+</head>
+<body>
 
-<h1>Handyman Dashboard</h1>
+<div class="container">
 
-{% endblock %}
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>HandyCut</h2>
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="{% url 'handyman_dashboard' %}" class="active">
+                <i class="fas fa-house"></i> Dashboard
+            </a></li>
+
+            <li><a href="{% url 'assigned_jobs' %}">
+                <i class="fas fa-briefcase"></i> Assigned Jobs
+            </a></li>
+
+            <li><a href="{% url 'job_requests' %}">
+                <i class="fas fa-envelope-open-text"></i> Job Requests
+            </a></li>
+
+            <li><a href="{% url 'job_tracking' %}">
+                <i class="fas fa-location-dot"></i> Job Tracking
+            </a></li>
+
+            <li><a href="{% url 'job_progress' %}">
+                <i class="fas fa-spinner"></i> Job In Progress
+            </a></li>
+
+            <li><a href="{% url 'job_completed' %}">
+                <i class="fas fa-circle-check"></i> Job Completed
+            </a></li>
+
+            <li><a href="{% url 'report_customer' %}">
+                <i class="fas fa-triangle-exclamation"></i> Report Customer
+            </a></li>
+
+            <li><a href="{% url 'notifications' %}">
+                <i class="fas fa-bell"></i> Notifications
+            </a></li>
+        </ul>
+    </aside>
+
+    <main class="content">
+
+        <header class="topbar">
+            <h1>Handyman Dashboard</h1>
+
+            <div class="top-actions">
+                <button class="notification-btn">
+                    <i class="fas fa-bell"></i>
+                </button>
+
+                <div class="profile">
+                    <span>Name here</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="stats-grid">
+
+            <div class="card">
+                <h3>Assigned Jobs</h3>
+                <p>12</p>
+            </div>
+
+            <div class="card">
+                <h3>Pending Requests</h3>
+                <p>4</p>
+            </div>
+
+            <div class="card">
+                <h3>In Progress</h3>
+                <p>6</p>
+            </div>
+
+            <div class="card">
+                <h3>Completed</h3>
+                <p>48</p>
+            </div>
+
+        </section>
+
+        <section class="job-card">
+
+            <div class="job-header" onclick="toggleJob()">
+                <h2>Kitchen Sink Leak Repair</h2>
+                <span id="arrow">▲</span>
+            </div>
+
+            <div class="job-body" id="jobContent">
+
+                <div class="job-info">
+                    <h3>Job Brief</h3>
+
+                    <p>
+                        Water is dripping from the pipe below the kitchen sink.
+                        Inspect, replace damaged seal and test the installation.
+                    </p>
+
+                    <ul>
+                        <li>Inspect drain assembly</li>
+                        <li>Replace worn P-trap seal</li>
+                        <li>Leak test</li>
+                        <li>Clean work area</li>
+                    </ul>
+                </div>
+
+                <div class="milestones">
+                    <h3>Job Milestones</h3>
+
+                    <div class="status done">Assigned</div>
+                    <div class="status done">Scheduled</div>
+                    <div class="status active">In Progress</div>
+                    <div class="status">Completed</div>
+
+                    <button class="report-btn">
+                        Report Customer
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="material-request">
+
+            <h3>Materials Request</h3>
+
+            <textarea
+                placeholder="Need to purchase new pipe fittings and seal kit...">
+            </textarea>
+
+            <input type="file">
+
+            <button class="send-btn">
+                Send Request
+            </button>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script>
+function toggleJob() {
+
+    const content = document.getElementById('jobContent');
+    const arrow = document.getElementById('arrow');
+
+    if(content.style.display === 'none') {
+        content.style.display = 'flex';
+        arrow.innerHTML = '▲';
+    } else {
+        content.style.display = 'none';
+        arrow.innerHTML = '▼';
+    }
+}
+</script>
+
+</body>
+</html>

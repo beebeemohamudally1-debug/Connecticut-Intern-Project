@@ -1,0 +1,2 @@
+{# include with: for_id (the password input id, default "password"); needs `rules` = [(key, label, met)] #}
+<ul class="au-rules" data-au-rules="{{ for_id|default:'password' }}" aria-label="Password requirements">{% for key, label, met in rules %}<li data-rule="{{ key }}" class="{% if met %}is-met{% endif %}"><span class="au-mark" aria-hidden="true">{% if met %}✓{% else %}○{% endif %}</span><span>{{ label }}<span class="au-sr">{% if met %} (met){% else %} (not met){% endif %}</span></span></li>{% endfor %}</ul>

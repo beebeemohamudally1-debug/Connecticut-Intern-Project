@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Layout with a 64px navy top bar and one card (home page, application status).
+  Child pages fill:  title, card.
+  The bar shows "Log out" when request.user is signed in, otherwise "Log in".
+{% endcomment %}
+{% block page %}auth{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+{% include "accounts/_auth_icons.html" %}
+<div class="au-page">
+  <header class="au-topbar">{% include "accounts/_auth_logo.html" %}
+  {% if request.user.is_authenticated %}<form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="au-btn is-secondary is-compact" type="submit"><span class="au-label">Log out</span></button></form>
+  {% else %}<a class="au-btn is-compact" href="{% url 'accounts:login' %}">Log in</a>{% endif %}</header>
+  <main class="au-main" id="main"><div class="au-card">{% block card %}{% endblock %}</div></main>
+</div>
+<script src="{% static 'accounts/js/auth.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,151 @@
+/* ----------------------------------------------------------
+   HandyConnect: login, recovery, admin sign-in and status pages.
+   Every class starts with "au-" so nothing here can clash with
+   style.css or admin.css (which both define .btn, .card, .logo ...).
+   Colours come from the variables in style.css; the fallbacks
+   after each comma keep this file working on its own.
+   ---------------------------------------------------------- */
+.au-page {
+  --au-navy: var(--navy, #142D48);
+  --au-orange: var(--orange, #F47939);
+  --au-orange-hover: #DC6D33;   /* orange, 10% darker */
+  --au-orange-active: #CF6730;  /* orange, 15% darker */
+  --au-blue: var(--blue, #2563EB);
+  --au-text: var(--text, #203248);
+  --au-muted: var(--muted, #718199);
+  --au-border: var(--border, #BCCBDA);
+  --au-line: var(--line, #E4EAF0);
+  --au-grey: var(--grey-bg, #F5F7FA);
+  --au-light-blue: var(--light-blue, #EAF1F8);
+  --au-green: var(--green, #13866C);
+  --au-red: var(--red, #C95050);
+  --au-amber-bg: var(--amber, #FFF3DF);
+  --au-amber-text: #8A5200;
+  --au-red-bg: #FBEDED;
+  --au-green-bg: #E7F5F1;
+  font-family: Inter, Arial, sans-serif;
+  color: var(--au-text);
+  line-height: 1.5;
+}
+
+.au-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.au-ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.au-page h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; font-weight: 700; color: var(--au-navy); }
+.au-page p { margin: 0; }
+.au-sub { font-size: 15px; color: var(--au-text); }
+.au-page a { color: var(--au-blue); font-weight: 600; text-decoration: none; }
+.au-page a:hover { text-decoration: underline; }
+.au-page a:focus-visible,
+.au-page button:focus-visible { outline: 2px solid var(--au-blue); outline-offset: 2px; }
+.au-intro { margin-bottom: 24px; }
+
+/* ---------- Layout 1: navy brand panel + form (login, recovery, admin) ---------- */
+.au-split { display: grid; grid-template-columns: 480px 1fr; min-height: 100vh; background: var(--au-grey); }
+.au-split.is-story { grid-template-columns: 560px 1fr; }
+.au-panel { background: var(--au-navy); color: #fff; display: flex; flex-direction: column; padding: 48px; }
+.is-story .au-panel { gap: 28px; padding: 40px 48px; }
+.au-region { display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+.au-card { width: 100%; max-width: 480px; background: #fff; border: 1px solid var(--au-line); border-radius: 8px; padding: 32px; }
+
+.au-logo { display: inline-flex; align-items: center; gap: 10px; color: #fff !important; font-size: 18px; font-weight: 700; text-decoration: none !important; }
+.au-logo-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--au-orange); display: grid; place-items: center; }
+.au-logo-mark .au-ic { width: 18px; height: 18px; stroke: #fff; }
+
+.au-tagline { margin: auto 0; }
+.au-tagline-rule { width: 64px; height: 4px; background: var(--au-blue); margin-bottom: 24px; }
+.au-tagline p { font-size: 40px; line-height: 1.2; font-weight: 700; max-width: 400px; }
+
+.is-story h2 { margin: 0 0 16px; font-size: 36px; line-height: 1.2; font-weight: 700; color: #fff; }
+.au-lead { font-size: 15px; color: #C9D6E4; max-width: 460px; }
+.au-photo { width: 100%; max-width: 460px; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 12px; display: block; }
+.au-copy { font-size: 16px; max-width: 460px; }
+.au-trust { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #C9D6E4; margin-top: auto; }
+.au-trust .au-ic { width: 16px; height: 16px; stroke: var(--au-orange); }
+
+/* Small screens show a slim navy bar instead of the panel */
+.au-mbar { display: none; background: var(--au-navy); padding: 0 16px; height: 64px; align-items: center; }
+
+/* ---------- Layout 2: top bar + one card (home, application status) ---------- */
+.au-topbar { height: 64px; background: var(--au-navy); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; }
+.au-topbar form { margin: 0; }
+.au-main { padding: 32px; min-height: calc(100vh - 64px); background: var(--au-grey); }
+.au-main .au-card { max-width: 720px; padding: 24px; }
+
+/* ---------- Buttons: 12px 20px, radius 8, hover 10% darker, active 15% darker, disabled 50% ---------- */
+.au-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 12px 20px;
+  border-radius: 8px; border: 1px solid transparent; background: var(--au-orange); color: #fff; font: 600 14px/20px Inter, Arial, sans-serif;
+  cursor: pointer; text-decoration: none; }
+.au-page a.au-btn { color: #fff; }
+.au-page a.au-btn:hover { text-decoration: none; }
+.au-btn:hover:not(:disabled) { background: var(--au-orange-hover); text-decoration: none; }
+.au-btn:active:not(:disabled) { background: var(--au-orange-active); }
+.au-btn.is-secondary, .au-page a.au-btn.is-secondary { background: #fff; border-color: var(--au-navy); color: var(--au-navy); }
+.au-btn.is-secondary:hover:not(:disabled) { background: var(--au-light-blue); }
+.au-btn.is-secondary:active:not(:disabled) { background: #D8E5F2; }
+.au-btn.is-compact { width: auto; min-height: 40px; padding: 8px 12px; }
+.au-btn:disabled, .au-btn.is-disabled { opacity: .5; cursor: not-allowed; }
+.au-btn.is-loading { pointer-events: none; }
+.au-btn.is-loading .au-label::before { content: ""; display: inline-block; width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: au-spin .7s linear infinite; }
+@keyframes au-spin { to { transform: rotate(360deg); } }
+.au-stack-sm > * + * { margin-top: 12px; }
+
+/* ---------- Fields: 40px, 1px #BCCBDA, 14px labels, 12px errors ---------- */
+.au-field { margin-bottom: 8px; }
+.au-label { display: block; margin-bottom: 6px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--au-text); }
+.au-label.is-plain { font-weight: 400; }
+.au-ctl { position: relative; }
+.au-page input[type=email], .au-page input[type=password], .au-page input[type=text] {
+  width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--au-border); border-radius: 8px; background: #fff; color: var(--au-text); font: 400 14px Inter, Arial, sans-serif; }
+.au-page input::placeholder { color: var(--au-muted); font-size: 14px; }
+.au-page input:focus { outline: 0; border-color: var(--au-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .2); }
+.au-page input[aria-invalid=true], .au-otp.is-bad input { border-color: var(--au-red); }
+.au-ctl.is-password input { padding-right: 44px; }
+.au-pw-toggle { position: absolute; right: 0; top: 0; width: 44px; height: 40px; border: 0; background: none; color: var(--au-muted); border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+.au-help { min-height: 20px; margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--au-muted); }
+.au-help.is-error { display: flex; gap: 6px; align-items: center; color: var(--au-red); }
+.au-help .au-ic { width: 14px; height: 14px; }
+.au-forgot { display: flex; justify-content: flex-end; font-size: 14px; margin-bottom: 20px; }
+.au-below { text-align: center; font-size: 14px; margin-top: 20px; }
+.au-below a { margin-left: 4px; }
+.au-note { font-size: 14px; margin: 8px 0 20px; }
+
+/* ---------- Alerts: 12-16px padding, radius 8, icon + text (never colour alone) ---------- */
+.au-alert { display: flex; gap: 12px; align-items: flex-start; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; line-height: 20px; }
+.au-alert.is-error { background: var(--au-red-bg); color: #A33A3A; }
+.au-alert.is-success { background: var(--au-green-bg); color: #0F6B56; }
+.au-alert.is-info { background: var(--au-light-blue); color: var(--au-navy); }
+
+/* ---------- Six-box code input ---------- */
+.au-otp { display: flex; gap: 8px; }
+.au-otp input { flex: 1; min-width: 0; height: 48px; padding: 0; text-align: center; font: 600 20px Inter, Arial, sans-serif; }
+.au-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; margin: 12px 0 16px; }
+
+/* ---------- Password rules and status badges ---------- */
+.au-rules { list-style: none; margin: 8px 0 20px; padding: 0; font-size: 14px; line-height: 20px; }
+.au-rules li { display: flex; gap: 8px; color: var(--au-text); }
+.au-rules li.is-met { color: var(--au-green); }
+.au-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 12px; line-height: 16px; font-weight: 600; }
+.au-badge .au-ic { width: 14px; height: 14px; }
+.au-badge.is-pending { background: var(--au-amber-bg); color: var(--au-amber-text); }
+.au-badge.is-active { background: var(--au-green-bg); color: #0F6B56; }
+.au-badge.is-rejected { background: var(--au-red-bg); color: #A33A3A; }
+
+/* ---------- Responsive: mobile < 768, tablet 768-1023, desktop 1024+ ---------- */
+@media (max-width: 1023px) {
+  .au-split, .au-split.is-story { grid-template-columns: 1fr; }
+  .au-panel { display: none; }
+  .au-mbar { display: flex; }
+  .au-region { align-items: flex-start; padding: 24px 16px; }
+}
+@media (max-width: 767px) {
+  .au-card { padding: 24px 16px; }
+  .au-page h1 { font-size: 28px; }
+  .au-topbar { padding: 0 16px; }
+  .au-main { padding: 16px; }
+  .au-btn { min-height: 44px; }
+}
+
+/* Text for screen readers only */
+.au-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

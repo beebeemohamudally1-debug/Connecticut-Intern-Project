@@ -1,0 +1,146 @@
+/* Monitor Work Progress - Overview (section 5) */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- The card ---------- */
+.wp-card {
+  padding: 20px 24px;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.15s ease;
+}
+.wp-card:hover { box-shadow: var(--card-hover); }
+
+.wp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.wp-head h2 { margin: 0; font-size: 20px; }
+.wp-head p { margin: 0; font-size: 14px; }
+
+/* ---------- Search and filters ---------- */
+.wp-tools {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 180px 180px auto;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.wp-tools .in { max-width: none; width: 100%; }
+.wp-tools .in:hover { border-color: var(--navy); }
+.wp-tools .btn { height: 40px; padding-top: 0; padding-bottom: 0; }
+
+.wp-search { position: relative; display: block; }
+.wp-search .ico {
+  position: absolute; left: 12px; top: 12px;
+  width: 16px; height: 16px;
+  fill: none; stroke: var(--muted); stroke-width: 2;
+  stroke-linecap: round; pointer-events: none;
+}
+.wp-search .in { padding-left: 36px; }
+
+/* ---------- Table ---------- */
+.wp-table th { height: 44px; padding: 0 12px; background: var(--grey-bg); }
+.wp-table th:first-child { border-radius: 8px 0 0 8px; }
+.wp-table th:last-child { border-radius: 0 8px 8px 0; }
+.wp-table td { height: 58px; padding: 0 12px; }
+.wp-table tbody tr { transition: background-color 0.15s ease; }
+.wp-table tbody tr:hover { background: var(--grey-bg); }
+
+.wp-ref { font-weight: 600; color: var(--navy); }
+
+/* Progress: the percentage, with a thin bar under it */
+.wp-prog { display: flex; flex-direction: column; gap: 6px; min-width: 90px; }
+.wp-pct { font-size: 13px; font-weight: 600; color: var(--navy); }
+.wp-track {
+  -webkit-appearance: none; appearance: none;
+  display: block; width: 100%; height: 4px;
+  border: 0; border-radius: 4px; overflow: hidden;
+  background: #E5EAF0;
+}
+.wp-track::-webkit-progress-bar { background: #E5EAF0; border-radius: 4px; }
+.wp-track::-webkit-progress-value { background: #2866B1; border-radius: 4px; }
+.wp-track::-moz-progress-bar { background: #2866B1; border-radius: 4px; }
+/* The bar takes the colour of the job's status */
+tr[data-status="delayed"] .wp-track::-webkit-progress-value { background: #A66A16; }
+tr[data-status="delayed"] .wp-track::-moz-progress-bar { background: #A66A16; }
+tr[data-status="completed"] .wp-track::-webkit-progress-value { background: #11836D; }
+tr[data-status="completed"] .wp-track::-moz-progress-bar { background: #11836D; }
+
+/* A delayed job also shows its due date in amber */
+tr[data-status="delayed"] td[data-label="Due Date"] { color: #A66A16; font-weight: 600; }
+
+/* ---------- Status pills (Figma): soft tint, coloured text and dot ---------- */
+.wp-table .b {
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 100px;
+}
+.wp-table .b::before { display: block; width: 5px; height: 5px; }
+.wp-table .wp-delayed     { color: #A66A16; background: #FFF4DF; }
+.wp-table .wp-delayed::before     { background: #A66A16; }
+.wp-table .wp-in_progress { color: #2866B1; background: #ECF3FA; }
+.wp-table .wp-in_progress::before { background: #2866B1; }
+.wp-table .wp-completed   { color: #11836D; background: #E6F6EF; }
+.wp-table .wp-completed::before   { background: #11836D; }
+.wp-table .wp-assigned    { color: #718199; background: #F4F7FA; }
+.wp-table .wp-assigned::before    { background: #718199; }
+
+/* The View button is the same size as in Manage Users */
+.wp-table td .btn { min-width: 84px; text-align: center; }
+
+.wp-empty { margin: 24px 0 8px; text-align: center; color: var(--muted); }
+
+/* ---------- Footer: count and page buttons ---------- */
+.wp-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin-top: 12px; font-size: 14px;
+}
+.wp-foot p { margin: 0; }
+
+.wp-pages { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.wp-pages button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 8px;
+  font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 6px;
+}
+.wp-pages button:hover:not(:disabled):not([aria-current]) { background: var(--grey-bg); border-color: var(--line); }
+.wp-pages button[aria-current="page"] { color: var(--white); background: var(--navy); }
+.wp-pages button:disabled { opacity: 0.4; cursor: not-allowed; }
+.wp-pages button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+/* ---------- Tablet and phone: each row becomes a small card ---------- */
+@media (max-width: 1023px) {
+  .wp-tools { grid-template-columns: 1fr 1fr; }
+  .wp-search, .wp-tools > button { grid-column: 1 / -1; }
+
+  .wp-table thead { position: absolute; left: -9999px; }
+  .wp-table, .wp-table tbody, .wp-table tr, .wp-table td { display: block; width: 100%; }
+  .wp-table tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .wp-table td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    height: auto; min-height: 36px; padding: 4px 0; border: 0;
+  }
+  .wp-table td::before {
+    content: attr(data-label);
+    font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);
+  }
+  .wp-prog { min-width: 140px; }
+}
+
+@media (max-width: 767px) {
+  .wp-card { padding: 20px 16px; }
+  .wp-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .wp-tools { grid-template-columns: 1fr; }
+  .wp-foot { flex-direction: column; align-items: flex-start; }
+}

@@ -1,0 +1,24 @@
+{% extends "base_admin.html" %}
+{% block title %}Record payment | HandyConnect{% endblock %}
+{% block page %}payments{% endblock %}
+{% block content %}
+<div class="lab">Admin · Payments</div>
+<h1>Record customer payment</h1>
+<p class="sub">Record the full offline payment. No online payment is processed.</p>
+<div class="g2">
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+      {% include "payments/_form_fields.html" %}
+      <button class="btn" style="margin-top:12px">Record payment</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Quotation</h2>
+    <div class="row"><span class="mut">Request</span><span>{{ quotation.request.reference }}</span></div>
+    <div class="row"><span class="mut">Customer</span><span>{{ quotation.request.customer }}</span></div>
+    <div class="row"><span class="mut">Status</span><span>{{ quotation.get_status_display }}</span></div>
+    <div class="row t"><span>Total payable</span><span>MUR {{ quotation.total_amount }}</span></div>
+  </div>
+</div>
+{% endblock %}

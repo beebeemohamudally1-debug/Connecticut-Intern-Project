@@ -1,0 +1,143 @@
+/* Monitor Work Progress - Job Progress Details (section 5) */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+
+/* ---------- Heading: back link, title, buttons ---------- */
+.jd-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2A69B5;
+  text-decoration: none;
+}
+.jd-back:hover { text-decoration: underline; }
+
+.bar { align-items: flex-end; margin-bottom: 16px; }
+.bar .sub { margin-bottom: 0; }
+
+.jd-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.jd-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 16px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  border: 1px solid transparent; border-radius: 8px;
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.jd-btn .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.jd-btn:hover { box-shadow: var(--card-hover); }
+.jd-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.jd-flag { color: #B74555; background: #FEEDF0; border-color: #FEEDF0; }
+.jd-evidence { color: #fff; background: var(--blue); border-color: var(--blue); }
+.jd-outline { color: var(--navy); background: #fff; border-color: #E5EAF0; }
+
+/* ---------- Cards ---------- */
+.jd-card { padding: 20px 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.15s ease; }
+.jd-card:hover { box-shadow: var(--card-hover); }
+.jd-card h2 { margin: 0; font-size: 18px; }
+
+.jd-top {
+  display: grid;
+  grid-template-columns: 1.36fr 1fr;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+/* Job details: two columns of label + value */
+.jd-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 32px;
+  margin: 16px 0 0;
+}
+.jd-facts dt { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+.jd-facts dd { margin: 0; font-size: 15px; font-weight: 600; color: var(--navy); }
+.jd-line { padding-top: 16px; border-top: 1px solid #E5EAF0; }
+.jd-line:nth-of-type(5) { grid-column: 1; }
+.jd-line:nth-of-type(6) { grid-column: 2; }
+
+/* Progress snapshot */
+.jd-snap-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.jd-pct { margin: 12px 0 8px; font-size: 14px; color: var(--muted); }
+.jd-pct strong { font-size: 28px; font-weight: 700; color: var(--navy); margin-right: 6px; }
+.jd-track {
+  -webkit-appearance: none; appearance: none;
+  display: block; width: 100%; height: 6px;
+  border: 0; border-radius: 4px; overflow: hidden;
+  background: #E5EAF0;
+}
+.jd-track::-webkit-progress-bar { background: #E5EAF0; border-radius: 4px; }
+.jd-track::-webkit-progress-value { background: #2866B1; border-radius: 4px; }
+.jd-track::-moz-progress-bar { background: #2866B1; border-radius: 4px; }
+/* The bar takes the colour of the job's status */
+.jd-delayed::-webkit-progress-value { background: #A66A16; }
+.jd-delayed::-moz-progress-bar { background: #A66A16; }
+.jd-completed::-webkit-progress-value { background: #11836D; }
+.jd-completed::-moz-progress-bar { background: #11836D; }
+
+.jd-delay {
+  display: flex; gap: 10px;
+  margin-top: 14px; padding: 10px 12px;
+  color: #A66A16; background: #FFF4DF; border-radius: 8px;
+}
+.jd-delay .ico { flex: none; width: 18px; height: 18px; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.jd-delay p { margin: 0; }
+.jd-delay-title { font-size: 14px; font-weight: 700; }
+.jd-delay-text { font-size: 13px; color: #7A5A24; }
+.jd-last { margin: 10px 0 0; font-size: 13px; }
+
+/* Status pill (same look as the Overview) */
+.jd-snap .b {
+  gap: 6px; min-width: 0; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; border-radius: 100px;
+}
+.jd-snap .b::before { display: block; width: 5px; height: 5px; }
+.jd-snap .wp-delayed     { color: #A66A16; background: #FFF4DF; }
+.jd-snap .wp-delayed::before     { background: #A66A16; }
+.jd-snap .wp-in_progress { color: #2866B1; background: #ECF3FA; }
+.jd-snap .wp-in_progress::before { background: #2866B1; }
+.jd-snap .wp-completed   { color: #11836D; background: #E6F6EF; }
+.jd-snap .wp-completed::before   { background: #11836D; }
+.jd-snap .wp-assigned    { color: #718199; background: #F4F7FA; }
+.jd-snap .wp-assigned::before    { background: #718199; }
+
+/* ---------- Timeline ---------- */
+.jd-time-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.jd-time-head p { margin: 2px 0 0; font-size: 14px; }
+
+.jd-events { margin: 0; padding: 0; list-style: none; }
+.jd-event { position: relative; display: flex; gap: 14px; min-height: 52px; }
+/* the vertical line joining the markers */
+.jd-event:not(:last-child)::before {
+  content: ""; position: absolute; left: 13px; top: 28px; bottom: 0; width: 1px; background: #E5EAF0;
+}
+.jd-marker {
+  flex: none; display: grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  color: #2866B1; background: #ECF3FA;
+}
+.jd-marker .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.jd-event.delay .jd-marker { color: #A66A16; background: #FFF4DF; }
+
+.jd-ev-body { padding-bottom: 8px; }
+.jd-ev-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0; font-size: 14px; }
+.jd-ev-top strong { color: var(--navy); }
+.jd-ev-top span { font-size: 12px; }
+.jd-ev-text { margin: 2px 0 0; font-size: 13px; color: var(--text); }
+
+/* ---------- Tablet and phone ---------- */
+@media (max-width: 1023px) {
+  .jd-top { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .bar { flex-direction: column; align-items: stretch; }
+  .jd-actions .jd-btn { flex: 1; justify-content: center; }
+  .jd-card { padding: 20px 16px; }
+  .jd-facts { grid-template-columns: 1fr; }
+  .jd-line:nth-of-type(5), .jd-line:nth-of-type(6) { grid-column: auto; }
+  .jd-time-head { flex-direction: column; }
+}
