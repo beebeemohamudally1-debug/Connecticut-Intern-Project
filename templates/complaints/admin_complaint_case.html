@@ -1,0 +1,118 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Complaints (section 12) - Case Overview (also the Resolved view).
+
+  Data comes from the view as `page`:
+    reference, subject, description      -> complaint fields
+    status, status_label                 -> 'pending' | 'in_progress' | 'resolved'
+    is_resolved                          -> status == 'resolved'
+    created_at                           -> complaint.created_at
+    job, filed_by, against               -> job reference, submitted_by and against names
+    evidence                             -> ComplaintEvidence: name, size, url (complaints:evidence_file)
+    customer_msgs, handyman_msgs         -> number of ComplaintMessage rows per thread
+    customer_last, handyman_last         -> datetime of the latest message in each thread
+    activity                             -> ComplaintLog: title, detail, at, done (True/False)
+    outcome, resolved_by, resolved_at    -> only when resolved
+    queue_url, customer_url, handyman_url, resolve_url -> routes for the links
+    status_url                           -> complaints:resolution (POST status=in_progress, used by "Start investigation" while pending)
+  BACKEND: replace the sample data with the real complaint. Only admins can open this.
+  A resolved complaint cannot be changed, so the controls are replaced by the outcome.
+{% endcomment %}
+
+{% block title %}{{ page.reference }} | Complaints | HandyConnect{% endblock %}
+{% block page %}complaints{% endblock %}
+{% block crumb %}Complaints / {{ page.reference }}{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>{{ page.subject }}</h1>
+    <p class="sub">{{ page.reference }} &middot; Job {{ page.job }}</p>
+  </div>
+  <a class="btn o s" href="{{ page.queue_url|default:'#' }}">&larr; Back to queue</a>
+</div>
+
+{% if page.is_resolved %}
+<p class="cc-banner"><strong>Resolved on {{ page.resolved_at|date:"d M Y" }}</strong> Both people were told the outcome, separately.</p>
+{% endif %}
+
+<div class="cc-top">
+  <section class="card cc-card">
+    <h2>What was reported <span class="b cc-{{ page.status }}">{{ page.status_label }}</span></h2>
+    <p class="mut">{{ page.filed_by }} told us about {{ page.against }} on {{ page.created_at|date:"d M Y" }}.</p>
+    <blockquote class="cc-quote">&ldquo;{{ page.description }}&rdquo;</blockquote>
+    {% if page.evidence %}
+    <p class="cc-label">Photos and files</p>
+    <p class="cc-chips">
+      {% for e in page.evidence %}<a class="cc-chip" href="{{ e.url|default:'#' }}">{{ e.name }} <span>{{ e.size }}</span></a>{% endfor %}
+    </p>
+    {% endif %}
+  </section>
+
+  <section class="card cc-card">
+    {% if page.is_resolved %}
+    <h2>How it was sorted out</h2>
+    <p class="mut">By {{ page.resolved_by }}</p>
+    <p class="cc-quote cc-good">{{ page.outcome }}</p>
+    <p class="mut">This case is closed.</p>
+    {% else %}
+    <h2>Where things stand</h2>
+    <ol class="cc-steps" aria-label="Progress">
+      <li class="done">Received</li>
+      <li class="{% if page.status == 'in_progress' %}now{% endif %}">Looking into it</li>
+      <li>Resolved</li>
+    </ol>
+    {% if page.status == 'pending' %}
+    <p class="mut">Nobody has started yet. Begin when you are ready to look into it.</p>
+    <form method="post" action="{{ page.status_url|default:'#' }}" data-demo="Starting the investigation is not connected yet.">
+      {% csrf_token %}
+      <input type="hidden" name="status" value="in_progress">
+      <button class="btn accent" type="submit">Start investigation</button>
+    </form>
+    {% else %}
+    <p class="mut">You are looking into this. Talk to both people, then close the case.</p>
+    {% endif %}
+    {% endif %}
+  </section>
+</div>
+
+<h2 class="cc-h">{% if page.is_resolved %}Look back{% else %}What would you like to do?{% endif %}</h2>
+<div class="cc-links">
+  <section class="card cc-card cc-act cc-blue">
+    <span class="cc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <div>
+      <h3>{{ page.filed_by }}</h3>
+      <p class="mut">Private chat &middot; {{ page.customer_msgs }} message{{ page.customer_msgs|pluralize }}</p>
+    </div>
+    <a class="btn o s" href="{{ page.customer_url|default:'#' }}">{% if page.is_resolved %}Read{% else %}Open chat{% endif %}</a>
+  </section>
+  <section class="card cc-card cc-act cc-orange">
+    <span class="cc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <div>
+      <h3>{{ page.against }}</h3>
+      <p class="mut">Private chat &middot; {{ page.handyman_msgs }} message{{ page.handyman_msgs|pluralize }}</p>
+    </div>
+    <a class="btn o s" href="{{ page.handyman_url|default:'#' }}">{% if page.is_resolved %}Read{% else %}Open chat{% endif %}</a>
+  </section>
+  <section class="card cc-card cc-act cc-green">
+    <span class="cc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+    <div>
+      <h3>{% if page.is_resolved %}Case closed{% else %}Close the case{% endif %}</h3>
+      <p class="mut">{% if page.is_resolved %}Nothing more to do{% else %}Write the outcome for both people{% endif %}</p>
+    </div>
+    {% if not page.is_resolved %}<a class="btn accent s" href="{{ page.resolve_url|default:'#' }}">Resolve case</a>{% endif %}
+  </section>
+</div>
+
+<p class="cc-recent mut">
+  <strong>Latest:</strong>
+  {% for a in page.activity|slice:"-3:" %}{{ a.title }}{% if a.at %} ({{ a.at|date:"d M, H:i" }}){% endif %}{% if not forloop.last %} &rarr; {% endif %}{% endfor %}
+</p>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'complaints/js/admin_complaint_case.js' %}"></script>
+{% endblock %}
