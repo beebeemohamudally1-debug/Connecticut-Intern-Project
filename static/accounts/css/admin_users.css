@@ -1,0 +1,239 @@
+/* Manage Users - list page (section 3) */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+
+.um-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.um-stat { padding: 16px 24px; }
+
+.um-stat-label {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.um-stat-num {
+  margin: 4px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--navy);
+}
+
+.um-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.um-head h2 { margin: 0; font-size: 20px; }
+
+.um-tools {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 180px 180px auto;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.um-tools .in { max-width: none; width: 100%; }
+
+.um-search { position: relative; display: block; }
+.um-search .ico {
+  position: absolute; left: 12px; top: 12px;
+  width: 16px; height: 16px;
+  fill: none; stroke: var(--muted); stroke-width: 2;
+  stroke-linecap: round; pointer-events: none;
+}
+.um-search .in { padding-left: 36px; }
+
+.um-user { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; }
+
+.um-table tbody tr:hover { background: var(--grey-bg); }
+[hidden] { display: none !important; }
+
+.um-empty { margin: 24px 0 8px; text-align: center; color: var(--muted); }
+
+.um-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.um-foot p { margin: 0; }
+
+.um-pages { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.um-pages button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 8px;
+  font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent; border-radius: 6px;
+}
+.um-pages button:hover:not(:disabled):not([aria-current]) { background: var(--grey-bg); border-color: var(--line); }
+.um-pages button[aria-current="page"] { color: var(--white); background: var(--navy); }
+.um-pages button:disabled { opacity: 0.4; cursor: not-allowed; }
+.um-pages button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+@media (max-width: 1023px) {
+  .um-stats { grid-template-columns: repeat(2, 1fr); }
+  .um-tools { grid-template-columns: 1fr 1fr; }
+  .um-search, .um-tools > button { grid-column: 1 / -1; }
+}
+
+@media (max-width: 1023px) {
+  .um-table thead { position: absolute; left: -9999px; }
+  .um-table, .um-table tbody, .um-table tr, .um-table td { display: block; width: 100%; }
+  .um-table tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .um-table td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    height: auto; min-height: 36px; padding: 4px 0; border: 0;
+  }
+  .um-table td::before {
+    content: attr(data-label);
+    font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);
+  }
+  .um-email { word-break: break-all; text-align: right; }
+}
+
+/* Phones */
+@media (max-width: 767px) {
+  .um-stats { gap: 12px; }
+  .um-stat { padding: 16px; }
+  .um-head { flex-direction: column; align-items: stretch; }
+  .um-tools { grid-template-columns: 1fr; }
+  .um-foot { flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) { .um-table tbody tr { transition: none; } }
+
+/* Buttons beside the inputs match the input height (40px) */
+.um-tools .btn { height: 40px; padding-top: 0; padding-bottom: 0; }
+
+/* ----------------------------------------------------------
+   Hover effects (same style as the dashboard)
+   ---------------------------------------------------------- */
+
+/* Number cards and the table card: soft shadow for a raised (3D) look,
+   and a blue glow when the pointer is over a number card */
+.um-stat, .um-card {
+  box-shadow: var(--card-shadow);
+}
+.um-stat {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.um-stat:hover {
+  box-shadow: var(--card-hover);
+  transform: translateY(-2px);
+}
+
+/* Table rows: light grey band, and the avatar grows a little */
+.um-table tbody tr { transition: background-color 0.15s ease; }
+.um-user .avatar { transition: transform 0.15s ease; }
+.um-table tbody tr:hover .avatar { transform: scale(1.06); }
+
+/* Page numbers already highlight; give the filters a navy border on hover */
+.um-tools .in:hover { border-color: var(--navy); }
+
+@media (prefers-reduced-motion: reduce) {
+  .um-stat:hover, .um-table tbody tr:hover .avatar { transform: none; }
+}
+
+/* ----------------------------------------------------------
+   Status badges (match Figma): soft tinted pill, coloured text,
+   no dot, all the same width.
+   ---------------------------------------------------------- */
+.b {
+  justify-content: center;
+  min-width: 96px;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: var(--navy);
+  background: var(--light-blue);
+  border-radius: 16px;
+}
+.b::before { display: none; }
+.b.gr { color: #13866C; background: #E7F6F0; }
+.b.re { color: #C84C55; background: #FDEBEC; }
+.b.ye { color: #B97819; background: #FFF3DF; }
+
+/* Buttons in the Actions column are all the same size (View and Verify) */
+.um-table td .btn { min-width: 84px; text-align: center; }
+
+/* ----------------------------------------------------------
+   More breathing room (spacing only, nothing else changes)
+   ---------------------------------------------------------- */
+.bar { margin-bottom: 24px; }
+
+.um-stats { gap: 24px; margin-bottom: 32px; }
+.um-stat { padding: 24px; }
+.um-stat-num { margin-top: 8px; }
+
+.um-head { margin-bottom: 24px; }
+.um-tools { gap: 16px; margin-bottom: 24px; }
+
+/* Table: soft grey header band and taller rows */
+.um-table th { height: 52px; background: var(--grey-bg); }
+.um-table th:first-child { border-radius: 8px 0 0 8px; }
+.um-table th:last-child { border-radius: 0 8px 8px 0; }
+.um-table th, .um-table td { padding: 0 16px; }
+.um-table td { height: 60px; }
+
+.um-foot { margin-top: 24px; }
+
+@media (max-width: 767px) {
+  .um-stats { gap: 16px; margin-bottom: 24px; }
+  .um-stat { padding: 16px; }
+  .um-table td { height: auto; padding: 4px 0; }
+}
+
+/* ----------------------------------------------------------
+   Compact, so the whole page fits on one screen without
+   scrolling (laptop screens included)
+   ---------------------------------------------------------- */
+.bar { margin-bottom: 16px; }
+
+.um-stats { gap: 20px; margin-bottom: 20px; }
+.um-stat { padding: 16px 24px; }
+.um-stat-num { margin-top: 4px; font-size: 28px; }
+
+.um-card { padding: 20px 24px; }
+.um-head { margin-bottom: 16px; }
+.um-tools { margin-bottom: 16px; }
+
+.um-table th { height: 44px; }
+.um-table td { height: 52px; }
+.um-foot { margin-top: 16px; }
+
+@media (max-width: 767px) {
+  .um-stat { padding: 16px; }
+  .um-card { padding: 20px 16px; }
+  .um-table td { height: auto; }
+}
+
+/* A little tighter again, to leave a small margin at the bottom */
+.bar { margin-bottom: 12px; }
+.um-stats { margin-bottom: 16px; }
+.um-stat { padding: 14px 24px; }
+.um-card { padding: 16px 24px; }
+.um-head { margin-bottom: 12px; }
+.um-tools { margin-bottom: 12px; }
+.um-table td { height: 48px; }
+.um-foot { margin-top: 12px; }
+
+@media (max-width: 767px) {
+  .um-stat { padding: 16px; }
+  .um-card { padding: 20px 16px; }
+  .um-table td { height: auto; }
+}

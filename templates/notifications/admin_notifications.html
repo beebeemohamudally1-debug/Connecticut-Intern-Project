@@ -1,0 +1,108 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Administrator Notifications (section 12).
+
+  Names follow the notifications app (notifications/models.py):
+    notifications  -> list of Notification: id, title, message,
+                      notification_type (service_request, quotation, job,
+                      complaint, feedback, other), is_read, created_at
+    unread_count   -> number of unread notifications
+  BACKEND: notifications:notification_list currently returns JSON. This page
+  needs an HTML view that sends the list above (newest first). Reading is saved
+  by POST to notifications:mark_as_read and notifications:mark_all_as_read,
+  which the page already calls. Set TIME_ZONE to Indian/Mauritius to match the
+  note "Times shown in Mauritius Time".
+{% endcomment %}
+
+{% block title %}Notifications | HandyConnect{% endblock %}
+{% block page %}notifications{% endblock %}
+{% block crumb %}Notifications{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'notifications/css/admin_notifications.css' %}">
+
+<div class="bar">
+  <div>
+    <h1 data-title>{% if unread_count %}You’re up to date. Almost.{% else %}You’re all caught up.{% endif %}</h1>
+    <p class="sub" data-summary>{{ unread_count }} unread notification{{ unread_count|pluralize }} · Important updates, all in one place.</p>
+  </div>
+</div>
+
+<div class="nt-controls">
+  <div class="nt-filters" role="group" aria-label="Filter notifications" data-filters>
+    <button class="nt-filter" type="button" data-filter="all" aria-pressed="true">All <span class="nt-count" data-count="all"></span></button>
+    <button class="nt-filter" type="button" data-filter="unread" aria-pressed="false">Unread <span class="nt-count" data-count="unread"></span></button>
+    <button class="nt-filter" type="button" data-filter="read" aria-pressed="false">Read <span class="nt-count" data-count="read"></span></button>
+    <button class="nt-filter" type="button" data-filter="service_request" aria-pressed="false">Requests <span class="nt-count" data-count="service_request"></span></button>
+    <button class="nt-filter" type="button" data-filter="quotation" aria-pressed="false">Quotations <span class="nt-count" data-count="quotation"></span></button>
+    <button class="nt-filter" type="button" data-filter="job" aria-pressed="false">Jobs <span class="nt-count" data-count="job"></span></button>
+    <button class="nt-filter" type="button" data-filter="complaint" aria-pressed="false">Complaints <span class="nt-count" data-count="complaint"></span></button>
+    <button class="nt-filter" type="button" data-filter="feedback" aria-pressed="false">Feedback <span class="nt-count" data-count="feedback"></span></button>
+  </div>
+  <button class="btn o" type="button" data-mark-all>Mark all as read</button>
+</div>
+
+<div class="nt-layout">
+  <section class="card nt-card" aria-labelledby="nt-recent" data-notifications data-page-size="4"
+           data-read-all-url="{% url 'notifications:mark_all_as_read' %}" data-csrf="{{ csrf_token }}">
+    <h2 id="nt-recent">Recent activity</h2>
+    <p class="mut nt-note">Newest first · Times shown in Mauritius Time</p>
+
+    <ul class="nt-list" data-list>
+      {% for n in notifications %}
+      <li class="nt-item{% if not n.is_read %} unread{% endif %}" data-item
+          data-kind="{{ n.notification_type }}" data-read="{% if n.is_read %}1{% else %}0{% endif %}"
+          data-read-url="{% url 'notifications:mark_as_read' n.id %}">
+        <span class="nt-icon" aria-hidden="true">
+          {% if n.notification_type == 'service_request' %}
+          <svg class="ico" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg>
+          {% elif n.notification_type == 'quotation' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></svg>
+          {% elif n.notification_type == 'job' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18m-11 5 2 2 4-4"/></svg>
+          {% elif n.notification_type == 'complaint' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4M12 16h.01"/></svg>
+          {% elif n.notification_type == 'feedback' %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+          {% else %}
+          <svg class="ico" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          {% endif %}
+        </span>
+
+        <div class="nt-body">
+          <p class="nt-title">{{ n.title }}</p>
+          <p class="mut nt-text">{{ n.message }}</p>
+          <p class="mut nt-time"><span>{{ n.created_at|date:"M j · g:i A" }}</span> · <span data-state>{% if n.is_read %}Read{% else %}Unread{% endif %}</span></p>
+        </div>
+
+        <span class="nt-dot" aria-hidden="true"></span>
+        <svg class="ico nt-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="nt-empty" data-empty hidden>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <strong>Nothing here</strong>
+      <span>No notifications match this filter.</span>
+    </div>
+
+    <div class="nt-foot">
+      <p class="mut" data-showing aria-live="polite"></p>
+      <nav class="nt-pages" aria-label="Pagination" data-pages></nav>
+    </div>
+  </section>
+
+
+</div>
+
+<p class="mut nt-fine nt-footnote">
+  <span>Secure workspace · Your information stays private</span>
+  <span><a href="#">Help center</a> · <a href="#">Privacy policy</a></span>
+</p>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'notifications/js/admin_notifications.js' %}"></script>
+{% endblock %}
