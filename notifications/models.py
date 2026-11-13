@@ -29,6 +29,11 @@ class Notification(models.Model):
     title = models.CharField(max_length=150)
 
     message = models.TextField()
+    url = models.CharField(
+    max_length=500,
+    blank=True,
+    default=''
+)
 
     is_read = models.BooleanField(default=False)
 
