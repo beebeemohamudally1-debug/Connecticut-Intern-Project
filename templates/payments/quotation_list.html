@@ -1,0 +1,34 @@
+{% extends "base_admin.html" %}
+{% block title %}Quotations | HandyConnect{% endblock %}
+{% block page %}invoices{% endblock %}
+{% block content %}
+<div class="lab">Admin · Quotations</div>
+<h1>Quotations</h1>
+<p class="sub">Fixed quotations in MUR and their payment status.</p>
+{% include "payments/_messages.html" %}
+<div class="card">
+  <table class="tb">
+    <thead><tr><th>Request</th><th>Customer</th><th>Total (MUR)</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for q in quotations %}
+      <tr>
+        <td>{{ q.request.reference }}</td>
+        <td>{{ q.request.customer }}</td>
+        <td>{{ q.total_amount }}</td>
+        <td><span class="b {% if q.status == 'accepted' %}gr{% elif q.status == 'sent' or q.status == 'draft' %}ye{% elif q.status == 'declined' or q.status == 'cancelled' %}re{% endif %}">{{ q.get_status_display }}</span></td>
+        <td><span class="b {% if q.is_paid %}gr{% else %}ye{% endif %}">{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</span></td>
+        <td>
+          {% if q.status == 'draft' %}
+          <form method="post" action="{% url 'payments:quotation_send' q.pk %}" style="display:inline">{% csrf_token %}<button class="btn s">Send</button></form>
+          {% elif q.status == 'accepted' and not q.is_paid %}
+          <a class="btn s" href="{% url 'payments:payment_record' q.pk %}">Record payment</a>
+          {% else %}-{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="mut">No quotations yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

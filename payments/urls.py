@@ -1,15 +1,19 @@
 from django.urls import path
 from django.views.generic import TemplateView
+from django.urls import path
 
+from . import views
 
-def page(name):
-    return TemplateView.as_view(template_name=f'payments/{name}.html')
-
+app_name = 'payments'
 
 urlpatterns = [
-    path('admin-record-payment/', page('admin_record_payment')),
-    path('admin-dashboard/', page('admin_dashboard')),
-    path('customer-invoice/', page('customer_invoice')),
-    path('customer-receipt/', page('customer_receipt')),
-    path('handyman-earnings/', page('handyman_earnings')),
+    # administrator
+    path('quotations/', views.quotation_list, name='quotation_list'),
+    path('quotations/new/<int:request_id>/', views.quotation_create, name='quotation_create'),
+    path('quotations/<int:pk>/send/', views.quotation_send, name='quotation_send'),
+    path('quotations/<int:quotation_id>/pay/', views.payment_record, name='payment_record'),
+    # customer
+    path('my/quotations/', views.my_quotations, name='my_quotations'),
+    path('my/quotations/<int:pk>/', views.quotation_detail, name='quotation_detail'),
+    path('my/payments/', views.payment_history, name='payment_history'),
 ]

@@ -1,0 +1,10 @@
+{% if form.non_field_errors %}
+<div style="color:#C95050;font-size:14px;margin-bottom:12px">{{ form.non_field_errors|join:" " }}</div>
+{% endif %}
+{% for field in form %}
+<div style="margin-bottom:14px">
+  {{ field.label_tag }}
+  {{ field }}
+  {% for error in field.errors %}<div style="color:#C95050;font-size:12px;margin-top:4px">{{ error }}</div>{% endfor %}
+</div>
+{% endfor %}

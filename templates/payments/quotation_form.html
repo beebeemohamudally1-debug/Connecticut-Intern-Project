@@ -1,0 +1,26 @@
+{% extends "base_admin.html" %}
+{% block title %}New quotation | HandyConnect{% endblock %}
+{% block page %}invoices{% endblock %}
+{% block content %}
+<div class="lab">Admin · Quotations</div>
+<h1>New quotation</h1>
+<p class="sub">Request {{ service_request.reference }} · {{ service_request.customer }}</p>
+<div class="g2">
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+      {% include "payments/_form_fields.html" %}
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button class="btn" name="send" value="1">Send to customer</button>
+        <button class="btn o" name="draft" value="1">Save as draft</button>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Request</h2>
+    <div class="row"><span class="mut">Service</span><span>{{ service_request.service_category|default:"-" }}</span></div>
+    <div class="row"><span class="mut">Status</span><span>{{ service_request.status }}</span></div>
+    <p class="sub" style="margin:16px 0 0">{{ service_request.problem_description }}</p>
+  </div>
+</div>
+{% endblock %}

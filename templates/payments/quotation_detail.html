@@ -1,0 +1,37 @@
+{% extends "base_customer.html" %}
+{% block title %}Quotation | HandyConnect{% endblock %}
+{% block page %}invoices{% endblock %}
+{% block content %}
+<div class="bar">
+  <div>
+    <div class="lab">Your quotation</div>
+    <h1>Request {{ quotation.request.reference }}</h1>
+  </div>
+  <span class="b {% if quotation.status == 'accepted' %}gr{% elif quotation.status == 'sent' %}ye{% else %}re{% endif %}">{{ quotation.get_status_display }}</span>
+</div>
+{% include "payments/_messages.html" %}
+<div class="g2">
+  <div class="card">
+    <h2>Included work</h2>
+    <p style="margin:0 0 16px">{{ quotation.work_description|linebreaksbr }}</p>
+    <div class="row t"><span>Fixed total</span><span>MUR {{ quotation.total_amount }}</span></div>
+    {% if quotation.status == 'sent' %}
+    <form method="post" style="display:flex;gap:12px;margin-top:20px">
+      {% csrf_token %}
+      <button class="btn" name="accept" value="1">Accept quotation</button>
+      <button class="btn o" name="decline" value="1">Decline</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Payment</h2>
+    <div class="row"><span class="mut">Status</span><span class="b {% if quotation.is_paid %}gr{% else %}ye{% endif %}">{% if quotation.is_paid %}Paid{% else %}Unpaid{% endif %}</span></div>
+    {% if quotation.is_paid %}
+    <div class="row"><span class="mut">Received</span><span>{{ quotation.payment.date_received }}</span></div>
+    <div class="row"><span class="mut">Method</span><span>{{ quotation.payment.get_method_display }}</span></div>
+    {% elif quotation.status == 'accepted' %}
+    <p class="sub" style="margin:12px 0 0">Pay the full amount offline. The administrator will record your payment.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
