@@ -131,6 +131,8 @@ def get_admin_dashboard_stats():
         'awaiting_payment': Quotation.objects.filter(
             status=Quotation.ACCEPTED,
             payment__isnull=True
+        ).exclude(
+            request__status=ServiceRequest.STATUS_CANCELLED
         ).count(),
 
 
