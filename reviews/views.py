@@ -12,8 +12,10 @@ from .models import Review
 
 
 def is_admin(user):
-    return user.is_superuser or (
-        user.is_active and user.role == 'admin'
+    return user.is_active and (
+        user.is_superuser or (
+            user.role == 'admin' and user.is_staff
+        )
     )
 
 

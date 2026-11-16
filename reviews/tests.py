@@ -36,7 +36,8 @@ class ReviewTests(TestCase):
         self.admin_user = User.objects.create_user(
             username='review_admin',
             password='TestPass123!',
-            role='admin'
+            role='admin',
+            is_staff=True
         )
 
         self.job = Job.objects.create(
@@ -343,3 +344,26 @@ class ReviewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
+    def test_admin_without_staff_cannot_manage_reviews(self):
+        non_staff_admin = User.objects.create_user(
+            username='non_staff_admin',
+            password='TestPass123!',
+            role='admin',
+            is_staff=False
+        )
+
+        review = self.create_review()
+        self.client.force_login(non_staff_admin)
+
+        response = self.client.get(
+            reverse('reviews:admin_reviews')
+        )
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.post(
+            reverse('reviews:approve_review', args=[review.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+
+        review.refresh_from_db()
+        self.assertEqual(review.status, Review.PENDING)
