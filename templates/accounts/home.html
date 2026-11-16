@@ -1,7 +1,109 @@
-{% extends "accounts/auth_top.html" %}
-{# S01 Visitor home. #}
-{% block title %}HandyConnect{% endblock %}
-{% block card %}<h1>Welcome</h1><p class="au-sub" style="margin-bottom:20px">Connect with the services you need. Please log in or register a new account.</p>
-{% url 'accounts:register' as register_url %}
-<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="au-btn is-compact" href="{% url 'accounts:login' %}">Log in</a>{% if register_url %}<a class="au-btn is-secondary is-compact" href="{{ register_url }}">Register</a>{% endif %}</div>
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  S01 Visitor home (the page at "/"). Frontend only, no context needed.
+  Layout: top bar, one hero where the visitor chooses to register (customer or provider) or log in,
+  a short services list, three "how it works" steps, footer.
+  Styles: static/accounts/css/home.css (classes start with "hm-"); logo, variables and icon sprites come from auth.css.
+  Script: static/accounts/js/home.js (adds a shadow to the top bar once the page scrolls).
+  Signed-in visitors see "Log out" in the top bar and no register/log in choices.
+{% endcomment %}
+{% block title %}HandyConnect | Connect with the services you need{% endblock %}
+{% block page %}home{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/home.css' %}">
+{% include "accounts/_auth_icons.html" %}
+{% include "accounts/_reg_icons.html" %}
+<svg class="au-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<symbol id="hm-i-droplet" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+<symbol id="hm-i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+<symbol id="hm-i-hammer" viewBox="0 0 24 24"><path d="m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"/></symbol>
+<symbol id="hm-i-roller" viewBox="0 0 24 24"><rect width="16" height="6" x="2" y="2" rx="2"/><path d="M10 16v-2a2 2 0 0 1 2-2h8a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect width="4" height="6" x="8" y="16" rx="1"/></symbol>
+<symbol id="hm-i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></symbol>
+<symbol id="hm-i-snow" viewBox="0 0 24 24"><line x1="2" x2="22" y1="12" y2="12"/><line x1="12" x2="12" y1="2" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></symbol>
+<symbol id="hm-i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+</svg>
+<div class="au-page hm">
+  <a class="hm-skip" href="#main">Skip to content</a>
+
+  <header class="hm-nav"><div class="hm-wrap hm-nav-in">
+    {% include "accounts/_auth_logo.html" %}
+    <nav class="hm-links" aria-label="Page sections"><a href="#services">Services</a><a href="#how-it-works">How it works</a></nav>
+    <div class="hm-nav-cta">
+    {% if request.user.is_authenticated %}<form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="hm-btn is-ghost is-compact" type="submit">Log out</button></form>
+    {% else %}<a class="hm-btn is-ghost is-compact" href="{% url 'accounts:login' %}">Log in</a><a class="hm-btn is-primary is-compact" href="{% url 'accounts:register' %}">Register</a>{% endif %}
+    </div>
+  </div></header>
+
+  <main id="main">
+    <section class="hm-hero"><div class="hm-wrap hm-hero-in">
+      <div class="hm-intro">
+        <h1>Connect with the services you need</h1>
+        <p class="hm-lead">Find trusted professionals for your home in Mauritius, or offer your skills to customers near you.</p>
+
+        {% if not request.user.is_authenticated %}
+        <div class="hm-choose" role="group" aria-labelledby="hm-choose-title">
+          <h2 id="hm-choose-title">How will you use HandyConnect?</h2>
+          <form class="hm-pick" method="post" action="{% url 'accounts:register' %}">{% csrf_token %}
+            <input type="hidden" name="role" value="customer">
+            <button class="hm-option" type="submit">
+              <span class="hm-option-ic" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-user"/></svg></span>
+              <span class="hm-option-text"><strong>I need a service</strong><small>Register as a customer</small></span>
+              <span class="hm-option-go" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-arrow-right"/></svg></span>
+            </button>
+          </form>
+          <form class="hm-pick" method="post" action="{% url 'accounts:register' %}">{% csrf_token %}
+            <input type="hidden" name="role" value="provider">
+            <button class="hm-option" type="submit">
+              <span class="hm-option-ic is-navy" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-wrench"/></svg></span>
+              <span class="hm-option-text"><strong>I offer services</strong><small>Register as a service provider</small></span>
+              <span class="hm-option-go" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-arrow-right"/></svg></span>
+            </button>
+          </form>
+          <div class="hm-login-row">
+            <p>Already have an account?</p>
+            <a class="hm-btn is-outline is-compact" href="{% url 'accounts:login' %}">Log in</a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="hm-visual">
+        <img src="{% static 'accounts/img/home-service.jpg' %}" alt="A smiling plumber repairing a kitchen sink while the homeowner looks on" width="1000" height="746">
+        <div class="hm-chip"><span class="hm-chip-ic" aria-hidden="true"><svg class="au-ic"><use href="#au-i-shield"/></svg></span><span><strong>Verified providers</strong><small>Documents reviewed before approval</small></span></div>
+      </div>
+    </div></section>
+
+    <section class="hm-section" id="services"><div class="hm-wrap">
+      <div class="hm-head"><h2>Services you can find</h2><p>From a leaking tap to a garden makeover.</p></div>
+      <ul class="hm-services">
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-droplet"/></svg>Plumbing</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-zap"/></svg>Electrical</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-hammer"/></svg>Carpentry</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-roller"/></svg>Painting</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#rg-i-sparkles"/></svg>Cleaning</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-leaf"/></svg>Gardening</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-snow"/></svg>Air conditioning</li>
+        <li><svg class="au-ic" aria-hidden="true"><use href="#hm-i-plug"/></svg>Appliance repair</li>
+      </ul>
+    </div></section>
+
+    <section class="hm-section is-tint" id="how-it-works"><div class="hm-wrap">
+      <div class="hm-head"><h2>How it works</h2><p>Three steps from sign-up to a finished job.</p></div>
+      <ol class="hm-steps">
+        <li><span class="hm-num" aria-hidden="true">1</span><h3>Create your account</h3><p>Choose customer or service provider, confirm your email and set a password.</p></li>
+        <li><span class="hm-num" aria-hidden="true">2</span><h3>Add your details</h3><p>Customers tell us where they live. Providers share their services, regions and documents for review.</p></li>
+        <li><span class="hm-num" aria-hidden="true">3</span><h3>Get the job done</h3><p>Request a service, review the quotation and follow the work in one place.</p></li>
+      </ol>
+    </div></section>
+  </main>
+
+  <footer class="hm-foot"><div class="hm-wrap hm-foot-in">
+    {% include "accounts/_auth_logo.html" %}
+    <p>Trusted services. Real connections.</p>
+    {% if not request.user.is_authenticated %}<div class="hm-foot-links"><a href="{% url 'accounts:login' %}">Log in</a><a href="{% url 'accounts:register' %}">Register</a></div>{% endif %}
+  </div></footer>
+</div>
+<script src="{% static 'accounts/js/home.js' %}" defer></script>
 {% endblock %}
