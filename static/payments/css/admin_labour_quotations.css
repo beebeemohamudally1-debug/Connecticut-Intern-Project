@@ -1,0 +1,147 @@
+/* Labour Quotations - Overview (section 6) */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+[hidden] { display: none !important; }
+
+.bar { margin-bottom: 14px; }
+.bar h1 { font-size: 26px; }
+.bar .sub { margin-bottom: 0; }
+
+/* ---------- Number cards: a soft coloured icon on each ---------- */
+.lq-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 14px; }
+.lq-stat {
+  padding: 12px 20px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lq-stat:hover { box-shadow: var(--card-hover); transform: translateY(-2px); }
+.lq-stat p { margin: 0; }
+.lq-stat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lq-stat-label { font-size: 14px; font-weight: 600; color: var(--navy); }
+.lq-chip { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; }
+.lq-chip .ico { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lq-stat-num { margin-top: 2px !important; font-size: 28px; font-weight: 700; line-height: 1.2; color: var(--navy); }
+.lq-stat-hint { font-size: 12px; color: var(--muted); }
+.lq-s-review .lq-chip   { color: var(--orange); background: #FFEFE6; }
+.lq-s-pending .lq-chip  { color: var(--blue); background: #EAF1FF; }
+.lq-s-revision .lq-chip { color: #D9822B; background: #FFF3DF; }
+.lq-s-accepted .lq-chip { color: #13866C; background: #E6F6F1; }
+
+/* ---------- The card: tabs, filters, list ---------- */
+.lq-card { padding: 14px 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.15s ease; }
+.lq-card:hover { box-shadow: var(--card-hover); }
+
+.lq-tabs {
+  display: inline-flex; flex-wrap: wrap; gap: 4px;
+  margin-bottom: 12px; padding: 4px;
+  background: #EAF1F8; border-radius: 12px;
+}
+.lq-tabs button {
+  height: 34px; padding: 0 16px;
+  font: inherit; font-size: 13px; color: var(--muted);
+  background: transparent; border: 0; border-radius: 9px; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.lq-tabs button:hover { color: var(--blue); background: rgba(255, 255, 255, 0.75); }
+.lq-tabs button[aria-pressed="true"] { font-weight: 600; color: var(--navy); background: #fff; box-shadow: 0 1px 3px rgba(20, 45, 72, 0.12); }
+.lq-tabs button[aria-pressed="true"]:hover { color: var(--blue); }
+.lq-tabs button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+.lq-tools {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 200px 200px auto;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.lq-tools .in { max-width: none; width: 100%; border-color: var(--line); background: var(--grey-bg); }
+.lq-tools .in:hover { border-color: var(--blue); background: #fff; }
+.lq-tools .in:focus { background: #fff; }
+.lq-tools .btn { height: 40px; padding-top: 0; padding-bottom: 0; }
+
+.lq-search { position: relative; display: block; }
+.lq-search .ico {
+  position: absolute; left: 12px; top: 12px; width: 16px; height: 16px;
+  fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; pointer-events: none;
+}
+.lq-search .in { padding-left: 36px; }
+
+
+/* ---------- Table (same as Work Progress) ---------- */
+.lq-table th { height: 44px; padding: 0 12px; background: var(--grey-bg); }
+.lq-table th:first-child { border-radius: 8px 0 0 8px; }
+.lq-table th:last-child { border-radius: 0 8px 8px 0; }
+.lq-table td { height: 52px; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.lq-table tbody tr { transition: background-color 0.15s ease; }
+.lq-table tbody tr:hover { background: var(--grey-bg); }
+.lq-id { display: block; font-weight: 600; color: var(--navy); line-height: 1.25; }
+.lq-sub { display: block; font-size: 12px; color: var(--muted); line-height: 1.25; }
+.lq-amt { display: block; font-weight: 600; color: var(--navy); line-height: 1.25; }
+
+/* Action buttons: all the same size, plain navy outline like View in Manage Users */
+.lq-table td .btn { width: 120px; min-width: 120px; text-align: center; justify-content: center; }
+
+/* Status pills: soft tint, coloured text and dot (same as Work Progress) */
+.lq-table .b {
+  gap: 6px; width: 136px; justify-content: center; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; border-radius: 100px;
+}
+.lq-table .b::before { display: block; width: 5px; height: 5px; }
+.lq-table .lq-review, .lq-table .lq-revision   { color: #A66A16; background: #FFF4DF; }
+.lq-table .lq-review::before, .lq-table .lq-revision::before { background: #A66A16; }
+.lq-table .lq-ready, .lq-table .lq-pending     { color: #2866B1; background: #ECF3FA; }
+.lq-table .lq-ready::before, .lq-table .lq-pending::before { background: #2866B1; }
+.lq-table .lq-accepted { color: #11836D; background: #E6F6EF; }
+.lq-table .lq-accepted::before { background: #11836D; }
+.lq-table .lq-rejected { color: #C84C55; background: #FDEBEC; }
+.lq-table .lq-rejected::before { background: #C84C55; }
+.lq-table .lq-handyman, .lq-table .lq-cancelled { color: #718199; background: #F4F7FA; }
+.lq-table .lq-handyman::before, .lq-table .lq-cancelled::before { background: #718199; }
+
+.lq-empty { margin: 24px 0 8px; text-align: center; color: var(--muted); }
+
+/* ---------- Footer: count and page buttons ---------- */
+.lq-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 10px; font-size: 14px; }
+.lq-foot p { margin: 0; }
+
+.lq-pages { display: flex; align-items: center; gap: 4px; color: var(--muted); }
+.lq-pages button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px; padding: 0 8px;
+  font: inherit; font-size: 14px; color: var(--text); cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+}
+.lq-pages button:hover:not(:disabled):not([aria-current]) { color: var(--blue); background: #EAF1FF; }
+.lq-pages button[aria-current="page"] { color: var(--white); background: var(--navy); }
+.lq-pages button:disabled { opacity: 0.4; cursor: not-allowed; }
+.lq-pages button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+/* ---------- Tablet and phone: each row becomes a small card ---------- */
+@media (max-width: 1023px) {
+  .lq-stats { grid-template-columns: repeat(2, 1fr); }
+  .lq-tools { grid-template-columns: 1fr 1fr; }
+  .lq-search, .lq-tools > button { grid-column: 1 / -1; }
+
+  .lq-table thead { position: absolute; left: -9999px; }
+  .lq-table, .lq-table tbody, .lq-table tr, .lq-table td { display: block; width: 100%; }
+  .lq-table tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .lq-table td {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    height: auto; min-height: 36px; padding: 4px 0; border: 0;
+  }
+  .lq-table td::before {
+    content: attr(data-label);
+    font-size: 12px; font-weight: 600; color: var(--muted);
+  }
+}
+@media (max-width: 767px) {
+  .bar h1 { font-size: 22px; }
+  .lq-card { padding: 16px; }
+  .lq-tabs { display: flex; }
+  .lq-tabs button { flex: 1 1 45%; padding: 0 8px; }
+  .lq-tools { grid-template-columns: 1fr; }
+  .lq-foot { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .lq-stat:hover { transform: none; } }

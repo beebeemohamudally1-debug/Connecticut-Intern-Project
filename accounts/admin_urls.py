@@ -23,4 +23,6 @@ urlpatterns = [
     path('complaints/case/resolve/', views.complaint_resolve, name='complaint_resolve'),
     path('complaints/case/customer/', views.complaint_conversation, {'who': 'customer'}, name='complaint_customer'),
     path('complaints/case/handyman/', views.complaint_conversation, {'who': 'handyman'}, name='complaint_handyman'),
+    path('labour-quotations/', views.labour_quotations, name='labour_quotations'),
+    path('labour-quotations/review/', views.labour_estimate_review, name='labour_estimate_review'),
 ]
