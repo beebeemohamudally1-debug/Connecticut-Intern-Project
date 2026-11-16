@@ -1,0 +1,17 @@
+{% extends "accounts/register_base.html" %}
+{% comment %}
+  S02 Choose account type. Context: role ("customer" / "provider", pre-selected when returning), error (string).
+  POST: role. Continue stays disabled until one card is selected (also checked on the server).
+{% endcomment %}
+{% block title %}Choose account type | HandyConnect{% endblock %}
+{% block step_content %}
+<div class="au-intro"><h1>Choose account type</h1><p class="au-sub">How will you use your account?</p></div>
+{% if error %}{% include "accounts/_auth_alert.html" with kind="error" text=error %}{% endif %}
+<form method="post" novalidate data-au-once>{% csrf_token %}
+<fieldset class="rg-roles" data-rg-roles><legend class="au-sr">Account type</legend>
+<label class="rg-role"><input type="radio" name="role" value="customer"{% if role == 'customer' %} checked{% endif %}><span class="rg-role-body"><span class="rg-role-icon" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-user"/></svg></span><span class="rg-role-text"><strong>Customer</strong><small>Find and request services.</small></span><span class="rg-role-tick" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-tick"/></svg></span></span></label>
+<label class="rg-role"><input type="radio" name="role" value="provider"{% if role == 'provider' %} checked{% endif %}><span class="rg-role-body"><span class="rg-role-icon" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-wrench"/></svg></span><span class="rg-role-text"><strong>Service Provider</strong><small>Offer your services to customers.</small></span><span class="rg-role-tick" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-tick"/></svg></span></span></label>
+</fieldset>
+<button class="au-btn rg-submit" type="submit" data-rg-gate><span class="au-label">Continue</span><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-right"/></svg></button></form>
+<p class="au-below">Already have an account?<a href="{% url 'accounts:login' %}">Log in</a></p>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "accounts/register_base.html" %}
+{% comment %}
+  S05 Verify code.
+  Context: email, attempts_left, expires_in (seconds left, 0 if expired), cooldown (seconds until resend),
+           state ("wrong" | "expired" | "locked" | "hourly" | ""), alert (error text), notice (green text), role_label, step=2.
+  POST: code (6 digits) or action=resend.
+  Verify is disabled for "locked" and "expired" (the user must request a new code); "hourly" disables Resend.
+{% endcomment %}
+{% block title %}Verify your email | HandyConnect{% endblock %}
+{% block step_content %}
+<div class="au-intro"><h1>Verify your email</h1><p class="au-sub">Enter the six-digit code sent to <b class="rg-break">{{ email }}</b>.</p></div>
+{% if alert %}{% include "accounts/_auth_alert.html" with kind="error" text=alert %}{% elif notice %}{% include "accounts/_auth_alert.html" with kind="success" text=notice %}{% endif %}
+<form method="post" data-au-once>{% csrf_token %}<input type="hidden" name="code" id="code">
+<span class="au-label is-plain" id="otp-label">Verification code</span>
+<div class="au-otp rg-otp{% if state == 'wrong' or state == 'locked' %} is-bad{% endif %}" data-au-otp="code" role="group" aria-labelledby="otp-label">{% for i in "012345" %}<input type="text" inputmode="numeric" maxlength="1" aria-label="Digit {{ forloop.counter }}" autocomplete="one-time-code">{% endfor %}</div>
+<div class="rg-meta"><span class="rg-pill{% if state == 'expired' %} is-warn{% endif %}"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-hourglass"/></svg><span>Code expires in <b data-au-countdown="{{ expires_in|default:0 }}">05:00</b></span></span><span class="rg-pill{% if state == 'locked' %} is-warn{% endif %}"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-lock"/></svg><span>Attempts left: {{ attempts_left }}</span></span></div>
+<button class="au-btn rg-submit" type="submit"{% if state == "locked" or state == "expired" %} disabled{% else %} data-au-gate{% endif %}><span class="au-label">Verify</span></button></form>
+<form method="post" class="rg-second" data-au-once>{% csrf_token %}<input type="hidden" name="action" value="resend">
+<button class="au-btn is-secondary" type="submit" data-au-cooldown="{{ cooldown|default:0 }}"{% if state == "hourly" %} disabled{% endif %}><span class="au-label">{% if state == "expired" or state == "locked" %}Request new code{% else %}Resend code{% endif %}</span></button></form>
+<p class="au-note rg-note">Requesting a new code cancels the old one. You can request up to 5 codes per hour.</p>
+<p class="au-below"><a class="rg-back" href="{% url 'accounts:register_confirm' %}"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-left"/></svg>Back</a></p>
+{% endblock %}

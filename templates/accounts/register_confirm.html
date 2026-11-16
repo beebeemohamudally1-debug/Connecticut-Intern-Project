@@ -1,0 +1,12 @@
+{% extends "accounts/register_base.html" %}
+{# S04 Confirm email. Context: email, hint, role_label, step=1. POST (no fields) sends the code. #}
+{% block title %}Confirm your email | HandyConnect{% endblock %}
+{% block step_content %}
+{% include "accounts/_reg_role_chip.html" %}
+<div class="au-intro"><h1>Confirm your email</h1><p class="au-sub">We will send a six-digit code to this address.</p></div>
+<div class="rg-email"><span class="rg-email-icon" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-mail"/></svg></span><span><span class="rg-email-label">Email address</span><strong class="rg-email-value">{{ email }}</strong></span></div>
+<p class="au-sub rg-hint">{{ hint|default:"Check that your email address is correct before requesting a code." }}</p>
+<form method="post" data-au-once>{% csrf_token %}
+<button class="au-btn rg-submit" type="submit"><span class="au-label">Send code</span><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-right"/></svg></button></form>
+<div class="rg-second"><a class="au-btn is-secondary" href="{% url 'accounts:register_email' %}">Change email</a></div>
+{% endblock %}

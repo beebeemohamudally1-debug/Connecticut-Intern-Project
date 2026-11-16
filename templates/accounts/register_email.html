@@ -1,0 +1,15 @@
+{% extends "accounts/register_base.html" %}
+{% comment %}
+  S03 Email. Context: email (re-fill), errors {email}, already_registered (True shows the "Log in" link), role_label, step=1.
+  POST: email.
+{% endcomment %}
+{% block title %}Enter your email | HandyConnect{% endblock %}
+{% block step_content %}
+{% include "accounts/_reg_role_chip.html" %}
+<div class="au-intro"><h1>Enter your email</h1><p class="au-sub">Use your email address to create an account.</p></div>
+<form method="post" novalidate data-au-once>{% csrf_token %}
+{% include "accounts/_reg_field.html" with id="email" name="email" label="Email address" type="email" value=email error=errors.email autocomplete="email" placeholder="you@example.com" required="1" %}
+{% if already_registered %}<p class="rg-inline-link">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>{% endif %}
+<button class="au-btn rg-submit" type="submit"><span class="au-label">Continue</span><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-right"/></svg></button></form>
+<p class="au-below"><a class="rg-back" href="{% url 'accounts:register' %}"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-left"/></svg>Back to account type</a></p>
+{% endblock %}

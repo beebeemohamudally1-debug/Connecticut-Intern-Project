@@ -1,0 +1,9 @@
+{% extends "accounts/register_base.html" %}
+{# S07 Session expired. Context: message. Shown when the registration session lapses (30 min idle) or its token is invalid. #}
+{% block title %}Session expired | HandyConnect{% endblock %}
+{% block step_content %}
+<div class="rg-center"><span class="rg-badge is-amber" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-clock"/></svg></span>
+<h1>Session expired</h1><p class="au-sub">{{ message }}</p></div>
+<a class="au-btn rg-submit" href="{% url 'accounts:register' %}"><span class="au-label">Start again</span></a>
+<p class="au-below">Already have an account?<a href="{% url 'accounts:login' %}">Log in</a></p>
+{% endblock %}

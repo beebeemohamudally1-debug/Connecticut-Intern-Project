@@ -1,0 +1,4 @@
+{# include with: id, name, label, options [(value, label)], selected, error, placeholder, required #}
+<div class="au-field rg-field"><label class="au-label" for="{{ id }}">{{ label }}{% if required %} <span class="rg-req" aria-hidden="true">*</span>{% endif %}</label>
+<div class="au-ctl rg-select"><select id="{{ id }}" name="{{ name }}"{% if required %} aria-required="true"{% endif %} aria-describedby="{{ id }}-error"{% if error %} aria-invalid="true"{% endif %}><option value="">{{ placeholder|default:'Select' }}</option>{% for value, text in options %}<option value="{{ value }}"{% if value == selected %} selected{% endif %}>{{ text }}</option>{% endfor %}</select><svg class="au-ic rg-select-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+<div id="{{ id }}-error" class="au-help is-error rg-error" aria-live="polite">{% if error %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ error }}{% endif %}</div></div>

@@ -1,0 +1,2 @@
+{# Shows "Chosen role: Customer" with a link back to S02. Needs role_label. #}
+{% if role_label %}<p class="rg-chip"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-{% if role == 'provider' %}wrench{% else %}user{% endif %}"/></svg><span>Chosen role: <b>{{ role_label }}</b></span><a href="{% url 'accounts:register' %}">Change</a></p>{% endif %}

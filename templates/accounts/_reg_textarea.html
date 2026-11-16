@@ -1,0 +1,5 @@
+{# include with: id, name, label, value, error, help, placeholder, required, autocomplete #}
+<div class="au-field rg-field"><label class="au-label" for="{{ id }}">{{ label }}{% if required %} <span class="rg-req" aria-hidden="true">*</span>{% endif %}</label>
+<div class="au-ctl"><textarea id="{{ id }}" name="{{ name }}" rows="3" autocomplete="{{ autocomplete|default:'off' }}" placeholder="{{ placeholder|default:'' }}"{% if required %} aria-required="true"{% endif %} aria-describedby="{{ id }}-help {{ id }}-error"{% if error %} aria-invalid="true"{% endif %}>{{ value|default:'' }}</textarea></div>
+<div id="{{ id }}-help" class="au-help rg-help">{{ help|default:'' }}</div>
+<div id="{{ id }}-error" class="au-help is-error rg-error" aria-live="polite">{% if error %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ error }}{% endif %}</div></div>
