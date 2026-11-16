@@ -149,3 +149,8 @@
 
 /* Text for screen readers only */
 .au-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Button text uses the .au-label class too: no label margin, navy text (5.1:1 on orange; white would be 2.75:1) */
+.au-btn .au-label { margin: 0; color: var(--au-navy); }
+.au-page a.au-btn { color: var(--au-navy); }
+.au-page p.au-below { margin-top: 20px; }
