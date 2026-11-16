@@ -4,10 +4,10 @@
 {% block content %}
 <div class="bar">
   <div>
-    <div class="lab">Your quotation</div>
+    <div class="lab">Your {{ quotation.get_quotation_type_display|lower }} quotation</div>
     <h1>Request {{ quotation.request.reference }}</h1>
   </div>
-  <span class="b {% if quotation.status == 'accepted' %}gr{% elif quotation.status == 'sent' %}ye{% else %}re{% endif %}">{{ quotation.get_status_display }}</span>
+  <span class="b {% if quotation.status == 'accepted' %}gr{% elif quotation.status == 'declined' or quotation.status == 'cancelled' %}re{% else %}ye{% endif %}">{{ quotation.get_status_display }}</span>
 </div>
 {% include "payments/_messages.html" %}
 <div class="g2">
@@ -15,12 +15,21 @@
     <h2>Included work</h2>
     <p style="margin:0 0 16px">{{ quotation.work_description|linebreaksbr }}</p>
     <div class="row t"><span>Fixed total</span><span>MUR {{ quotation.total_amount }}</span></div>
+    {% if quotation.revision_number > 1 %}<p class="mut" style="margin:12px 0 0">Revision {{ quotation.revision_number }}</p>{% endif %}
     {% if quotation.status == 'sent' %}
     <form method="post" style="display:flex;gap:12px;margin-top:20px">
       {% csrf_token %}
       <button class="btn" name="accept" value="1">Accept quotation</button>
       <button class="btn o" name="decline" value="1">Decline</button>
     </form>
+    <form method="post" style="margin-top:20px">
+      {% csrf_token %}
+      <label for="note">Ask for a change</label>
+      <textarea class="in" id="note" name="note" rows="3" placeholder="What should change?"></textarea>
+      <button class="btn o" name="revision" value="1" style="margin-top:12px">Request revision</button>
+    </form>
+    {% elif quotation.status == 'revision_requested' %}
+    <p class="mut" style="margin:16px 0 0">You asked for a revision: {{ quotation.customer_note }}. The administrator will send a new quotation.</p>
     {% endif %}
   </div>
   <div class="card">
