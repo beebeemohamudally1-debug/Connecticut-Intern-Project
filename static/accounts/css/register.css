@@ -1,0 +1,182 @@
+/* ----------------------------------------------------------
+   HandyConnect: customer registration pages (S02 to S09).
+   Loaded after auth.css, so it reuses the .au-page variables
+   (navy, orange, blue, borders) and the au- buttons and alerts.
+   New classes start with "rg-". Fonts and colours are unchanged.
+   ---------------------------------------------------------- */
+
+/* ---------- Navy panel with the vertical progress list ---------- */
+.rg-split { grid-template-columns: 480px 1fr;
+  /* Slightly darker helper grey and error red than the spec (#718199 is 3.96:1 and #C95050 is 4.42:1 on white); these pass 4.5:1 */
+  --rg-muted: #5A6A80; --rg-red: #B33D3D; }
+.rg-panel { padding: 48px; gap: 32px; }
+.rg-panel-body { margin: auto 0; }
+.rg-panel h2 { margin: 0 0 12px; font-size: 32px; line-height: 1.2; font-weight: 700; color: #fff; max-width: 380px; }
+.rg-panel .au-lead { margin-bottom: 36px; }
+.rg-steps { list-style: none; margin: 0; padding: 0; }
+.rg-steps li { position: relative; display: grid; grid-template-columns: 36px 1fr; gap: 16px; padding-bottom: 22px; }
+.rg-steps li:last-child { padding-bottom: 0; }
+.rg-steps li::before { content: ""; position: absolute; left: 17px; top: 38px; bottom: 2px; width: 2px; background: rgba(255, 255, 255, .22); }
+.rg-steps li:last-child::before { display: none; }
+.rg-steps li.is-done::before { background: var(--au-orange); }
+.rg-dot { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 600; color: #fff;
+  border: 2px solid rgba(255, 255, 255, .35); background: transparent; }
+.rg-dot .au-ic { width: 18px; height: 18px; stroke-width: 2.6; }
+.is-done .rg-dot { background: var(--au-orange); border-color: var(--au-orange); }
+.is-current .rg-dot { background: #fff; border-color: #fff; color: var(--au-navy); box-shadow: 0 0 0 4px rgba(255, 255, 255, .18); }
+.rg-step-name { display: block; font-size: 16px; line-height: 20px; font-weight: 600; color: #fff; padding-top: 1px; }
+.rg-step-state { display: block; font-size: 13px; line-height: 18px; color: #C9D6E4; }
+.is-current .rg-step-state { color: #fff; font-weight: 600; }
+
+/* ---------- Card, progress (small screens), chip ---------- */
+.rg-card { max-width: 560px; padding: 40px; }
+.rg-card.is-wide { max-width: 680px; }
+.rg-progress { display: none; margin-bottom: 24px; }
+.rg-progress-text { font-size: 13px; color: var(--au-text); margin-bottom: 8px !important; }
+.rg-bar { height: 6px; border-radius: 999px; background: var(--au-line); overflow: hidden; }
+.rg-bar span { display: block; height: 100%; border-radius: 999px; background: var(--au-orange); }
+.rg-bar.is-s1 span { width: 20%; } .rg-bar.is-s2 span { width: 40%; } .rg-bar.is-s3 span { width: 60%; }
+.rg-bar.is-s4 span { width: 80%; } .rg-bar.is-s5 span { width: 100%; }
+
+.rg-chip { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px !important; padding: 6px 8px 6px 12px; border-radius: 999px;
+  background: var(--au-light-blue); color: var(--au-navy); font-size: 13px; line-height: 20px; }
+.rg-chip .au-ic { width: 16px; height: 16px; }
+.rg-chip a { margin-left: 4px; padding: 0 8px; border-left: 1px solid var(--au-border); font-size: 13px; }
+.rg-break { word-break: break-word; overflow-wrap: anywhere; }
+.rg-submit { margin-top: 8px; }
+.rg-submit .au-ic { width: 18px; height: 18px; }
+.rg-second { margin-top: 12px; }
+.rg-note { margin: 16px 0 0 !important; font-size: 13px; color: var(--au-text); text-align: center; }
+.rg-hint { margin-bottom: 20px !important; }
+.rg-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 !important; }
+.rg-back .au-ic { width: 16px; height: 16px; }
+.rg-inline-link { margin: -4px 0 16px !important; font-size: 14px; }
+
+/* ---------- S02 account type cards ---------- */
+.rg-roles { border: 0; margin: 0 0 20px; padding: 0; display: grid; gap: 12px; }
+.rg-role { position: relative; display: block; cursor: pointer; }
+.rg-role input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.rg-role-body { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1.5px solid var(--au-border); border-radius: 12px; background: #fff;
+  transition: border-color .15s, background-color .15s, box-shadow .15s; }
+.rg-role:hover .rg-role-body { border-color: var(--au-navy); background: var(--au-grey); }
+.rg-role-icon { flex: none; width: 48px; height: 48px; border-radius: 12px; background: var(--au-light-blue); color: var(--au-navy); display: grid; place-items: center; }
+.rg-role-icon .au-ic { width: 24px; height: 24px; }
+.rg-role-text { flex: 1; min-width: 0; }
+.rg-role-text strong { display: block; font-size: 17px; line-height: 24px; color: var(--au-navy); }
+.rg-role-text small { display: block; font-size: 14px; line-height: 20px; color: var(--au-text); }
+.rg-role-tick { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--au-border); display: grid; place-items: center; color: transparent; background: #fff; }
+.rg-role-tick .au-ic { width: 14px; height: 14px; stroke-width: 3; }
+.rg-role input:checked + .rg-role-body { border-color: var(--au-orange); background: #FFF8F3; box-shadow: 0 0 0 3px rgba(244, 121, 57, .18); }
+.rg-role input:checked + .rg-role-body .rg-role-icon { background: var(--au-navy); color: #fff; }
+.rg-role input:checked + .rg-role-body .rg-role-tick { background: var(--au-orange); border-color: var(--au-orange); color: #fff; }
+.rg-role input:focus-visible + .rg-role-body { outline: 2px solid var(--au-blue); outline-offset: 2px; }
+
+/* ---------- Fields ---------- */
+.rg-field { margin-bottom: 12px; }
+.rg-req { color: var(--rg-red); font-weight: 700; }
+.rg-opt { font-weight: 400; color: var(--rg-muted); }
+.rg-help { min-height: 0; color: var(--rg-muted); }
+.rg-error { min-height: 0; color: var(--rg-red) !important; }
+.rg-help:empty, .rg-error:empty { display: none; }
+.rg-field .au-help + .au-help { margin-top: 2px; }
+.au-page textarea, .au-page select {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--au-border); border-radius: 8px; background: #fff; color: var(--au-text); font: 400 14px/1.5 Inter, Arial, sans-serif; }
+.au-page textarea { resize: vertical; min-height: 88px; display: block; }
+.au-page select { height: 40px; padding: 0 40px 0 12px; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.au-page textarea:focus, .au-page select:focus { outline: 0; border-color: var(--au-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .2); }
+.au-page textarea[aria-invalid=true], .au-page select[aria-invalid=true] { border-color: var(--au-red); }
+.rg-select { position: relative; }
+.rg-select-chev { position: absolute; right: 12px; top: 10px; width: 20px; height: 20px; pointer-events: none; color: var(--au-muted); }
+.au-ctl.has-prefix { display: flex; }
+.rg-prefix { flex: none; display: grid; place-items: center; padding: 0 12px; border: 1px solid var(--au-border); border-right: 0; border-radius: 8px 0 0 8px;
+  background: var(--au-grey); color: var(--au-text); font-size: 14px; font-weight: 600; }
+.has-prefix input { border-radius: 0 8px 8px 0 !important; }
+.rg-status { min-height: 0; margin: -4px 0 4px; font-size: 12px; line-height: 16px; color: var(--rg-muted); display: flex; gap: 6px; align-items: center; }
+.rg-status:empty { display: none; }
+.rg-status.is-ok { color: var(--au-green); }
+.rg-status .au-ic { width: 14px; height: 14px; }
+.rg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.rg-full { grid-column: 1 / -1; }
+
+/* ---------- Checkboxes ---------- */
+.rg-consent { margin: 8px 0 16px; padding-top: 16px; border-top: 1px solid var(--au-line); }
+.rg-check { display: flex; gap: 12px; align-items: flex-start; min-height: 44px; padding: 8px 0; font-size: 14px; line-height: 20px; cursor: pointer; }
+.rg-check input { appearance: none; -webkit-appearance: none; flex: none; width: 20px; height: 20px; margin: 0; border: 1px solid var(--au-border); border-radius: 4px; background: #fff; cursor: pointer; display: grid; place-items: center; }
+.rg-check input:checked { background: var(--au-navy); border-color: var(--au-navy); }
+.rg-check input:checked::after { content: ""; width: 5px; height: 10px; margin-top: -2px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.rg-check input:focus-visible { outline: 2px solid var(--au-blue); outline-offset: 2px; }
+.rg-check input[aria-invalid=true] { border-color: var(--au-red); border-width: 2px; }
+.rg-consent .rg-error { margin: -4px 0 8px 32px; }
+
+/* ---------- S04 email confirmation ---------- */
+.rg-email { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding: 16px; border: 1px solid var(--au-line); border-radius: 12px; background: var(--au-grey); }
+.rg-email-icon { flex: none; width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid var(--au-line); color: var(--au-navy); display: grid; place-items: center; }
+.rg-email-label { display: block; font-size: 12px; line-height: 16px; color: var(--rg-muted); text-transform: uppercase; letter-spacing: .04em; }
+.rg-email-value { display: block; font-size: 17px; line-height: 24px; color: var(--au-navy); word-break: break-all; }
+
+/* ---------- S05 code entry ---------- */
+.rg-otp input { height: 52px; }
+.rg-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
+.rg-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; background: var(--au-grey); border: 1px solid var(--au-line); font-size: 14px; line-height: 20px; }
+.rg-pill .au-ic { width: 16px; height: 16px; color: var(--au-navy); }
+.rg-pill.is-warn { background: var(--au-red-bg); border-color: #F0C9C9; color: #A33A3A; }
+.rg-pill.is-warn .au-ic { color: #A33A3A; }
+
+/* ---------- S06 password strength ---------- */
+.rg-strength { margin: 4px 0 4px; }
+.rg-strength-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.rg-strength-bar span { height: 4px; border-radius: 999px; background: var(--au-line); transition: background-color .2s; }
+.rg-strength-text { margin-top: 6px !important; font-size: 13px; color: var(--au-text); }
+.rg-strength[data-level="1"] span:nth-child(-n+1) { background: var(--au-red); }
+.rg-strength[data-level="2"] span:nth-child(-n+2) { background: var(--au-orange); }
+.rg-strength[data-level="3"] span:nth-child(-n+3) { background: var(--au-blue); }
+.rg-strength[data-level="4"] span { background: var(--au-green); }
+
+/* ---------- S07 and S09 centred status pages ---------- */
+.rg-center { text-align: center; margin-bottom: 24px; }
+.rg-center h1 { margin-top: 20px; }
+.rg-badge { width: 72px; height: 72px; border-radius: 50%; display: inline-grid; place-items: center; }
+.rg-badge .au-ic { width: 34px; height: 34px; stroke-width: 2.4; }
+.rg-badge.is-amber { background: var(--au-amber-bg); color: var(--au-amber-text); }
+.rg-badge.is-green { background: var(--au-green-bg); color: var(--au-green); }
+.rg-pop { animation: rg-pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes rg-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.rg-summary { margin: 0 0 20px; border: 1px solid var(--au-line); border-radius: 12px; overflow: hidden; }
+.rg-summary div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 16px; font-size: 14px; }
+.rg-summary div + div { border-top: 1px solid var(--au-line); }
+.rg-summary dt { color: var(--rg-muted); flex: none; }
+.rg-summary dd { margin: 0; font-weight: 600; color: var(--au-navy); text-align: right; }
+
+@media (prefers-reduced-motion: reduce) { .rg-pop { animation: none; } .rg-role-body, .rg-strength-bar span { transition: none; } }
+
+/* ---------- Responsive: mobile < 768, tablet 768-1023, desktop 1024+ ---------- */
+@media (max-width: 1023px) {
+  .rg-split { grid-template-columns: 1fr; }
+  .rg-progress { display: block; }
+  .rg-card { padding: 32px; }
+}
+@media (max-width: 767px) {
+  .rg-card { padding: 24px 16px; }
+  .rg-grid { grid-template-columns: 1fr; }
+  .rg-role-body { padding: 14px 16px; gap: 12px; }
+  .rg-role-icon { width: 40px; height: 40px; }
+  .rg-role-text strong { font-size: 16px; }
+  .rg-email-value { font-size: 15px; }
+}
+
+/* The global ".au-page p { margin: 0 }" rule beats single-class margins, so restate them here */
+.rg-card .au-below { margin-top: 20px; }
+.rg-card .au-note { margin: 8px 0 12px; }
+
+/* ---------- Polish: depth on the panel and card, livelier account-type cards ---------- */
+.rg-panel { position: relative; overflow: hidden; background: radial-gradient(120% 80% at 0% 0%, #1E4268 0%, var(--au-navy) 58%); }
+.rg-panel > * { position: relative; z-index: 1; }
+.rg-card { box-shadow: 0 1px 2px rgba(20, 45, 72, .05), 0 16px 40px rgba(20, 45, 72, .07); }
+.rg-role-body { box-shadow: 0 1px 2px rgba(20, 45, 72, .04); }
+.rg-role:hover .rg-role-body { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(20, 45, 72, .08); }
+.rg-role-icon { transition: background-color .15s, color .15s; }
+@media (prefers-reduced-motion: reduce) { .rg-role:hover .rg-role-body { transform: none; } }
+
+/* The repo's global label style is bold; these labels wrap normal text */
+.rg-role, .rg-check { font-weight: 400; }
+.rg-role-text small { font-weight: 400; }

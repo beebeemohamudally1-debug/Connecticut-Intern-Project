@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Layout for every registration page: navy panel with the vertical progress list, one card on the right.
+  Child pages fill:  title, card_class (optional, "is-wide"), step_content.
+  Context:  step (0 to 5; 0 = before the email step), role_label ("Customer" / "Service Provider", shown as a chip when set).
+  Under 1024px the panel becomes a slim navy bar and the card starts with "Step X of 5" and a progress bar.
+{% endcomment %}
+{% block page %}register{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{% static 'accounts/css/auth.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/register.css' %}">
+{% include "accounts/_auth_icons.html" %}
+{% include "accounts/_reg_icons.html" %}
+<div class="au-page au-split rg-split">
+  <aside class="au-panel rg-panel">{% include "accounts/_auth_logo.html" %}
+    <div class="rg-panel-body">
+      <div class="au-tagline-rule"></div>
+      <h2>Create your HandyConnect account</h2>
+      <p class="au-lead">A few quick steps and you are ready to connect with trusted professionals.</p>
+      {% include "accounts/_reg_steps.html" %}
+    </div>
+    <div class="au-trust"><svg class="au-ic" aria-hidden="true"><use href="#au-i-shield"/></svg>Secure accounts. Private conversations. Real support.</div>
+  </aside>
+  <header class="au-mbar">{% include "accounts/_auth_logo.html" %}</header>
+  <main class="au-region" id="main"><div class="au-card rg-card {% block card_class %}{% endblock %}">
+    {% if step %}<div class="rg-progress"><p class="rg-progress-text">Step {{ step }} of 5<span aria-hidden="true"> · </span><b>{% if step == 1 %}Email{% elif step == 2 %}Verify{% elif step == 3 %}Password{% elif step == 4 %}Details{% else %}Done{% endif %}</b></p><div class="rg-bar is-s{{ step }}" aria-hidden="true"><span></span></div></div>{% endif %}
+    {% block step_content %}{% endblock %}
+  </div></main>
+</div>
+<script src="{% static 'accounts/js/auth.js' %}" defer></script>
+<script src="{% static 'accounts/js/register.js' %}" defer></script>
+{% endblock %}

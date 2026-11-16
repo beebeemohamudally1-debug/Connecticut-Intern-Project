@@ -13,6 +13,7 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 
 from . import auth_messages as M
+from .frontend_stubs_register import PREVIEW_GROUPS
 
 RULES_UNMET = [(k, label, False) for k, label in M.PW_RULES]
 RULES_MET = [(k, label, True) for k, label in M.PW_RULES]
@@ -136,6 +137,6 @@ def preview_index(request):
         ("S18 Application status", "/provider/status", STATUS), ("S21 Admin MFA", "/admin-portal/login/mfa", MFA),
         ("S22 Admin first login", "/admin-portal/first-login", NEW),
     ]
-    rows = [(t, [(s, f"{u}?state={s}") for s in tbl]) for t, u, tbl in groups]
-    rows.append(("Other", [("S01 Home", "/"), ("S15 Success", "/forgot-password/done")]))
+    rows = [(t, [(s, f"{u}?state={s}") for s in tbl]) for t, u, tbl in PREVIEW_GROUPS + groups]
+    rows.append(("Other", [("S01 Home", "/"), ("S02 to S08 flow (clickable)", "/register"), ("S15 Success", "/forgot-password/done")]))
     return render(request, "accounts/preview.html", {"rows": rows})

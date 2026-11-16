@@ -28,3 +28,43 @@ PW_RULES = [
     ("common", "Not a common password"),
 ]
 ADMIN_CODE_WRONG = "Incorrect code. Enter the current code from your authenticator app."
+
+# ---------------------------------------------------------------------------
+# Registration (S02 to S09). Quoted from the lo-fi frames; the few lines marked NEW
+# are not in the design (it names the state but gives no text) and are recorded in the README.
+# ---------------------------------------------------------------------------
+ROLE_CUSTOMER = "Customer"
+ROLE_PROVIDER = "Service Provider"
+ROLE_REQUIRED = "Select an account type to continue."  # NEW
+REG_EMAIL_INVALID = "Enter a valid email address."  # NEW
+REG_EMAIL_TAKEN = "This email address is already registered."  # NEW
+REG_CONFIRM_HINT = "Check that your email address is correct before requesting a code."
+REG_CODE_WRONG = "Incorrect code. Please try again."
+REG_CODE_EXPIRED = "Your code has expired. Request a new code."
+REG_CODE_LOCKED = "Locked after 3 failed attempts. Request a new code to continue."
+REG_CODE_HOURLY = "Resend limit reached: 5 codes per hour. Please try again later."
+REG_CODE_SENT = "A new code has been sent. Any earlier code no longer works."  # NEW
+REG_PW_UNMET = "Your password does not meet all requirements."
+REG_PW_MISMATCH = "Passwords do not match."
+REG_SESSION_EXPIRED = "Your registration session has expired. For your security, please start again."  # NEW
+
+USERNAME_TAKEN = "This username is already taken."
+USERNAME_FREE = "Username is available."  # NEW
+CUSTOMER_ERRORS = {
+    "first_name": "Enter a valid first name.",
+    "surname": "Enter a valid surname.",
+    "additional_names": "Enter valid additional names, or leave this optional field blank.",
+    "username": "Use 3-30 characters: letters, digits and underscores.",
+    "phone": "Enter a phone number with exactly 8 digits.",
+    "region": "Select your region.",
+    "address": "Enter your residential address.",
+    "terms": "You must accept the Terms and Conditions.",
+    "privacy": "You must accept the Privacy Policy.",
+}
+# The nine regions of the residential-region dropdown (value, label). Backend: load these from the Region model.
+REGIONS = [
+    (name, name) for name in (
+        "Port Louis", "Pamplemousses", "Riviere du Rempart", "Flacq", "Grand Port",
+        "Savanne", "Plaines Wilhems", "Moka", "Black River",
+    )
+]

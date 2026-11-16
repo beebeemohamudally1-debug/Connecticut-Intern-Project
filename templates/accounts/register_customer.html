@@ -1,0 +1,31 @@
+{% extends "accounts/register_base.html" %}
+{% comment %}
+  S08 Customer details.
+  Context: email, values {first_name, surname, additional_names, username, phone, region, address}, regions [(value, label)],
+           errors {first_name, surname, additional_names, username, phone, region, address, terms, privacy},
+           terms_accepted, privacy_accepted (bools, to keep the ticks), role_label, step=4.
+  POST: the fields above plus terms and privacy (checkboxes). Username is also checked live on blur (accounts:username_check).
+{% endcomment %}
+{% block title %}Customer details | HandyConnect{% endblock %}
+{% block card_class %}is-wide{% endblock %}
+{% block step_content %}
+{% include "accounts/_reg_role_chip.html" %}
+<div class="au-intro"><h1>Customer details</h1><p class="au-sub">Complete your details for <b class="rg-break">{{ email }}</b>.</p></div>
+<form method="post" novalidate data-au-once>{% csrf_token %}
+<div class="rg-grid">
+{% include "accounts/_reg_field.html" with id="first_name" name="first_name" label="First name" value=values.first_name error=errors.first_name autocomplete="given-name" required="1" %}
+{% include "accounts/_reg_field.html" with id="surname" name="surname" label="Surname" value=values.surname error=errors.surname autocomplete="family-name" required="1" %}
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="additional_names" name="additional_names" label="Additional names" optional="1" value=values.additional_names error=errors.additional_names autocomplete="additional-name" %}</div>
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="username" name="username" label="Username" value=values.username error=errors.username help="Unique, 3-30 characters, letters, digits and underscores" autocomplete="username" maxlength="30" required="1" live="1" %}<div id="username-status" class="rg-status" aria-live="polite"></div></div>
+{% include "accounts/_reg_field.html" with id="phone" name="phone" label="Phone" type="text" value=values.phone error=errors.phone help="Exactly 8 digits" autocomplete="tel-national" inputmode="numeric" maxlength="8" prefix="+230" required="1" %}
+{% include "accounts/_reg_select.html" with id="region" name="region" label="Residential region" options=regions selected=values.region error=errors.region placeholder="Select your region" required="1" %}
+<div class="rg-full">{% include "accounts/_reg_textarea.html" with id="address" name="address" label="Residential address" value=values.address error=errors.address autocomplete="street-address" required="1" %}</div>
+</div>
+<div class="rg-consent">
+<label class="rg-check"><input type="checkbox" name="terms" value="1"{% if terms_accepted %} checked{% endif %}{% if errors.terms %} aria-invalid="true"{% endif %} aria-describedby="terms-error"><span>I accept the <a href="#" target="_blank" rel="noopener">Terms and Conditions</a>.</span></label>
+<div id="terms-error" class="au-help is-error rg-error" aria-live="polite">{% if errors.terms %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ errors.terms }}{% endif %}</div>
+<label class="rg-check"><input type="checkbox" name="privacy" value="1"{% if privacy_accepted %} checked{% endif %}{% if errors.privacy %} aria-invalid="true"{% endif %} aria-describedby="privacy-error"><span>I accept the <a href="#" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+<div id="privacy-error" class="au-help is-error rg-error" aria-live="polite">{% if errors.privacy %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ errors.privacy }}{% endif %}</div>
+</div>
+<button class="au-btn rg-submit" type="submit"><span class="au-label">Create account</span></button></form>
+{% endblock %}
