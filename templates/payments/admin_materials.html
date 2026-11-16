@@ -1,6 +1,69 @@
 {% extends "base_admin.html" %}
-{% block title %}Admin · Materials approval | HandyConnect{% endblock %}
+{% block title %}Materials | HandyConnect{% endblock %}
 {% block page %}materials{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Admin · Materials</div><h1>Materials approval</h1><p class="sub">Approve material costs and receipts before they are added to the invoice.</p></div></div><div class="card"><table class="tb"><thead><tr><th>Job</th><th>Handyman</th><th>Item</th><th>Qty</th><th>Cost (MUR)</th><th>Receipt</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td>JOB-1042</td><td>Kevin L.</td><td>Mixer tap</td><td>1</td><td>950.00</td><td><i class="th"></i></td><td><span class="b ye">Pending</span></td><td><button class="btn s">Approve</button> <button class="btn o s">Reject</button></td></tr><tr><td>JOB-1042</td><td>Kevin L.</td><td>Pipe fittings</td><td>4</td><td>550.00</td><td><i class="th"></i></td><td><span class="b ye">Pending</span></td><td><button class="btn s">Approve</button> <button class="btn o s">Reject</button></td></tr><tr><td>JOB-1038</td><td>Marc D.</td><td>Cable and switch</td><td>2</td><td>1,200.00</td><td><i class="th"></i></td><td><span class="b gr">Approved</span></td><td>-</td></tr></tbody></table></div>
+<div class="lab">Admin · Materials</div>
+<h1>Materials</h1>
+<p class="sub">Review purchase requests and receipts from handymen.</p>
+{% include "payments/_messages.html" %}
+<div class="card" style="margin-bottom:24px">
+  <h2>Purchase requests</h2>
+  <table class="tb">
+    <thead><tr><th>Request</th><th>Handyman</th><th>Materials</th><th>Estimate (MUR)</th><th>Status</th><th>Review</th></tr></thead>
+    <tbody>
+    {% for p in purchase_requests %}
+      <tr>
+        <td>{{ p.request.reference }}</td>
+        <td>{{ p.handyman }}</td>
+        <td>{{ p.items|truncatechars:60 }}</td>
+        <td>{{ p.estimated_cost }}</td>
+        <td><span class="b {% if p.status == 'forwarded' %}gr{% elif p.status == 'rejected' %}re{% else %}ye{% endif %}">{{ p.get_status_display }}</span></td>
+        <td>
+          {% if p.status == 'submitted' %}
+          <form method="post" action="{% url 'payments:material_request_action' p.pk %}" style="display:flex;gap:8px;flex-wrap:wrap">
+            {% csrf_token %}
+            <input class="in" name="total" placeholder="Quote total (MUR)" value="{{ p.estimated_cost }}" style="width:130px">
+            <input class="in" name="note" placeholder="Reason (to reject)" style="width:170px">
+            <button class="btn s" name="action" value="forward">Forward to customer</button>
+            <button class="btn o s" name="action" value="reject">Reject</button>
+          </form>
+          {% elif p.quotation %}<a href="{% url 'payments:quotation_detail_admin' p.quotation.pk %}">Quotation details</a>
+          {% else %}<span class="mut">{{ p.admin_note|default:"-" }}</span>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="mut">No purchase requests yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="card">
+  <h2>Receipts</h2>
+  <table class="tb">
+    <thead><tr><th>Request</th><th>Handyman</th><th>Amount spent (MUR)</th><th>Receipt</th><th>Status</th><th>Review</th></tr></thead>
+    <tbody>
+    {% for r in receipts %}
+      <tr>
+        <td>{{ r.purchase_request.request.reference }}</td>
+        <td>{{ r.uploaded_by }}</td>
+        <td>{{ r.amount_spent }}</td>
+        <td><a href="{{ r.image.url }}" target="_blank">View</a></td>
+        <td><span class="b {% if r.status == 'approved' %}gr{% elif r.status == 'rejected' %}re{% else %}ye{% endif %}">{{ r.get_status_display }}</span></td>
+        <td>
+          {% if r.status == 'submitted' %}
+          <form method="post" action="{% url 'payments:receipt_action' r.pk %}" style="display:flex;gap:8px;flex-wrap:wrap">
+            {% csrf_token %}
+            <input class="in" name="note" placeholder="Reason (to reject)" style="width:170px">
+            <button class="btn s" name="action" value="approve">Approve</button>
+            <button class="btn o s" name="action" value="reject">Reject</button>
+          </form>
+          {% else %}<span class="mut">{{ r.admin_note|default:"-" }}</span>{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="mut">No receipts yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
