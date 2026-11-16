@@ -11,10 +11,8 @@ accounts/urls.py from `frontend_stubs` to `views`, and delete this file.
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import redirect, render
-from django.contrib.auth import logout
+
 from . import auth_messages as M
-from django.contrib.auth import authenticate, login
-from django.contrib import messages
 
 RULES_UNMET = [(k, label, False) for k, label in M.PW_RULES]
 RULES_MET = [(k, label, True) for k, label in M.PW_RULES]
@@ -69,54 +67,15 @@ def home(request):
     return render(request, "accounts/home.html")
 
 
-
-
 def login_view(request):
+    # TODO(backend): POST = validate, authenticate, lockout, route by role (FR-LOG-01..14).
     if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "")
-
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-
-        user = User.objects.filter(email__iexact=email).first()
-
-        if user is not None:
-            user = authenticate(
-                request,
-                username=user.username,
-                password=password
-            )
-
-        if user is not None and user.is_active:
-            login(request, user)
-
-            if user.is_superuser or user.role == "admin":
-                return redirect("dashboard:admin_dashboard")
-
-            if user.role == "handyman":
-                return redirect("dashboard:handyman_dashboard")
-
-            return redirect("dashboard:customer_dashboard")
-
-        messages.error(request, "Invalid email or password.")
-
-    return render(
-        request,
-        "accounts/login.html",
-        {
-            "errors": {},
-            "email": "",
-            "panel": "login",
-            **_pick(request, LOGIN)
-        }
-    )
-
-
+        return redirect("dashboard:customer_dashboard")  # stub
+    return render(request, "accounts/login.html", {"errors": {}, "email": "", "panel": "login", **_pick(request, LOGIN)})
 
 
 def logout_view(request):
-    logout(request)
+    # TODO(backend): flush the session, then redirect to login.
     return redirect("accounts:login")
 
 
