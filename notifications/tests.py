@@ -3,7 +3,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from .services import notify_admins
-
+from bookings.models import ServiceRequest
+from django.db import transaction
 from .models import Notification
 
 
@@ -287,3 +288,107 @@ class ComplaintNotificationSignalTests(TestCase):
             ).exists()
         )
 
+
+class ServiceRequestNotificationSignalTests(TestCase):
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='service_admin_test',
+            password='TestPass123!',
+            role='admin',
+            is_staff=True
+        )
+
+        self.customer = User.objects.create_user(
+            username='service_customer_test',
+            password='TestPass123!',
+            role='customer'
+        )
+
+    def test_new_service_request_notifies_admin(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            service_request = ServiceRequest.objects.create(
+                customer=self.customer,
+                service_category='Plumbing',
+                problem_description='Leaking kitchen tap',
+                status='requested'
+            )
+
+        notifications = Notification.objects.filter(
+            notification_type='service_request'
+        )
+
+        self.assertEqual(notifications.count(), 1)
+
+        notification = notifications.first()
+
+        self.assertEqual(notification.recipient, self.admin)
+        self.assertEqual(notification.title, 'New Service Request')
+        self.assertIn(service_request.reference, notification.message)
+        self.assertIn('Plumbing', notification.message)
+        self.assertFalse(notification.is_read)
+
+        self.assertFalse(
+            Notification.objects.filter(
+                recipient=self.customer
+            ).exists()
+        )
+
+    def test_updating_service_request_does_not_notify_again(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            service_request = ServiceRequest.objects.create(
+                customer=self.customer,
+                service_category='Electrical',
+                status='requested'
+            )
+
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type='service_request'
+            ).count(),
+            1
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            service_request.status = ServiceRequest.STATUS_REVIEWING
+            service_request.save()
+
+        self.assertEqual(
+            Notification.objects.filter(
+                notification_type='service_request'
+            ).count(),
+            1
+        )
+
+    def test_cancelled_request_does_not_notify_admin(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            ServiceRequest.objects.create(
+                customer=self.customer,
+                service_category='Cleaning',
+                status=ServiceRequest.STATUS_CANCELLED
+            )
+
+        self.assertFalse(
+            Notification.objects.filter(
+                notification_type='service_request'
+            ).exists()
+        )
+
+    def test_rolled_back_request_does_not_notify_admin(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            try:
+                with transaction.atomic():
+                    ServiceRequest.objects.create(
+                        customer=self.customer,
+                        service_category='Painting',
+                        status='requested'
+                    )
+                    raise ValueError('Simulated rollback')
+            except ValueError:
+                pass
+
+        self.assertFalse(
+            Notification.objects.filter(
+                notification_type='service_request'
+            ).exists()
+        )
