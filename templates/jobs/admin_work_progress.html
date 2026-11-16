@@ -1,0 +1,123 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Monitor Work Progress (section 5) - Overview.
+
+  Data comes from the view as `page`:
+    page.jobs      -> one row per assigned job (see names below)
+    page.services  -> service names for the Service filter
+  Names follow jobs.Job:
+    reference      -> job.reference            (JOB-1042)
+    service        -> job.service_name
+    customer       -> job.customer full name
+    handyman       -> job.handyman full name
+    percent        -> latest DailyReport.percent_complete (0 if none yet)
+    due            -> job.due_date             (a date, no time)
+    status         -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
+                      ('delayed' = job.is_delayed, not a stored status)
+    status_label   -> text shown in the pill
+    url            -> link to this job's progress details page
+  BACKEND: replace the sample data with real jobs. Search, filters and the
+  page buttons work in the browser on the rows sent (6 per page). If you
+  paginate on the server, send one page at a time and swap the buttons for links.
+{% endcomment %}
+
+{% block title %}Monitor Work Progress | HandyConnect{% endblock %}
+{% block page %}progress{% endblock %}
+{% block crumb %}Work Progress{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'jobs/css/admin_work_progress.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Monitor Work Progress</h1>
+    <p class="sub">Track assigned jobs, review daily updates and monitor completion.</p>
+  </div>
+</div>
+
+<section class="card wp-card" data-jobs data-page-size="6">
+  <div class="wp-head">
+    <h2>Work Progress Overview</h2>
+    <p class="mut" data-total>{{ page.jobs|length }} assigned job{{ page.jobs|length|pluralize }}</p>
+  </div>
+
+  <div class="wp-tools">
+    <label class="wp-search">
+      <span class="sr-only">Search by job ID, customer or handyman</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search by job ID, customer or handyman..." data-search>
+    </label>
+    <label>
+      <span class="sr-only">Filter by service</span>
+      <select class="in" data-service>
+        <option value="">All services</option>
+        {% for s in page.services %}
+        <option value="{{ s|lower }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Filter by status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="assigned">Assigned</option>
+        <option value="in_progress">In Progress</option>
+        <option value="delayed">Delayed</option>
+        <option value="completed">Completed</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb wp-table">
+    <thead>
+      <tr>
+        <th scope="col">Job ID</th>
+        <th scope="col">Service</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Progress</th>
+        <th scope="col">Due Date</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in page.jobs %}
+      <tr data-row data-service="{{ j.service|lower }}" data-status="{{ j.status }}"
+          data-text="{{ j.reference|lower }} {{ j.customer|lower }} {{ j.handyman|lower }}">
+        <td data-label="Job ID" class="wp-ref">{{ j.reference }}</td>
+        <td data-label="Service">{{ j.service }}</td>
+        <td data-label="Customer">{{ j.customer }}</td>
+        <td data-label="Handyman">{{ j.handyman }}</td>
+        <td data-label="Progress">
+          <span class="wp-prog">
+            <span class="wp-pct">{{ j.percent }}%</span>
+            <progress class="wp-track" value="{{ j.percent }}" max="100" aria-label="{{ j.percent }} percent complete"></progress>
+          </span>
+        </td>
+        <td data-label="Due Date">{{ j.due|date:"d M Y" }}</td>
+        <td data-label="Status">
+          <span class="b wp-{{ j.status }}">{{ j.status_label }}</span>
+        </td>
+        <td data-label="Action">
+          <a class="btn o s" href="{{ j.url|default:'#' }}">View<span class="sr-only"> {{ j.reference }}</span></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="wp-empty" data-empty hidden>No jobs match your search.</p>
+
+  <div class="wp-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="wp-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'jobs/js/admin_work_progress.js' %}"></script>
+{% endblock %}

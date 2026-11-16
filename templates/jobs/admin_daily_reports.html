@@ -1,0 +1,92 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Monitor Work Progress (section 5) - Daily Work Reports for one job.
+
+  Data comes from the view as `page`:
+    page.reference, page.service, page.customer -> the job (jobs.Job)
+    page.job_url        -> this job's Job Progress Details page
+    page.handymen       -> handyman names for the filter (a job has one handyman)
+    page.reports        -> one card per jobs.ProgressReport, newest first:
+        report_date  -> report.report_date   (a date)
+        updated_at   -> report.updated_at    (gives the time)
+        handyman     -> report.author full name
+        details      -> report.details
+        percent      -> report.percent_complete
+        photos       -> number of WorkEvidence photos uploaded that day
+                        (WorkEvidence belongs to the job, so count by uploaded_at)
+        url          -> the Work Evidence page for this report
+  A report has no status of its own, so the pill shows its percent complete.
+  BACKEND: replace the sample data with the real reports. The filter and page
+  buttons work in the browser on the cards sent (3 per page).
+{% endcomment %}
+
+{% block title %}Daily Work Reports | HandyConnect{% endblock %}
+{% block page %}progress{% endblock %}
+{% block crumb %}Work Progress{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'jobs/css/admin_daily_reports.css' %}">
+
+<a class="dr-back" href="{{ page.job_url|default:'#' }}">&larr; Job Progress Details</a>
+
+<div class="bar">
+  <div>
+    <h1>Daily Work Reports</h1>
+    <p class="sub">Reports for job {{ page.reference }} &middot; {{ page.service }} &middot; {{ page.customer }}</p>
+  </div>
+  <label class="dr-filter">
+    <span>Filter by handyman</span>
+    <select class="in" data-handyman>
+      <option value="">All handymen</option>
+      {% for h in page.handymen %}
+      <option value="{{ h|lower }}">{{ h }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</div>
+
+<section class="dr-list" data-reports data-page-size="3">
+  {% for r in page.reports %}
+  <article class="card dr-card" data-row data-handyman="{{ r.handyman|lower }}">
+    <div class="dr-top">
+      <p class="dr-date">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span class="mut">Date</span> <strong>{{ r.report_date|date:"d M Y" }}</strong> <span class="mut">&middot; {{ r.updated_at|date:"H:i" }}</span>
+      </p>
+      <span class="dr-chip">{{ r.percent }}% complete</span>
+    </div>
+
+    <div class="dr-body">
+      <div>
+        <p class="dr-label">Handyman Name</p>
+        <p class="dr-name">{{ r.handyman }}</p>
+      </div>
+      <div>
+        <p class="dr-label">Description</p>
+        <p class="dr-text">{{ r.details }}</p>
+      </div>
+    </div>
+
+    <div class="dr-bottom">
+      <p class="dr-photos">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>
+        {% if r.photos %}{{ r.photos }} new photo{{ r.photos|pluralize }} uploaded{% else %}No new photos{% endif %}
+      </p>
+      <a class="dr-open" href="{{ r.url|default:'#' }}">Open<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="sr-only"> report of {{ r.report_date|date:"d M Y" }}</span></a>
+    </div>
+  </article>
+  {% endfor %}
+
+  <p class="dr-empty" data-empty hidden>No reports for this handyman.</p>
+</section>
+
+<div class="dr-foot">
+  <p class="mut" data-count aria-live="polite"></p>
+  <nav class="dr-pages" aria-label="Pagination" data-pages></nav>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'jobs/js/admin_daily_reports.js' %}"></script>
+{% endblock %}

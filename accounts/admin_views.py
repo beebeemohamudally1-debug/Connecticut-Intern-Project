@@ -1,5 +1,6 @@
 from datetime import datetime
-
+from notifications.models import Notification
+from dashboard.permissions import role_required
 from django.shortcuts import render
 
 # Sample data until the real administrator is connected
@@ -182,24 +183,227 @@ def suspended_handyman(request):
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': SUSPENDED_HANDYMAN})
 
 
-# Sample data for the Notifications page. Same names as notifications.models.Notification.
-NOTIFICATIONS = [
-    {'id': 1, 'title': 'New report requires review', 'message': 'C-0152 · Marcus Reed reported a customer access issue.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 13, 45)},
-    {'id': 2, 'title': 'Quotation accepted', 'message': 'JOB-0154 · John Doe accepted the quotation.', 'notification_type': 'quotation', 'is_read': False, 'created_at': datetime(2026, 10, 26, 12, 5)},
-    {'id': 3, 'title': 'New private reply from Emma Wilson', 'message': 'C-0147 · Customer confirmed morning availability.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 11, 42)},
-    {'id': 4, 'title': 'New private reply from Marcus Reed', 'message': 'C-0147 · Handyman confirmed a no-charge follow-up.', 'notification_type': 'complaint', 'is_read': False, 'created_at': datetime(2026, 10, 26, 11, 28)},
-    {'id': 5, 'title': 'Appointment rescheduled', 'message': 'AP-3112 · Customer moved the visit to Oct 28 morning.', 'notification_type': 'job', 'is_read': False, 'created_at': datetime(2026, 10, 26, 10, 40)},
-    {'id': 6, 'title': 'Service request awaiting a quote', 'message': 'REQ-1058 · Cabinet hinge repair · Carpentry.', 'notification_type': 'service_request', 'is_read': False, 'created_at': datetime(2026, 10, 26, 10, 20)},
-    {'id': 7, 'title': 'Offline payments verified', 'message': 'Oct 25 batch · 24 offline receipts · MUR 58,200 verified.', 'notification_type': 'other', 'is_read': False, 'created_at': datetime(2026, 10, 26, 8, 0)},
-    {'id': 8, 'title': 'Private feedback awaiting assessment', 'message': 'FB-0834 · REQ-1042 · Private · 4/5. Review internally.', 'notification_type': 'feedback', 'is_read': False, 'created_at': datetime(2026, 10, 24, 11, 8)},
-    {'id': 9, 'title': 'Job assignment confirmed', 'message': 'REQ-1042 · Full payment verified · AP-3106 · Oct 24 morning.', 'notification_type': 'job', 'is_read': True, 'created_at': datetime(2026, 10, 23, 11, 16)},
-    {'id': 10, 'title': 'Complaint resolution recorded', 'message': 'C-0132 · MUR 100 goodwill credit · Customer informed.', 'notification_type': 'complaint', 'is_read': True, 'created_at': datetime(2026, 10, 13, 16, 20)},
+
+
+
+
+@role_required('admin')
+def notifications(request):
+    """Display real notifications for the administrator."""
+
+    notifications_list = Notification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+
+    unread_count = notifications_list.filter(
+        is_read=False
+    ).count()
+
+    return render(
+        request,
+        'notifications/admin_notifications.html',
+        {
+            'notifications': notifications_list,
+            'unread_count': unread_count,
+        }
+    )
+# Sample data for Monitor Work Progress until the real jobs are connected
+from datetime import date
+
+WORK_PROGRESS = {
+    'services': ['Appliance Repair', 'Carpentry', 'Electrical', 'Painting', 'Plumbing'],
+    'jobs': [
+        {'reference': 'JOB-1042', 'service': 'Plumbing', 'customer': 'Emma Wilson', 'handyman': 'Marcus Reed', 'percent': 65, 'due': date(2026, 10, 28), 'status': 'delayed', 'status_label': 'Delayed', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1051', 'service': 'Electrical', 'customer': 'Daniel Brooks', 'handyman': 'Sofia Martinez', 'percent': 40, 'due': date(2026, 10, 30), 'status': 'in_progress', 'status_label': 'In Progress', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1046', 'service': 'Painting', 'customer': 'Amy Lee', 'handyman': 'James Carter', 'percent': 100, 'due': date(2026, 10, 28), 'status': 'completed', 'status_label': 'Completed', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1053', 'service': 'Carpentry', 'customer': 'Rachel Kim', 'handyman': 'Ethan Taylor', 'percent': 0, 'due': date(2026, 11, 2), 'status': 'assigned', 'status_label': 'Assigned', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1049', 'service': 'Appliance Repair', 'customer': 'David Park', 'handyman': 'Noah Williams', 'percent': 80, 'due': date(2026, 10, 30), 'status': 'in_progress', 'status_label': 'In Progress', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1054', 'service': 'Plumbing', 'customer': 'Sarah Patel', 'handyman': 'Marcus Reed', 'percent': 0, 'due': date(2026, 11, 3), 'status': 'assigned', 'status_label': 'Assigned', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1055', 'service': 'Electrical', 'customer': 'Priya Nair', 'handyman': 'Sofia Martinez', 'percent': 55, 'due': date(2026, 11, 4), 'status': 'in_progress', 'status_label': 'In Progress', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1047', 'service': 'Painting', 'customer': 'Kevin Dubois', 'handyman': 'James Carter', 'percent': 100, 'due': date(2026, 10, 27), 'status': 'completed', 'status_label': 'Completed', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1048', 'service': 'Carpentry', 'customer': 'Aisha Rahman', 'handyman': 'Ethan Taylor', 'percent': 30, 'due': date(2026, 10, 29), 'status': 'delayed', 'status_label': 'Delayed', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1056', 'service': 'Appliance Repair', 'customer': 'Nadia Bhuruth', 'handyman': 'Noah Williams', 'percent': 0, 'due': date(2026, 11, 5), 'status': 'assigned', 'status_label': 'Assigned', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1050', 'service': 'Plumbing', 'customer': 'Jean Laval', 'handyman': 'Marcus Reed', 'percent': 90, 'due': date(2026, 11, 1), 'status': 'in_progress', 'status_label': 'In Progress', 'url': '/admin-portal/work-progress/job/'},
+        {'reference': 'JOB-1052', 'service': 'Electrical', 'customer': 'Ravi Gopaul', 'handyman': 'Sofia Martinez', 'percent': 100, 'due': date(2026, 10, 31), 'status': 'completed', 'status_label': 'Completed', 'url': '/admin-portal/work-progress/job/'},
+    ],
+}
+
+
+def work_progress(request):
+    """Monitor Work Progress - Overview."""
+    return render(request, 'jobs/admin_work_progress.html', {'page': WORK_PROGRESS})
+
+# Sample data for Job Progress Details until the real job is connected
+JOB_PROGRESS = {
+    'reference': 'JOB-1042',
+    'title': 'Kitchen pipe repair and replacement',
+    'handyman': 'Marcus Reed',
+    'customer': 'Emma Wilson',
+    'started': datetime(2026, 10, 27, 9, 0),
+    'due': date(2026, 10, 28),
+    'service': 'Plumbing',
+    'request_ref': 'REQ-3128',
+    'scheduled': date(2026, 10, 27),
+    'status': 'delayed',
+    'status_label': 'Delayed',
+    'percent': 65,
+    'overdue': '1 day overdue',
+    'latest_note': 'Awaiting replacement fitting. Final pressure test is still pending.',
+    'last_report': datetime(2026, 10, 29, 16, 45),
+    'reports_url': '/admin-portal/work-progress/reports/',
+    'evidence_url': '/admin-portal/work-progress/evidence/',
+    'timeline': [
+        {'kind': 'assigned', 'title': 'Assigned to handyman', 'when': datetime(2026, 10, 26, 10, 30), 'text': 'Marcus Reed assigned to the plumbing repair for Emma Wilson.'},
+        {'kind': 'started', 'title': 'Work Started', 'when': datetime(2026, 10, 27, 9, 0), 'text': 'Site inspection completed; damaged kitchen pipework removed.'},
+        {'kind': 'report', 'title': 'Daily Report added', 'when': datetime(2026, 10, 28, 16, 20), 'text': 'Replacement pipework installed. Progress updated from 35% to 65%.'},
+        {'kind': 'delay', 'title': 'Delay reported · Daily Report added', 'when': datetime(2026, 10, 29, 16, 45), 'text': 'Final fitting is unavailable. Expected completion missed by 1 day.'},
+    ],
+}
+
+
+def job_progress(request):
+    """Monitor Work Progress - Job Progress Details."""
+    return render(request, 'jobs/admin_job_progress.html', {'job': JOB_PROGRESS})
+
+# Sample data for Daily Work Reports until the real reports are connected
+DAILY_REPORTS = {
+    'reference': 'JOB-1042',
+    'service': 'Plumbing',
+    'customer': 'Emma Wilson',
+    'job_url': '/admin-portal/work-progress/job/',
+    'handymen': ['Marcus Reed'],
+    'reports': [
+        {'report_date': date(2026, 10, 29), 'updated_at': datetime(2026, 10, 29, 16, 45), 'handyman': 'Marcus Reed', 'percent': 65, 'photos': 3, 'url': '/admin-portal/work-progress/evidence/',
+         'details': 'Main pipework fitted. Waiting for a replacement elbow fitting before the final pressure test and handover.'},
+        {'report_date': date(2026, 10, 28), 'updated_at': datetime(2026, 10, 28, 16, 20), 'handyman': 'Marcus Reed', 'percent': 65, 'photos': 4, 'url': '/admin-portal/work-progress/evidence/',
+         'details': 'Replacement supply pipes installed and joints secured. Initial leak checks completed; final fitting still required.'},
+        {'report_date': date(2026, 10, 27), 'updated_at': datetime(2026, 10, 27, 17, 10), 'handyman': 'Marcus Reed', 'percent': 35, 'photos': 2, 'url': '/admin-portal/work-progress/evidence/',
+         'details': 'Inspected the kitchen leak, isolated the water supply and removed the damaged pipe section. Site prepared for installation.'},
+        {'report_date': date(2026, 10, 26), 'updated_at': datetime(2026, 10, 26, 15, 30), 'handyman': 'Marcus Reed', 'percent': 10, 'photos': 1, 'url': '/admin-portal/work-progress/evidence/',
+         'details': 'Met the customer on site, confirmed the scope of work and photographed the damaged pipework.'},
+    ],
+}
+
+
+def daily_reports(request):
+    """Monitor Work Progress - Daily Work Reports."""
+    return render(request, 'jobs/admin_daily_reports.html', {'page': DAILY_REPORTS})
+
+# Sample data for Work Evidence & Completion Notes until the real job is connected
+WORK_EVIDENCE = {
+    'reference': 'JOB-1042',
+    'title': 'Kitchen pipe repair and replacement',
+    'reports_url': '/admin-portal/work-progress/reports/',
+    'report_date': date(2026, 10, 29),
+    'updated_at': datetime(2026, 10, 29, 16, 45),
+    'handyman': 'Marcus Reed',
+    'status': 'delayed',
+    'status_label': 'Delayed',
+    'photos': [
+        {'caption': 'Pipework overview', 'filename': 'site_2910_01.jpg', 'url': ''},
+        {'caption': 'New supply connection', 'filename': 'site_2910_02.jpg', 'url': ''},
+        {'caption': 'Under-sink joint detail', 'filename': 'site_2910_03.jpg', 'url': ''},
+    ],
+    'notes': 'Main pipework installed and initial leak checks completed. A replacement elbow fitting is required before the final pressure test. Completion is delayed until the part arrives.',
+    'is_flagged': False,
+    'flag_reason': '',
+    'flag_url': '',
+}
+
+
+def work_evidence(request):
+    """Monitor Work Progress - Work Evidence & Completion Notes."""
+    return render(request, 'jobs/admin_work_evidence.html', {'page': WORK_EVIDENCE})
+
+# Sample data for the Complaint Queue until the real complaints are connected
+COMPLAINT_QUEUE = {
+    'stats': {'total': 12, 'pending': 4, 'in_progress': 5, 'resolved': 3},
+    'complaints': [
+        {'reference': 'CMP-1152', 'subject': 'Access issue', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1051', 'created_at': datetime(2026, 10, 26, 9, 15), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1151', 'subject': 'Payment query', 'filed_by': 'Daniel Brooks', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1046', 'created_at': datetime(2026, 10, 26, 8, 40), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1150', 'subject': 'Invoice copy', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-0998', 'created_at': datetime(2026, 10, 25, 16, 5), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1149', 'subject': 'Missed appointment', 'filed_by': 'Amy Lee', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1043', 'created_at': datetime(2026, 10, 25, 13, 30), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1147', 'subject': 'Work quality', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1042', 'created_at': datetime(2026, 10, 25, 8, 50), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1146', 'subject': 'Customer not home', 'filed_by': 'Sofia Martinez', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1039', 'created_at': datetime(2026, 10, 24, 11, 20), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1144', 'subject': 'Billing question', 'filed_by': 'Rachel Kim', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1032', 'created_at': datetime(2026, 10, 22, 10, 10), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1141', 'subject': 'Damaged tile', 'filed_by': 'David Park', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1028', 'created_at': datetime(2026, 10, 20, 15, 45), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1138', 'subject': 'Parking access', 'filed_by': 'James Carter', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1022', 'created_at': datetime(2026, 10, 18, 9, 0), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
+        {'reference': 'CMP-1132', 'subject': 'Late arrival', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1016', 'created_at': datetime(2026, 10, 14, 14, 25), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+        {'reference': 'CMP-1128', 'subject': 'Wrong materials', 'filed_by': 'Priya Nair', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1011', 'created_at': datetime(2026, 10, 10, 12, 0), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+        {'reference': 'CMP-1124', 'subject': 'Access delay', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-0980', 'created_at': datetime(2026, 10, 6, 10, 30), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
+    ],
+}
+
+
+def complaint_queue(request):
+    """Complaints - Complaint Queue."""
+    return render(request, 'complaints/admin_complaint_queue.html', {'page': COMPLAINT_QUEUE})
+
+# ---------- Complaints: case pages (sample data until the real complaint is connected) ----------
+CASE_BASE = '/admin-portal/complaints/case/'
+
+_CASE = {
+    'reference': 'CMP-1147', 'subject': 'Work quality',
+    'description': 'The sink no longer leaks, but the cabinet floor still feels damp. I’m concerned there may be trapped moisture. Could someone inspect it and confirm it is safe?',
+    'job': 'JOB-1042', 'filed_by': 'Emma Wilson', 'against': 'Marcus Reed',
+    'created_at': datetime(2026, 10, 25, 8, 50),
+    'evidence': [{'name': 'cabinet-moisture.jpg', 'size': '1.8 MB', 'url': '#'}, {'name': 'repair-after.jpg', 'size': '1.9 MB', 'url': '#'}],
+    'customer_msgs': 2, 'customer_last': datetime(2026, 10, 25, 11, 10),
+    'handyman_msgs': 2, 'handyman_last': datetime(2026, 10, 25, 10, 35),
+    'queue_url': '/admin-portal/complaints/', 'customer_url': CASE_BASE + 'customer/', 'handyman_url': CASE_BASE + 'handyman/',
+    'resolve_url': CASE_BASE + 'resolve/', 'status_url': '',
+}
+
+_ACTIVITY = [
+    {'title': 'Complaint received', 'at': datetime(2026, 10, 25, 8, 50), 'done': True},
+    {'title': 'Investigation opened', 'at': datetime(2026, 10, 25, 10, 0), 'done': True},
+    {'title': 'Enquiry sent to customer', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
+    {'title': 'Enquiry sent to handyman', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
+    {'title': 'Customer replied', 'at': datetime(2026, 10, 25, 11, 10), 'done': True},
 ]
 
+CASE_OPEN = dict(_CASE, status='in_progress', status_label='In progress', is_resolved=False,
+                 activity=_ACTIVITY + [{'title': 'Resolved', 'detail': 'Awaiting outcome', 'done': False}])
 
-def notifications(request):
-    """Administrator Notifications."""
-    return render(request, 'notifications/admin_notifications.html', {
-        'notifications': NOTIFICATIONS,
-        'unread_count': 8,
-    })
+CASE_RESOLVED = dict(_CASE, status='resolved', status_label='Resolved', is_resolved=True,
+                     outcome='No-charge follow-up completed on 27 Oct. No active leak; moisture readings normal. Drying guidance provided and the customer confirmed the cabinet is dry. Original payment unchanged.',
+                     resolved_by='Olivia Chen', resolved_at=datetime(2026, 10, 27, 15, 30),
+                     activity=_ACTIVITY + [{'title': 'Resolved', 'at': datetime(2026, 10, 27, 15, 30), 'done': True}])
+
+CONVERSATIONS = {
+    'customer': dict(CASE_OPEN, who='Customer', other_label='Handyman', other_url=CASE_BASE + 'handyman/', case_url=CASE_BASE,
+        person={'name': 'Emma Wilson', 'first_name': 'Emma', 'initials': 'EW', 'email': 'emma.wilson@email.com'}, recipient_id=1, enquiry_url='',
+        messages=[
+            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Thanks for letting us know, Emma. Is there fresh water under the sink, or does the wood feel damp from before the repair? A current photo would help.'},
+            {'author': 'Emma Wilson', 'role': 'Customer', 'from_admin': False, 'at': datetime(2026, 10, 25, 11, 10), 'body': 'There’s no fresh drip. The wood feels damp near the back. I’ve attached a photo taken this morning.'},
+        ]),
+    'handyman': dict(CASE_OPEN, who='Handyman', other_label='Customer', other_url=CASE_BASE + 'customer/', case_url=CASE_BASE,
+        person={'name': 'Marcus Reed', 'first_name': 'Marcus', 'initials': 'MR', 'email': 'marcus.reed@email.com'}, recipient_id=2, enquiry_url='',
+        messages=[
+            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Hi Marcus. We are reviewing a moisture concern after the sink repair. Please describe your leak test and whether any moisture remained at handover.'},
+            {'author': 'Marcus Reed', 'role': 'Handyman', 'from_admin': False, 'at': datetime(2026, 10, 25, 10, 35), 'body': 'The connection stayed dry during a 10-minute test. The rear panel was still damp from the original leak. I can return for a moisture check on Oct 27 at no charge.'},
+        ]),
+}
+
+CASE_RESOLVE = dict(CASE_OPEN, case_url=CASE_BASE, resolution_url='',
+                    checks={'customer_replied': True, 'handyman_replied': True, 'has_evidence': True})
+
+
+def complaint_case(request):
+    """Complaints - Case Overview."""
+    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_OPEN})
+
+
+def complaint_case_resolved(request):
+    """Complaints - Case Overview of a resolved complaint."""
+    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_RESOLVED})
+
+
+def complaint_conversation(request, who):
+    """Complaints - private conversation ('customer' or 'handyman')."""
+    return render(request, 'complaints/admin_complaint_conversation.html', {'page': CONVERSATIONS[who]})
+
+
+def complaint_resolve(request):
+    """Complaints - Resolve case."""
+    return render(request, 'complaints/admin_complaint_resolve.html', {'page': CASE_RESOLVE})
