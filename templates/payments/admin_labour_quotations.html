@@ -1,0 +1,151 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Labour Quotations (section 6) - Overview.
+
+  Data comes from the view as `page`:
+    page.stats      -> review, pending, revision, accepted (counts)
+    page.customers  -> names for the customer filter
+    page.quotes     -> one row per labour quotation, newest update first:
+        reference     -> 'LQ-204' (payments.Quotation id)
+        request       -> 'REQ-2085' (quotation.request, a bookings.ServiceRequest)
+        customer      -> request customer full name
+        service       -> request service / title
+        amount        -> quotation.total_amount (or the handyman estimate while under review)
+        amount_note   -> short note under the amount for estimate rows ('Handyman estimate'), else ''
+        updated_at    -> last change date
+        status        -> 'review' | 'ready' | 'handyman' | 'pending' | 'revision' | 'accepted' | 'rejected' | 'cancelled'
+        status_label  -> 'Needs review' | 'Needs quote' | 'Awaiting handyman' | 'Awaiting customer' | 'Changes requested' | 'Accepted' | 'Declined' | 'Cancelled'
+        handyman      -> the handyman who made the labour estimate (full name)
+        url           -> that quotation's page (review page when under review,
+                         details page for the others)
+  ONE ROW PER REQUEST: show the latest quotation if there is one, otherwise the
+  labour estimate. Estimate rows: submitted = review, approved with no quotation
+  yet = ready (action "Prepare quote"), revision_requested = handyman (the admin
+  asked the handyman to revise), rejected = rejected. Quotation rows: sent =
+  pending, revision_requested or revised = revision, accepted, declined =
+  rejected, cancelled. The list needs an updated date for each row.
+  BACKEND: payments.Quotation has no labour/material type, handyman estimate,
+  "revision" status or updated date yet. Suggested mapping: under review = draft,
+  pending = sent, accepted = accepted, rejected = declined, revision = new status.
+  Search, customer and status filters and page buttons work in the browser on the rows
+  sent (5 per page). If you paginate on the server, send one page at a time, send
+  the counts in page.stats, and swap the buttons for links.
+{% endcomment %}
+
+{% block title %}Service Quotations | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Service Quotations</h1>
+    <p class="sub">Manage handyman estimates, labour margins and customer decisions.</p>
+  </div>
+</div>
+
+<section class="lq-stats" aria-label="Quotation totals">
+  <div class="card lq-stat lq-s-review">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting estimate review</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.review|default:0|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Handyman costs to check</p>
+  </div>
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting customer</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.pending|default:0|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Quotes sent, no answer yet</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Changes requested</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.revision|default:0|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Customer wants changes</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Labour quotations accepted</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.accepted|default:0|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Ready for the next step</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-queue data-page-size="5">
+  <div class="lq-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by quote ID, request or customer</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Quote ID, request or customer..." data-search>
+    </label>
+    <label>
+      <span class="sr-only">Customer</span>
+      <select class="in" data-customer>
+        <option value="">All customers</option>
+        {% for name in page.customers %}<option value="{{ name|lower }}">{{ name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>
+      <span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="review">Needs review</option>
+        <option value="ready">Needs quote</option>
+        <option value="handyman">Awaiting handyman</option>
+        <option value="pending">Awaiting customer</option>
+        <option value="revision">Changes requested</option>
+        <option value="accepted">Accepted</option>
+        <option value="rejected">Declined</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table">
+    <thead>
+      <tr>
+        <th scope="col">Quote</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Service</th>
+        <th scope="col">Labour quote</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in page.quotes %}
+      <tr data-row data-status="{{ q.status }}" data-customer="{{ q.customer|lower }}"
+          data-text="{{ q.reference|lower }} {{ q.request|lower }} {{ q.customer|lower }} {{ q.handyman|lower }} {{ q.service|lower }}">
+        <td data-label="Quote"><span class="lq-id">{{ q.reference }}</span><span class="lq-sub">{{ q.request }}</span></td>
+        <td data-label="Customer">{{ q.customer }}</td>
+        <td data-label="Handyman">{{ q.handyman }}</td>
+        <td data-label="Service">{{ q.service }}</td>
+        <td data-label="Labour quote"><span class="lq-amt">MUR {{ q.amount }}</span>{% if q.amount_note %}<span class="lq-sub">{{ q.amount_note }}</span>{% endif %}</td>
+        <td data-label="Updated">{{ q.updated_at|date:"d M Y" }}</td>
+        <td data-label="Status"><span class="b lq-{{ q.status }}">{{ q.status_label }}</span></td>
+        <td data-label="">
+          <a class="btn o s" href="{{ q.url|default:'#' }}">{% if q.status == 'review' %}Review{% elif q.status == 'ready' %}Prepare quote{% else %}View{% endif %}<span class="sr-only"> {{ q.reference }}</span></a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty hidden>Nothing matches that search. Try clearing the filters.</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_labour_quotations.js' %}"></script>
+{% endblock %}
