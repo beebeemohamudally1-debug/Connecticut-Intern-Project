@@ -50,11 +50,16 @@ def notify_on_service_request_created(sender, instance, created, **kwargs):
     def create_notification():
         service_request = ServiceRequest.objects.get(pk=request_id)
 
+        reference = (
+            service_request.reference
+            or f'SR-{1000 + service_request.pk}'
+        )
+
         notify_admins(
             notification_type='service_request',
             title='New Service Request',
             message=(
-                f'Service request {service_request.reference} '
+                f'Service request {reference} '
                 f'for {service_category} has been received.'
             ),
             url=''
