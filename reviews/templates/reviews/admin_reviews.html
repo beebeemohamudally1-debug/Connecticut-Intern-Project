@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Reviews</title>
+</head>
+<body>
+    <h1>Manage Customer Reviews</h1>
+
+    <p>Pending: {{ pending_count }}</p>
+    <p>Approved: {{ approved_count }}</p>
+    <p>Rejected: {{ rejected_count }}</p>
+
+    <form method="get">
+        <select name="status">
+            <option value="">All Reviews</option>
+            <option value="pending"
+                {% if selected_status == 'pending' %}selected{% endif %}>
+                Pending
+            </option>
+            <option value="approved"
+                {% if selected_status == 'approved' %}selected{% endif %}>
+                Approved
+            </option>
+            <option value="rejected"
+                {% if selected_status == 'rejected' %}selected{% endif %}>
+                Rejected
+            </option>
+        </select>
+        <button type="submit">Filter</button>
+    </form>
+
+    {% for review in reviews %}
+        <div>
+            <p>Job: {{ review.job.reference }}</p>
+            <p>Customer: {{ review.customer.username }}</p>
+            <p>Rating: {{ review.rating }}/5</p>
+            <p>Status: {{ review.get_status_display }}</p>
+
+            <a href="{% url 'reviews:review_detail' review.pk %}">
+                View Review
+            </a>
+        </div>
+        <hr>
+    {% empty %}
+        <p>No reviews found.</p>
+    {% endfor %}
+</body>
+</html>

@@ -1,0 +1,24 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Reviews</title>
+</head>
+<body>
+    <h1>My Reviews</h1>
+
+    {% for review in reviews %}
+        <div>
+            <h3>{{ review.job.reference }}</h3>
+            <p>Service: {{ review.job.service_name }}</p>
+            <p>Rating: {{ review.rating }}/5</p>
+            <p>Comment: {{ review.comment }}</p>
+            <p>Status: {{ review.get_status_display }}</p>
+        </div>
+        <hr>
+    {% empty %}
+        <p>No reviews submitted yet.</p>
+    {% endfor %}
+</body>
+</html>
