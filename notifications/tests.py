@@ -215,3 +215,75 @@ class NotificationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
+
+
+
+
+
+from complaints.models import Complaint
+from complaints.signals import complaint_submitted
+from notifications.models import Notification
+
+
+
+class ComplaintNotificationSignalTests(TestCase):
+
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username='complaint_admin_test',
+            password='TestPass123!',
+            role='admin',
+            is_staff=True
+        )
+
+        self.other_admin = User.objects.create_user(
+            username='complaint_other_admin',
+            password='TestPass123!',
+            role='admin',
+            is_staff=True
+        )
+
+        self.customer = User.objects.create_user(
+            username='complaint_customer_test',
+            password='TestPass123!',
+            role='customer'
+        )
+
+    def test_complaint_submission_notifies_admins(self):
+        complaint = Complaint(
+            pk=123,
+            reference='CMP-123'
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            complaint_submitted.send(
+                sender=Complaint,
+                complaint=complaint
+            )
+
+        notifications = Notification.objects.filter(
+            title='New Complaint Submitted'
+        )
+
+        self.assertEqual(notifications.count(), 2)
+
+        expected_url = reverse(
+            'complaints:detail',
+            kwargs={'pk': 123}
+        )
+
+        for notification in notifications:
+            self.assertEqual(notification.url, expected_url)
+            self.assertFalse(notification.is_read)
+
+        self.assertEqual(
+            set(notifications.values_list('recipient_id', flat=True)),
+            {self.admin_user.pk, self.other_admin.pk}
+        )
+
+        self.assertFalse(
+            Notification.objects.filter(
+                recipient=self.customer
+            ).exists()
+        )
+
