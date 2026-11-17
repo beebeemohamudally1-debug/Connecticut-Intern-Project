@@ -1,0 +1,19 @@
+{% comment %} Multiselect with chips. include with: id, name, label, options [(value, label)], selected [values], error, help, placeholder, noun, noun_plural, open.
+   Real control = the checkboxes in the panel (name=...), so a normal POST sends request.POST.getlist(name). The chips are drawn by provider.js.
+   Without JavaScript the checkbox list is simply shown open. {% endcomment %}
+<div class="au-field rg-field pv-ms{% if open %} is-open-demo{% endif %}" data-pv-ms data-noun="{{ noun }}" data-noun-plural="{{ noun_plural }}">
+<span class="au-label" id="{{ id }}-label">{{ label }} <span class="rg-req" aria-hidden="true">*</span></span>
+<div class="pv-ms-wrap">
+<div class="pv-ms-input{% if error %} is-bad{% endif %}" data-pv-ms-input>
+<span class="pv-ms-chips" data-pv-chips></span>
+<button type="button" class="pv-ms-toggle" id="{{ id }}-toggle" aria-expanded="false" aria-controls="{{ id }}-panel" aria-labelledby="{{ id }}-label {{ id }}-toggle" aria-describedby="{{ id }}-help {{ id }}-error"{% if error %} aria-invalid="true"{% endif %}>
+<span class="pv-ms-placeholder" data-pv-placeholder>{{ placeholder }}</span><svg class="au-ic pv-ms-chev" aria-hidden="true"><use href="#pv-i-chevron"/></svg></button>
+</div>
+<div class="pv-ms-panel" id="{{ id }}-panel" role="group" aria-label="{{ label }}" data-pv-panel>
+{% for value, text in options %}<label class="pv-opt"><input type="checkbox" name="{{ name }}" value="{{ value }}"{% if value in selected %} checked{% endif %}><span class="pv-opt-box" aria-hidden="true"><svg class="au-ic"><use href="#pv-i-tick"/></svg></span><span class="pv-opt-text">{{ text }}</span></label>{% endfor %}
+</div>
+</div>
+<div id="{{ id }}-help" class="au-help rg-help">{{ help|default:'' }}</div>
+<div id="{{ id }}-error" class="au-help is-error rg-error" aria-live="polite">{% if error %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ error }}{% endif %}</div>
+<span class="au-sr" aria-live="polite" data-pv-live></span>
+</div>

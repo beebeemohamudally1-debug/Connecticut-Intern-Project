@@ -68,3 +68,29 @@ REGIONS = [
         "Savanne", "Plaines Wilhems", "Moka", "Black River",
     )
 ]
+
+# ---------------------------------------------------------------------------
+# Service provider registration (S10, S10b, S11). Quoted from the lo-fi frames; lines marked NEW are not in the design.
+# ---------------------------------------------------------------------------
+# The eight service categories of the "Service categories" multiselect (value, label). Backend: load these from the ServiceCategory model.
+SERVICE_CATEGORIES = [
+    (name, name) for name in (
+        "Plumbing", "Electrical", "Carpentry", "Painting", "Cleaning", "Gardening", "Air conditioning", "Appliance repair",
+    )
+]
+PROVIDER_ERRORS = {  # NEW (the design shows no error states for S10)
+    **CUSTOMER_ERRORS,
+    "regions": "Select at least one region where you offer services.",
+    "categories": "Select at least one service category.",
+}
+DOC_ERRORS = {  # NEW
+    "id_photo": "Upload a photo of your ID card.",
+    "certificates": "Upload at least one certificate.",
+    "terms": CUSTOMER_ERRORS["terms"],
+    "privacy": CUSTOMER_ERRORS["privacy"],
+}
+FILE_TYPE_ERROR = "Only JPEG or PNG files are accepted."  # NEW (FR-SPR-16)
+FILE_SIZE_ERROR = "Each file must be 5 MB or smaller."  # NEW (FR-SPR-16)
+FILE_UPLOAD_FAILED = "We could not upload this file. Please try again."  # NEW (FR-SPR-19)
+DOC_MAX_MB = 5
+DOC_TYPES = ("image/jpeg", "image/png")

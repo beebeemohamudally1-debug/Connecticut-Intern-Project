@@ -1,0 +1,113 @@
+/* ----------------------------------------------------------
+   HandyConnect: service provider registration pages (S10, S10b, S11).
+   Loaded after auth.css and register.css, so it reuses their variables
+   (navy, orange, blue, borders, --rg-muted, --rg-red) and the au- and rg-
+   buttons, fields and alerts. New classes start with "pv-".
+   ---------------------------------------------------------- */
+
+/* ---------- Section headings inside the long details form ---------- */
+.pv-section { margin: 0 0 8px; }
+.pv-section + .pv-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--au-line); }
+.au-page .pv-h { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; font-size: 17px; line-height: 24px; font-weight: 700; color: var(--au-navy); }
+.pv-h-icon { flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--au-light-blue); color: var(--au-navy); display: grid; place-items: center; }
+.pv-h-icon .au-ic { width: 18px; height: 18px; }
+
+/* ---------- Multiselect with chips (regions, service categories) ---------- */
+.pv-ms { position: relative; margin-bottom: 16px; }
+.pv-ms-wrap { position: relative; }
+.pv-ms-input { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 5px 8px 5px 10px; border: 1px solid var(--au-border); border-radius: 8px; background: #fff; cursor: pointer; }
+.pv-ms-input:focus-within { border-color: var(--au-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .2); }
+.pv-ms-input.is-bad { border-color: var(--au-red); }
+.pv-ms-chips { display: contents; }
+.pv-chip { display: inline-flex; align-items: center; gap: 2px; padding: 3px 4px 3px 10px; border-radius: 6px; background: var(--au-light-blue); color: var(--au-navy); font-size: 13px; line-height: 20px; font-weight: 600; }
+.pv-chip-x { width: 22px; height: 22px; border: 0; border-radius: 4px; background: none; color: var(--rg-muted); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.pv-chip-x:hover { background: rgba(20, 45, 72, .12); color: var(--au-navy); }
+.pv-chip-x .au-ic { width: 14px; height: 14px; stroke-width: 2.4; }
+.pv-ms-toggle { flex: 1; min-width: 56px; min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 0 4px; border: 0; background: none; font: 400 14px/20px Inter, Arial, sans-serif; color: var(--rg-muted); text-align: left; cursor: pointer; }
+.pv-ms-toggle:focus-visible { outline: 0; }
+.pv-ms-toggle[hidden], .pv-ms-placeholder[hidden] { display: none; }
+.pv-ms-chev { width: 18px; height: 18px; margin-left: auto; color: var(--rg-muted); transition: transform .15s; }
+.pv-ms.is-open .pv-ms-chev { transform: rotate(180deg); }
+.pv-ms.is-js .pv-ms-panel { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); max-height: 304px; overflow-y: auto; padding: 8px;
+  border: 1px solid var(--au-line); border-radius: 12px; background: #fff; box-shadow: 0 12px 32px rgba(20, 45, 72, .16); }
+.pv-ms-panel[hidden] { display: none; }
+.pv-ms:not(.is-js) .pv-ms-input { display: none; }
+.pv-ms:not(.is-js) .pv-ms-panel { border: 1px solid var(--au-line); border-radius: 8px; padding: 8px; }
+.pv-opt { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 6px 10px; border-radius: 8px; font-size: 14px; line-height: 20px; font-weight: 400; color: var(--au-text); cursor: pointer; }
+.pv-opt:hover { background: var(--au-grey); }
+.pv-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pv-opt-box { flex: none; width: 20px; height: 20px; border: 1px solid var(--au-border); border-radius: 4px; background: #fff; display: grid; place-items: center; color: transparent; }
+.pv-opt-box .au-ic { width: 14px; height: 14px; stroke-width: 3; }
+.pv-opt input:checked + .pv-opt-box { background: var(--au-navy); border-color: var(--au-navy); color: #fff; }
+.pv-opt input:checked ~ .pv-opt-text { color: var(--au-navy); font-weight: 600; }
+.pv-opt input:focus-visible + .pv-opt-box { outline: 2px solid var(--au-blue); outline-offset: 2px; }
+.pv-opt:has(input:checked) { background: var(--au-light-blue); }
+
+/* ---------- "Next: documents" note ---------- */
+.pv-next-doc { display: flex; align-items: flex-start; gap: 12px; margin: 24px 0 16px; padding: 16px; border: 1px solid var(--au-line); border-radius: 12px; background: var(--au-grey); }
+.pv-next-icon { flex: none; width: 36px; height: 36px; border-radius: 8px; background: #fff; border: 1px solid var(--au-line); color: var(--au-navy); display: grid; place-items: center; }
+.pv-next-doc strong { display: block; font-size: 14px; line-height: 20px; color: var(--au-navy); }
+.pv-next-doc p { font-size: 14px; line-height: 20px; }
+
+/* ---------- Upload fields (ID card photo, certificates) ---------- */
+.pv-upload { margin-bottom: 24px; }
+.pv-hint { margin: -2px 0 10px !important; font-size: 12px; line-height: 16px; color: var(--rg-muted); }
+.pv-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pv-files:empty { display: none; }
+.pv-files:not(:empty) { margin-bottom: 10px; }
+.pv-seed { font-size: 13px; color: var(--au-text); }
+.pv-file { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border: 1px solid var(--au-line); border-radius: 12px; background: #fff; box-shadow: 0 1px 2px rgba(20, 45, 72, .04); }
+.pv-thumb { flex: none; width: 56px; height: 56px; border-radius: 8px; overflow: hidden; background: var(--au-grey); border: 1px solid var(--au-line); display: grid; place-items: center; color: var(--rg-muted); }
+.pv-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv-thumb .au-ic { width: 24px; height: 24px; }
+.pv-file-main { flex: 1; min-width: 0; }
+.pv-file-name { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--au-navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-file-meta { display: block; font-size: 12px; line-height: 16px; color: var(--rg-muted); }
+.pv-file-actions { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 4px; }
+.pv-act { padding: 4px 0; border: 0; background: none; font: 600 13px/16px Inter, Arial, sans-serif; color: var(--au-blue); cursor: pointer; }
+.pv-act:hover { text-decoration: underline; }
+.pv-act.is-danger { color: #A33A3A; }
+.pv-act:focus-visible { outline: 2px solid var(--au-blue); outline-offset: 2px; border-radius: 4px; }
+
+.pv-drop { display: none; flex-direction: column; align-items: center; gap: 8px; padding: 20px 16px; border: 1.5px dashed var(--au-border); border-radius: 12px; background: var(--au-grey); text-align: center;
+  transition: border-color .15s, background-color .15s; }
+.pv-upload.is-js .pv-drop { display: flex; }
+.pv-upload.is-js .pv-drop[hidden] { display: none; }
+.pv-drop.is-over { border-color: var(--au-blue); background: var(--au-light-blue); }
+.pv-drop.is-bad { border-color: var(--au-red); }
+.pv-drop-icon { width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid var(--au-line); color: var(--au-navy); display: grid; place-items: center; }
+.pv-drop-text { font-size: 14px; line-height: 20px; color: var(--au-text); }
+.pv-pick { width: auto; }
+.pv-file-input { display: block; max-width: 100%; font-size: 14px; }
+.pv-upload.is-js .pv-file-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); opacity: 0; }
+.pv-status { margin: 8px 0 0 !important; font-size: 12px; line-height: 16px; color: var(--rg-muted); }
+
+/* Larger preview, opened from the "Preview" action */
+.pv-preview { padding: 12px; border: 1px solid var(--au-border); border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(20, 45, 72, .12); }
+.pv-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.pv-preview-head strong { font-size: 14px; line-height: 20px; color: var(--au-navy); }
+.pv-preview-img { display: grid; place-items: center; min-height: 160px; padding: 8px; border-radius: 8px; background: var(--au-grey); color: var(--rg-muted); }
+.pv-preview-img img { display: block; max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 4px; }
+.pv-preview-img .au-ic { width: 40px; height: 40px; }
+.pv-preview-cap { margin-top: 10px !important; font-size: 12px; line-height: 16px; color: var(--rg-muted); }
+
+/* ---------- Submit: stays grey until the page is complete (Figma "Disabled submission") ---------- */
+.pv-requirements { margin: 0 0 12px !important; font-size: 12px; line-height: 16px; color: var(--rg-muted); }
+.pv-submit:disabled { opacity: 1; background: #F1F5F9; border-color: #CBD5E1; }
+.pv-submit:disabled .au-label { color: var(--rg-muted); }
+
+/* ---------- S11 "what happens next" ---------- */
+.rg-next { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 14px; }
+.rg-next li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; }
+.rg-next-num { width: 28px; height: 28px; border-radius: 50%; background: var(--au-light-blue); color: var(--au-navy); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.rg-next b { display: block; font-size: 14px; line-height: 20px; color: var(--au-navy); }
+.rg-next small { display: block; font-size: 13px; line-height: 18px; color: var(--au-text); }
+
+/* Touch screens have no drag and drop from a file manager, so only the button is shown */
+@media (hover: none) { .pv-drop-text { display: none; } }
+@media (prefers-reduced-motion: reduce) { .pv-ms-chev, .pv-drop { transition: none; } }
+@media (max-width: 767px) {
+  .pv-file { gap: 12px; padding: 12px; }
+  .pv-thumb { width: 48px; height: 48px; }
+  .pv-ms.is-js .pv-ms-panel { max-height: 248px; }
+}

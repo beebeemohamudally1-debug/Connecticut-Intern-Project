@@ -118,7 +118,7 @@ JS calls `GET /register/check-username?username=abc` on blur. Return `200 {"avai
 
 ## Decisions to know about
 - S09 has "Go to login" (not a dashboard link): the requirements say users go to login after registering.
-- Provider: the Service Provider card works on S02 and the flow runs to S06; S10 (provider details) is not built, so the stub sends providers home.
+- Provider: the Service Provider card works on S02 and the flow continues through S10, S10b and S11. See `PROVIDER_REGISTRATION_README.md`.
 - Copy not in the design (marked NEW in `auth_messages.py`): account-type error, invalid-email text, "already registered" text, session-expired explanation, "new code sent".
 - Region dropdown is a native `<select>`, so its open state is drawn by the browser.
 - Terms and Privacy links are `#` placeholders until those pages exist.
