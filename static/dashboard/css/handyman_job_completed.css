@@ -1,0 +1,147 @@
+/* Page-specific styles. Layout, cards and sidebar come from handyman_job_in_progress.css */
+
+.content.wide { max-width: 1040px; }
+
+.job-head {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--orange);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+.job-head .job-title { display: block; font-size: 20px; font-weight: 700; }
+.job-head .job-code { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+/* Green wrapper + banner */
+.done-wrap {
+    background: #eaf5ee;
+    border-radius: 12px;
+    padding: 16px;
+}
+.success {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 0 4px 14px;
+}
+.success strong { color: #137a43; font-size: 13px; }
+.success p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+.tick {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border: 1.5px solid #137a43;
+    color: #137a43;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+    margin-top: 1px;
+}
+
+/* Two columns */
+.done-grid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+.stack { display: flex; flex-direction: column; gap: 16px; }
+.stack .card { margin-bottom: 0; }
+
+.tag-done { background: #dcf3e5; color: #137a43; }
+.description.plain { background: none; padding: 0; margin: 0 0 16px; }
+
+h3.divided {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    margin-bottom: 10px;
+}
+
+.ticks { list-style: none; margin: 0 0 16px; padding: 0; }
+.ticks li {
+    position: relative;
+    padding-left: 22px;
+    margin-bottom: 7px;
+    font-size: 13px;
+    color: var(--muted);
+}
+.ticks li::before {
+    content: "\2713";
+    position: absolute;
+    left: 0;
+    color: #137a43;
+    font-weight: 700;
+}
+
+/* Label / value rows */
+.kv { margin: 0 0 14px; }
+.kv > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 13px;
+}
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-weight: 600; text-align: right; }
+.kv dd a { text-decoration: underline; }
+.kv.stacked > div { padding: 9px 0; }
+
+/* Customer */
+.person { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.person strong { display: block; font-size: 14px; }
+.avatar.big { width: 38px; height: 38px; font-size: 12px; }
+
+/* Buttons */
+.outline-btn {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--card);
+}
+.outline-btn:hover { background: var(--tag-bg); }
+.outline-btn.block { display: block; text-align: center; }
+.outline-btn.flat { padding: 12px 16px; }
+
+/* Milestones */
+.milestones { list-style: none; margin: 0; padding: 0; }
+.milestones li {
+    position: relative;
+    padding: 0 0 16px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+}
+.milestones li:last-child { padding-bottom: 0; }
+.milestones li::before {
+    content: "\2713";
+    position: absolute;
+    left: 0; top: 0;
+    width: 20px; height: 20px;
+    border: 1.5px solid #137a43;
+    color: #137a43;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 700;
+}
+.milestones span { font-size: 11px; color: var(--muted); }
+
+/* Footer */
+.page-foot {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 28px;
+    font-size: 11px;
+    color: var(--muted);
+}
+.page-foot a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+    .done-grid { grid-template-columns: 1fr; }
+}
