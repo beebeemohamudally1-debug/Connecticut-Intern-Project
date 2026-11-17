@@ -1,12 +1,13 @@
-"""Fill the local database with demo data for the payment and quotation pages.
+"""Fill the local database with demo data for the admin pages (Service Quotations, payments,
+materials and Private Feedback).
 
-Run:      python manage.py seed_payments_demo
-Start over: python manage.py seed_payments_demo --reset
+Run:      python manage.py seed_demo
+Start over: python manage.py seed_demo --reset
 
 Only for local testing. Every demo user starts with "demo_", so the data is easy to find
 and remove. It prints the links to open at the end.
 """
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -15,6 +16,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from bookings.models import ServiceRequest, ServiceRequestAssignment
+from jobs.models import Job
+from reviews.models import Review
 from payments.models import LabourEstimate, MaterialPurchaseRequest, Payment, Quotation
 
 User = get_user_model()
@@ -22,7 +25,7 @@ BASE = 'http://127.0.0.1:8000'
 
 
 class Command(BaseCommand):
-    help = 'Create demo data for the payment and quotation pages (local testing only).'
+    help = 'Create demo data for the admin pages (local testing only).'
 
     def add_arguments(self, parser):
         parser.add_argument('--reset', action='store_true', help='Delete the demo data first.')
@@ -56,6 +59,8 @@ class Command(BaseCommand):
         MaterialPurchaseRequest.objects.filter(**demo).delete()
         Quotation.objects.filter(**demo).delete()
         LabourEstimate.objects.filter(**demo).delete()
+        Review.objects.filter(customer__username__startswith='demo_').delete()
+        Job.objects.filter(customer__username__startswith='demo_').delete()
         ServiceRequestAssignment.objects.filter(service_request__customer__username__startswith='demo_').delete()
         ServiceRequest.objects.filter(customer__username__startswith='demo_').delete()
         User.objects.filter(username__startswith='demo_').delete()
@@ -135,6 +140,27 @@ class Command(BaseCommand):
         # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
         self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True)
 
+        # Private feedback: completed jobs with customer reviews (pending, approved, rejected)
+        reviews = [
+            (0, 0, 'Kitchen sink leak repair', 4, 'pending', 'Marcus was friendly and explained the repair clearly. The cabinet could have been dried a little more thoroughly.', 2),
+            (1, 1, 'Bedroom wall painting', 5, 'pending', 'Very good service and professional. The room looks brand new.', 4),
+            (2, 0, 'Door hinge replacement', 2, 'pending', 'The door still squeaks a bit and the handyman arrived late.', 6),
+            (3, 1, 'Bathroom tile repair', 5, 'pending', 'Satisfied with the work. Completed on time and left everything clean.', 9),
+            (0, 1, 'Shelf installation', 4, 'approved', 'Good work, but could improve on cleanup.', 15),
+            (2, 0, 'Light fitting', 5, 'approved', 'Quick and tidy. Would book again.', 25),
+            (3, 0, 'Fence painting', 1, 'rejected', 'Terrible!!! call me now 5 999 9999', 40),
+        ]
+        for c, h, service, rating, status, comment, days_ago in reviews:
+            when = timezone.now() - timedelta(days=days_ago)
+            job = Job.objects.create(customer=customers[c], handyman=handymen[h], service_name=service,
+                                     description=f'Demo job: {service}.', address='12 Royal Road, Port Louis',
+                                     status=Job.COMPLETED, completed_at=when - timedelta(hours=3))
+            review = Review.objects.create(job=job, customer=customers[c], rating=rating, comment=comment)
+            done = status != 'pending'
+            Review.objects.filter(pk=review.pk).update(
+                created_at=when, status=status, assessed_by=admin if done else None,
+                assessed_at=when + timedelta(days=1) if done else None)
+
     def material(self, admin, handyman, key, items, cost, paid):
         mat = MaterialPurchaseRequest.objects.create(
             request_id=self.ids[key]['request'], handyman=handyman, items=items, estimated_cost=Decimal(cost))
@@ -164,6 +190,7 @@ class Command(BaseCommand):
         out(f'  Labour estimates:  {BASE}/payments/estimates/')
         out(f'  Quotations:        {BASE}/payments/quotations/')
         out(f'  Materials:         {BASE}/payments/materials/')
+        out(f'  Private feedback:  {BASE}/reviews/admin/')
         if 'needs_quote' in ids:
             i = ids['needs_quote']
             out('\nCreate quotation (from an approved estimate)')

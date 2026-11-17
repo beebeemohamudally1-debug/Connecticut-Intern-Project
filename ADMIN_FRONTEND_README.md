@@ -4,13 +4,34 @@ This file lists the admin pages built so far. **The admin frontend is still in p
 
 There are two kinds of pages:
 - **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
-- **Service Quotations** (see its own section below): built on the existing **payments** pages, so they **already use the real backend**.
+- **Service Quotations** and **Private Feedback** (see their own sections below): built on the existing **payments** and **reviews** pages, so they **already use the real backend**.
 
 ## Try it
 ```
 python manage.py runserver
 ```
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
+
+## Demo data (for the pages connected to the backend)
+Service Quotations and Private Feedback show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+```
+python manage.py seed_demo
+```
+It creates:
+- demo users: one admin (`demo_admin`), customers and handymen, all with the password `demo12345`
+- labour estimates to review, approved and waiting for the handyman
+- labour quotations in every status (draft, sent, changes requested, accepted, paid, declined, cancelled)
+- material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid)
+- customer reviews (to assess, approved, rejected)
+
+At the end it prints the links to open. To delete the demo data and create it again:
+```
+python manage.py seed_demo --reset
+```
+Notes:
+- Log in as `demo_admin` (or give your own account `role = 'admin'` and staff status) to open the pages.
+- The ids change after `--reset`, so use the printed links or open the pages from the lists.
+- Only for local testing. Every demo user starts with `demo_`, and nothing else in the database is changed. The command is in `payments/management/commands/seed_demo.py`.
 
 ## Pages
 All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/admin-portal/`).
@@ -78,7 +99,7 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 - `quotation_edit` renders `quotation_edit.html` instead of the shared `form_page.html` (still used by the handyman forms), and **Send to Customer** on Revise saves and sends in one step.
 - `quotation_detail_admin` also sends `other` (the material quotation of the same request, or the labour one for a material quotation) and `request_payment` (`request_payment_state`), because payment comes after **both** quotations are accepted. Record payment shows only then, and **Schedule Appointment** only when the whole request is paid.
 
-**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), several estimates to review and revision requests, quotations in every status, material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid), and prints the links. Local testing only.
+**Demo data:** see "Demo data" at the top (`python manage.py seed_demo`).
 
 **Still needed from the backend**
 1. **Note to handyman** on Revise (shown but not connected): allow an estimate revision after approval when the customer asks for changes.
@@ -92,6 +113,24 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 9. **Login redirect:** `LOGIN_URL = 'login'` is missing in settings.
 10. **Material process:** after the administrator approves a purchase request, the **customer approves the purchase** before the handyman buys, and the **material quotation is made from the actual costs on the receipts**. Now, forwarding a request creates a material quotation at the estimated cost straight away.
 11. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
+
+## Private Feedback (connected to the backend)
+Built on the existing `reviews` app: real views, URLs and the `Review` model. Needs an account with `role = 'admin'` **and staff status** (the reviews views check both).
+
+| Page | URL | Template |
+|---|---|---|
+| Private Feedback list | `/reviews/admin/` | `reviews/admin_reviews.html` |
+| Feedback Details (Approve / Reject) | `/reviews/admin/<id>/` | `reviews/review_detail.html` |
+
+- The 4 review templates were moved from `reviews/templates/reviews/` to the main `templates/reviews/` (same names, so the views did not change). Only the two admin templates were restyled; `submit_review.html` and `my_reviews.html` (customer) are unchanged.
+- CSS and JS: `static/reviews/css/admin_reviews.css`, `static/reviews/js/admin_reviews.js`.
+- The sidebar link **Reviews** points to `reviews:admin_reviews`.
+- List: number cards and status tabs use the view's `?status=` filter; search, the date filter and pages (5 rows) work in the browser on the rows sent.
+- Details: Approve and Reject (pending only) ask for confirmation and post to `reviews:approve_review` / `reviews:reject_review`. After that the outcome, who assessed it and when are shown.
+
+**Still needed from the backend**
+1. No success message after Approve or Reject (the views do not add a Django message).
+2. No admin note or reason with the assessment.
 
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.
