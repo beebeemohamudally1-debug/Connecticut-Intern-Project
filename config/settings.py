@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'complaints',
     'notifications',
     'reports',
+    'reviews',
 
 ]
 

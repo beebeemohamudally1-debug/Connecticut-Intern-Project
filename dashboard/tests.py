@@ -354,10 +354,36 @@ class DashboardTests(TestCase):
             Decimal('2500.00')
         )
 
+    def test_cancelled_request_excluded_from_awaiting_payment(self):
+        service_request = ServiceRequest.objects.create(
+            customer=self.customer,
+            service_category='Plumbing',
+            problem_description='Fix leaking pipe'
+        )
 
+        Quotation.objects.create(
+            request=service_request,
+            work_description='Plumbing repair',
+            total_amount=Decimal('2500.00'),
+            status=Quotation.ACCEPTED,
+            created_by=self.admin_user
+        )
+
+        # Initially, the accepted quotation is awaiting payment.
+        stats = get_admin_dashboard_stats()
+        self.assertEqual(stats['awaiting_payment'], 1)
+
+        # Cancel the service request.
+        service_request.status = ServiceRequest.STATUS_CANCELLED
+        service_request.save()
+
+        # Cancelled requests must not count as awaiting payment.
+        stats = get_admin_dashboard_stats()
+        self.assertEqual(stats['awaiting_payment'], 0)
+        
     def test_recent_activities_empty(self):
-        activities = get_recent_activities()
-        self.assertEqual(activities, [])
+            activities = get_recent_activities()
+            self.assertEqual(activities, [])
 
     def test_recent_service_request_activity(self):
         service_request = ServiceRequest.objects.create(
