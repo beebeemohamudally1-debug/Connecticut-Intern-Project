@@ -4,15 +4,54 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ report_title }}</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 40px;
+            color: #222;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .summary {
+            margin: 20px 0;
+        }
+
+        .summary p {
+            margin: 6px 0;
+        }
+
+        .report-filters {
+            margin: 20px 0;
+        }
+
+        .report-filters label {
+            margin-right: 5px;
+        }
+
+        .report-filters input,
+        .report-filters select {
+            margin-right: 12px;
+            padding: 6px;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+        .errors {
+            color: #b00020;
+            margin: 15px 0;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
 
         th, td {
@@ -21,89 +60,164 @@
             text-align: left;
         }
 
-        button {
-            padding: 10px 20px;
-            cursor: pointer;
+        th {
+            background: #f2f2f2;
         }
 
         @media print {
-            button,
-            .report-filters {
+            @page {
+                size: A4 landscape;
+                margin: 12mm;
+            }
+
+            body {
+                margin: 0;
+                font-size: 11px;
+            }
+
+            .report-filters,
+            .print-button {
                 display: none;
+            }
+
+            thead {
+                display: table-header-group;
+            }
+
+            tr {
+                break-inside: avoid;
             }
         }
     </style>
 </head>
+
 <body>
 
     <h1>{{ report_title }}</h1>
-    <p>Total Jobs: {{ total_jobs }}</p>
-    <p>Assigned: {{ assigned_jobs }}</p>
-    <p>In Progress: {{ in_progress_jobs }}</p>
-    <p>Completed: {{ completed_jobs }}</p>
-    <p>Cancelled: {{ cancelled_jobs }}</p>
 
+    <p>
+        <strong>Status:</strong>
+        {{ selected_status_label }}
+    </p>
 
-<form method="get" class="report-filters">
-    <label for="status">Status:</label>
-    <select name="status" id="status">
-        <option value="">All statuses</option>
-        {% for value, label in status_choices %}
-            <option value="{{ value }}"
-                {% if selected_status == value %}selected{% endif %}>
-                {{ label }}
-            </option>
-        {% endfor %}
-    </select>
+    <p>
+        <strong>Period:</strong>
+        {% if start_date %}
+            {{ start_date }}
+        {% else %}
+            All dates
+        {% endif %}
+        to
+        {% if end_date %}
+            {{ end_date }}
+        {% else %}
+            All dates
+        {% endif %}
+    </p>
 
-    <label for="start_date">From:</label>
-    <input type="date" name="start_date" id="start_date"
-           value="{{ start_date }}">
+    {% if errors %}
+        <div class="errors">
+            {% for error in errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-    <label for="end_date">To:</label>
-    <input type="date" name="end_date" id="end_date"
-           value="{{ end_date }}">
+    <form method="get" class="report-filters">
 
-    <button type="submit">Filter</button>
-    <a href="{% url 'reports:job_summary' %}">Clear</a>
-</form>
+        <label for="status">Status:</label>
+        <select name="status" id="status">
+            <option value="">All statuses</option>
 
+            {% for value, label in status_choices %}
+                <option value="{{ value }}"
+                    {% if selected_status == value %}
+                        selected
+                    {% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
 
-    <button onclick="window.print()">Print Report</button>
+        <label for="start_date">From:</label>
+        <input
+            type="date"
+            name="start_date"
+            id="start_date"
+            value="{{ start_date }}"
+        >
 
-    
-<table>
-    <thead>
-        <tr>
-            <th>Job Reference</th>
-            <th>Service</th>
-            <th>Customer</th>
-            <th>Handyman</th>
-            <th>Status</th>
-            <th>Scheduled Date</th>
-            <th>Completion Date</th>
-        </tr>
-    </thead>
+        <label for="end_date">To:</label>
+        <input
+            type="date"
+            name="end_date"
+            id="end_date"
+            value="{{ end_date }}"
+        >
 
-    <tbody>
-        {% for job in jobs %}
-        <tr>
-            <td>{{ job.reference }}</td>
-            <td>{{ job.service_name }}</td>
-            <td>{{ job.customer.username }}</td>
-            <td>{{ job.handyman.username }}</td>
-            <td>{{ job.get_status_display }}</td>
-            <td>{{ job.scheduled_start|date:"d/m/Y" }}</td>
-            <td>{{ job.completed_at|date:"d/m/Y" }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="7">No jobs available.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <button type="submit">Filter</button>
 
+        <a href="{% url 'reports:job_summary' %}">
+            Clear
+        </a>
+    </form>
+
+    {% if filters_valid %}
+
+        <div class="summary">
+            <p><strong>Total Jobs:</strong> {{ total_jobs }}</p>
+            <p><strong>Assigned:</strong> {{ assigned_jobs }}</p>
+            <p><strong>In Progress:</strong> {{ in_progress_jobs }}</p>
+            <p><strong>Completed:</strong> {{ completed_jobs }}</p>
+            <p><strong>Cancelled:</strong> {{ cancelled_jobs }}</p>
+        </div>
+
+        <button
+            type="button"
+            class="print-button"
+            onclick="window.print()">
+            Print Report
+        </button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Job Reference</th>
+                    <th>Service</th>
+                    <th>Customer</th>
+                    <th>Handyman</th>
+                    <th>Status</th>
+                    <th>Scheduled Date</th>
+                    <th>Completion Date</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for job in jobs %}
+                    <tr>
+                        <td>{{ job.reference }}</td>
+                        <td>{{ job.service_name }}</td>
+                        <td>{{ job.customer.username }}</td>
+                        <td>{{ job.handyman.username }}</td>
+                        <td>{{ job.get_status_display }}</td>
+                        <td>
+                            {{ job.scheduled_start|date:"d/m/Y"|default:"-" }}
+                        </td>
+                        <td>
+                            {{ job.completed_at|date:"d/m/Y"|default:"-" }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            No jobs available.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% endif %}
 
 </body>
 </html>
