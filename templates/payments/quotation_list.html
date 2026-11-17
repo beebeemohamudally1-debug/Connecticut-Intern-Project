@@ -1,32 +1,130 @@
 {% extends "base_admin.html" %}
-{% block title %}Quotations | HandyConnect{% endblock %}
-{% block page %}invoices{% endblock %}
+{% load static %}
+{% comment %}
+  Service Quotations - Quotations tab (admin). View: payments.views.quotation_list
+  Context: quotations (all Quotation objects). Only LABOUR quotations are shown here;
+  material quotations belong to the Material Quotations section.
+  Suggestion for the view: filter quotation_type='labour' and select_related
+  'labour_estimate__handyman' so the template does less work.
+  The number cards, filters and pages work in the browser on the rows on the page.
+{% endcomment %}
+
+{% block title %}Service Quotations | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
 {% block content %}
-<div class="lab">Admin · Quotations</div>
-<h1>Quotations</h1>
-<p class="sub">Labour and material quotations in MUR, with their payment status.</p>
-{% include "payments/_messages.html" %}
-<div class="card">
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Type</th><th>Customer</th><th>Total (MUR)</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for q in quotations %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Service Quotations</h1>
+    <p class="sub">Manage handyman estimates, labour margins and customer decisions.</p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<section class="lq-stats" aria-label="Quotation totals">
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting customer</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="pending">00</p>
+    <p class="lq-stat-hint">Quotes sent, no answer yet</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Changes requested</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="revision">00</p>
+    <p class="lq-stat-hint">Customer wants changes</p>
+  </div>
+  <div class="card lq-stat lq-s-review">
+    <div class="lq-stat-top"><p class="lq-stat-label">Accepted, unpaid</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="unpaid">00</p>
+    <p class="lq-stat-hint">Paid once materials are accepted</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Paid</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="paid">00</p>
+    <p class="lq-stat-hint">Labour payment recorded</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-queue data-page-size="5" data-noun="quotation">
+  <nav class="lq-tabs" aria-label="Service Quotations">
+    <a href="{% url 'payments:estimate_list' %}">Labour estimates</a>
+    <a href="{% url 'payments:quotation_list' %}" aria-current="page">Quotations</a>
+  </nav>
+
+  <div class="lq-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by quote, request or customer</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Quote, request or customer..." data-search>
+    </label>
+    <label><span class="sr-only">Customer</span>
+      <select class="in" data-customer><option value="">All customers</option></select>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="draft">Draft</option>
+        <option value="pending">Awaiting customer</option>
+        <option value="revision">Changes requested</option>
+        <option value="unpaid">Accepted, unpaid</option>
+        <option value="paid">Paid</option>
+        <option value="rejected">Declined</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table">
+    <thead>
       <tr>
-        <td>{{ q.request.reference }}</td>
-        <td>{{ q.get_quotation_type_display }}</td>
-        <td>{{ q.request.customer }}</td>
-        <td>{{ q.total_amount }}</td>
-        <td><span class="b {% if q.status == 'accepted' %}gr{% elif q.status == 'declined' or q.status == 'cancelled' %}re{% else %}ye{% endif %}">{{ q.get_status_display }}</span></td>
-        <td><span class="b {% if q.is_paid %}gr{% else %}ye{% endif %}">{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</span></td>
-        <td>
-          <a href="{% url 'payments:quotation_detail_admin' q.pk %}">Details</a>
-          {% if q.ready_for_payment %} · <a href="{% url 'payments:payment_record' q.pk %}">Record payment</a>{% endif %}
-        </td>
+        <th scope="col">Quote</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Service</th>
+        <th scope="col">Labour quote</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
       </tr>
-    {% empty %}
-      <tr><td colspan="7" class="mut">No quotations yet.</td></tr>
-    {% endfor %}
+    </thead>
+    <tbody>
+      {% for q in quotations %}{% if q.quotation_type == 'labour' %}
+      {% with customer=q.request.customer handyman=q.labour_estimate.handyman %}
+      {% if q.status == 'draft' %}{% firstof 'draft' as st %}{% elif q.status == 'sent' %}{% firstof 'pending' as st %}{% elif q.status == 'revision_requested' or q.status == 'revised' %}{% firstof 'revision' as st %}{% elif q.status == 'accepted' and q.is_paid %}{% firstof 'paid' as st %}{% elif q.status == 'accepted' %}{% firstof 'unpaid' as st %}{% elif q.status == 'declined' %}{% firstof 'rejected' as st %}{% else %}{% firstof 'cancelled' as st %}{% endif %}
+      <tr data-row data-status="{{ st }}" data-customer="{% firstof customer.get_full_name customer.username %}"
+          data-text="q-{{ q.pk }} {{ q.request.reference|lower }} {% firstof customer.get_full_name customer.username %} {% firstof handyman.get_full_name handyman.username %} {{ q.request.service_category|lower }}">
+        <td data-label="Quote"><span class="lq-id">Q-{{ q.pk }}</span><span class="lq-sub">{{ q.request.reference }}{% if q.revision_number > 1 %} &middot; v{{ q.revision_number }}{% endif %}</span></td>
+        <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
+        <td data-label="Handyman">{% if handyman %}{% firstof handyman.get_full_name handyman.username %}{% else %}-{% endif %}</td>
+        <td data-label="Service">{{ q.request.service_category|default:"-" }}</td>
+        <td data-label="Labour quote"><span class="lq-amt">MUR {{ q.total_amount|floatformat:"2g" }}</span>{% if q.status == 'accepted' %}<span class="lq-sub">{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</span>{% endif %}</td>
+        <td data-label="Updated">{% firstof q.responded_at|date:"d M Y" q.created_at|date:"d M Y" %}</td>
+        <td data-label="Status"><span class="b lq-{% if st == 'paid' %}accepted{% elif st == 'unpaid' %}ready{% elif st == 'draft' %}handyman{% else %}{{ st }}{% endif %}">{% if st == 'draft' %}Draft{% elif st == 'pending' %}Awaiting customer{% elif st == 'revision' %}{% if q.status == 'revised' %}Revised, not sent{% else %}Changes requested{% endif %}{% elif st == 'paid' %}Paid{% elif st == 'unpaid' %}Accepted{% elif st == 'rejected' %}Declined{% else %}Cancelled{% endif %}</span></td>
+        <td data-label=""><a class="btn o s" href="{% url 'payments:quotation_detail_admin' q.pk %}">View<span class="sr-only"> quotation {{ q.pk }}</span></a></td>
+      </tr>
+      {% endwith %}
+      {% endif %}{% endfor %}
     </tbody>
   </table>
-</div>
+
+  <p class="lq-empty" data-empty hidden>Nothing to show here yet.</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'payments/js/admin_labour_quotations.js' %}"></script>
 {% endblock %}

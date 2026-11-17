@@ -1,26 +1,139 @@
 {% extends "base_admin.html" %}
-{% block title %}New quotation | HandyConnect{% endblock %}
-{% block page %}invoices{% endblock %}
+{% load static %}
+{% comment %}
+  Service Quotations - Create Service Quotation (admin). View: payments.views.quotation_create
+  Context: form (QuotationForm: work_description, total_amount), service_request,
+  estimate (the approved LabourEstimate from ?estimate=, or None).
+  With an estimate: the work is the handyman's breakdown (read only) and the total is the
+  labour cost + the admin margin, worked out on the page (there is no margin field).
+  Without an estimate: work and total are typed in.
+  Buttons post `draft` or `send` (send asks for confirmation first).
+{% endcomment %}
+
+{% block title %}Create Service Quotation | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
 {% block content %}
-<div class="lab">Admin · Quotations</div>
-<h1>New quotation</h1>
-<p class="sub">Request {{ service_request.reference }} · {{ service_request.customer }}</p>
-<div class="g2">
-  <div class="card">
-    <form method="post">
-      {% csrf_token %}
-      {% include "payments/_form_fields.html" %}
-      <div style="display:flex;gap:12px;margin-top:20px">
-        <button class="btn" name="send" value="1">Send to customer</button>
-        <button class="btn o" name="draft" value="1">Save as draft</button>
-      </div>
-    </form>
-  </div>
-  <div class="card">
-    <h2>Request</h2>
-    <div class="row"><span class="mut">Service</span><span>{{ service_request.service_category|default:"-" }}</span></div>
-    <div class="row"><span class="mut">Status</span><span>{{ service_request.status }}</span></div>
-    <p class="sub" style="margin:16px 0 0">{{ service_request.problem_description }}</p>
+<link rel="stylesheet" href="{% static 'payments/css/admin_review_estimate.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/quotation_form.css' %}">
+
+{% with customer=service_request.customer %}
+<a class="back" href="{% url 'payments:estimate_list' %}">&larr; Back to Service Quotations</a>
+
+<div class="bar">
+  <div>
+    <h1>Create Service Quotation</h1>
+    <p class="sub">{% if estimate %}Add the admin margin to the approved labour cost, then send the quotation to the customer.{% else %}Describe the work and the fixed total, then send the quotation to the customer.{% endif %}</p>
   </div>
 </div>
+
+<div class="card re-refbar">
+  <strong>{{ service_request.reference }}{% if estimate %} / Estimate {{ estimate.pk }}{% endif %}</strong>
+  <span class="b re-pill is-quote">Needs quote</span>
+</div>
+
+<form class="re-grid qf-form" method="post" id="qf" data-form{% if estimate %} data-labour="{{ estimate.amount|stringformat:'s' }}"{% endif %} novalidate>
+  {% csrf_token %}
+  <section class="card re-main">
+    <h2>Service Quotation Details</h2>
+
+    {% if form.non_field_errors %}<p class="qf-alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+
+    <dl class="re-facts">
+      <div><dt>Selected handyman</dt><dd>{% if estimate %}{% firstof estimate.handyman.get_full_name estimate.handyman.username %}{% else %}-{% endif %}</dd></div>
+      <div><dt>Approved labour cost</dt><dd>{% if estimate %}MUR {{ estimate.amount|floatformat:"2g" }}{% else %}-{% endif %}</dd></div>
+      <div><dt>Materials</dt><dd>Excluded</dd></div>
+    </dl>
+
+    <div class="re-break">
+      {% if estimate %}
+      <h3>Work included</h3>
+      <p class="qf-lines" data-work-text>{{ form.work_description.value|default:""|linebreaksbr }}</p>
+      <input type="hidden" name="work_description" value="{{ form.work_description.value|default:'' }}" data-work>
+      {% else %}
+      <label for="{{ form.work_description.id_for_label }}"><h3>Work included</h3></label>
+      <textarea class="in" id="{{ form.work_description.id_for_label }}" name="work_description" rows="3" data-work>{{ form.work_description.value|default:"" }}</textarea>
+      {% endif %}
+      <p class="qf-error" data-work-error {% if not form.work_description.errors %}hidden{% endif %}>{% if form.work_description.errors %}{{ form.work_description.errors|join:" " }}{% else %}Please list the work included.{% endif %}</p>
+
+      {% if estimate %}
+      <div class="qf-calc">
+        <span>Admin margin</span>
+        <span class="qf-calc-val">
+          <label class="qf-pct"><span class="sr-only">Margin percentage</span>
+            <input class="in" type="number" min="0" max="100" step="0.5" value="15" data-percent><span aria-hidden="true">%</span>
+          </label>
+          <strong data-margin>MUR 0.00</strong>
+        </span>
+      </div>
+      <p class="qf-error" data-percent-error hidden>Enter a margin between 0 and 100.</p>
+      <div class="re-total"><span>Quotation total</span><strong data-total>MUR {{ form.total_amount.value|default:"0" }}</strong></div>
+      <input type="hidden" name="total_amount" value="{{ form.total_amount.value|default:'' }}" data-total-input{% if form.is_bound %} data-bound{% endif %}>
+      {% else %}
+      <div class="re-total"><label for="{{ form.total_amount.id_for_label }}">Quotation total (MUR)</label>
+        <input class="in qf-amount" type="number" min="0" step="0.01" id="{{ form.total_amount.id_for_label }}" name="total_amount" value="{{ form.total_amount.value|default:'' }}" data-total-input></div>
+      {% endif %}
+      <p class="qf-error" data-total-error {% if not form.total_amount.errors %}hidden{% endif %}>{% if form.total_amount.errors %}{{ form.total_amount.errors|join:" " }}{% else %}Please enter the total.{% endif %}</p>
+    </div>
+  </section>
+
+  <aside class="card re-side">
+    <h2>Request Information</h2>
+    <dl class="re-info">
+      <div><dt>Request ID</dt><dd>{{ service_request.reference }}</dd></div>
+      <div><dt>Customer</dt><dd>{% firstof customer.get_full_name customer.username %}</dd></div>
+      <div><dt>Service</dt><dd>{{ service_request.service_category|default:"-" }}</dd></div>
+      <div><dt>Request status</dt><dd>{{ service_request.get_status_display }}</dd></div>
+    </dl>
+    <h2 class="re-docs-title">Customer's problem</h2>
+    <p class="qf-problem">{{ service_request.problem_description|default:"No description given." }}</p>
+  </aside>
+
+  <section class="card re-next">
+    <div>
+      <h2>Next Action</h2>
+      <p class="mut">Check the total, then save a draft or send the quotation to the customer.</p>
+    </div>
+    <div class="re-actions">
+      <button class="btn soft-blue" type="button" data-open="preview">Preview</button>
+      <button class="btn soft-warn" type="submit" name="draft" value="1" data-submit>Save Draft</button>
+      <button class="btn soft-green" type="button" data-send>Send to Customer</button>
+    </div>
+  </section>
+</form>
+
+{# ---------- Send confirmation (submits the form with `send`) ---------- #}
+<dialog class="re-modal" id="modal-send" aria-labelledby="sd-title">
+  <div class="qf-confirm">
+    <h2 id="sd-title">Send quotation to the customer?</h2>
+    <p class="mut">{% firstof customer.get_full_name customer.username %} will receive a quotation for <strong data-sd-total></strong> (materials not included). They can accept it, ask for changes or decline it.</p>
+    <div class="re-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-green" type="submit" form="qf" name="send" value="1">Send to Customer</button>
+    </div>
+  </div>
+</dialog>
+
+{# ---------- Preview: what the customer will see ---------- #}
+<dialog class="re-modal wide" id="modal-preview" aria-labelledby="pv-title">
+  <div class="qf-preview">
+    <h2 id="pv-title">Quotation preview</h2>
+    <p class="mut">This is what {% firstof customer.get_full_name customer.username %} will see.</p>
+    <dl class="re-ctx">
+      <div><dt>Prepared for</dt><dd>{% firstof customer.get_full_name customer.username %}</dd></div>
+      <div><dt>Request</dt><dd>{{ service_request.reference }}</dd></div>
+      <div><dt>Service</dt><dd>{{ service_request.service_category|default:"-" }}</dd></div>
+    </dl>
+    <h3>Work included</h3>
+    <p class="qf-pv-text" data-pv-work></p>
+    <div class="re-total"><span>Total (materials not included)</span><strong data-pv-total></strong></div>
+    <div class="re-btns"><button class="btn o" type="button" data-close>Close</button></div>
+  </div>
+</dialog>
+{% endwith %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/quotation_form.js' %}"></script>
 {% endblock %}
