@@ -56,6 +56,7 @@ The full list of names is in the comment at the top of each template. Summary:
 - **Case Overview** (also the resolved view) – `page`: reference, subject, description, job, filed_by, against, created_at, status, status_label, is_resolved, evidence (name, size, url), customer_msgs, handyman_msgs, activity (from `ComplaintLog`), and when resolved: outcome, resolved_by, resolved_at. The links are `queue_url`, `customer_url`, `handyman_url`, `resolve_url`. "Start investigation" posts `status=in_progress` to `complaints:resolution` (`status_url`).
 - **Private chats** (customer and handyman use one template) – `page`: the complaint fields above, `who` (`Customer` or `Handyman`), `person` (name, first_name, initials, email), `recipient_id`, `messages` (author, role, at, body, from_admin) for **that person only**, and `case_url`, `other_url`, `other_label`. Send posts `recipient` and `body` to `complaints:enquiry` (`enquiry_url`). The reply box is hidden when `is_resolved`.
 - **Resolve Case** – `page`: reference, subject, filed_by, against, `case_url`, `resolution_url`, `checks` (customer_replied, handyman_replied, has_evidence). The form posts `status=resolved` and `outcome` (required) to `complaints:resolution`.
+
 `status` for jobs is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
 
 `status` for complaints is `pending`, `in_progress` or `resolved`. The complaint pages have no assigned admin, category, priority, internal notes or payment amount, because the complaints app has no data for them.
@@ -69,7 +70,7 @@ Built on the existing `payments` pages, so they use the real views, forms and mo
 | Quotations tab | `/payments/quotations/` | `payments/quotation_list.html` |
 | Create Service Quotation | `/payments/quotations/new/<request_id>/?estimate=<id>` | `payments/quotation_form.html` |
 | Revise Service Quotation | `/payments/quotations/<id>/edit/` | `payments/quotation_edit.html` (new) |
-| Service Quotation Details (customer-response prompts) | `/payments/quotations/<id>/` | `payments/quotation_admin_detail.html` |
+| Service Quotation Details (customer-response prompts, link to the material quotation) | `/payments/quotations/<id>/` | `payments/quotation_admin_detail.html` |
 
 CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** points to `payments:estimate_list`.
 
@@ -77,7 +78,7 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 - `quotation_edit` renders `quotation_edit.html` instead of the shared `form_page.html` (still used by the handyman forms), and **Send to Customer** on Revise saves and sends in one step.
 - `quotation_detail_admin` also sends `other` (the material quotation of the same request, or the labour one for a material quotation) and `request_payment` (`request_payment_state`), because payment comes after **both** quotations are accepted. Record payment shows only then, and **Schedule Appointment** only when the whole request is paid.
 
-**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), estimates and quotations in every status, material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid), and prints the links. Local testing only.
+**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), several estimates to review and revision requests, quotations in every status, material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid), and prints the links. Local testing only.
 
 **Still needed from the backend**
 1. **Note to handyman** on Revise (shown but not connected): allow an estimate revision after approval when the customer asks for changes.
