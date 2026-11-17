@@ -73,9 +73,11 @@ Built on the existing `payments` pages, so they use the real views, forms and mo
 
 CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** points to `payments:estimate_list`.
 
-**Change in `payments/views.py`:** `quotation_edit` renders `quotation_edit.html` instead of the shared `form_page.html` (still used by the handyman forms), and **Send to Customer** on Revise saves and sends in one step.
+**Changes in `payments/views.py`:**
+- `quotation_edit` renders `quotation_edit.html` instead of the shared `form_page.html` (still used by the handyman forms), and **Send to Customer** on Revise saves and sends in one step.
+- `quotation_detail_admin` also sends `other` (the material quotation of the same request, or the labour one for a material quotation) and `request_payment` (`request_payment_state`), because payment comes after **both** quotations are accepted. Record payment shows only then, and **Schedule Appointment** only when the whole request is paid.
 
-**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), estimates and quotations in every status, and prints the links. Local testing only.
+**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), estimates and quotations in every status, material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid), and prints the links. Local testing only.
 
 **Still needed from the backend**
 1. **Note to handyman** on Revise (shown but not connected): allow an estimate revision after approval when the customer asks for changes.
@@ -87,6 +89,8 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 7. **Links and routes:** an appointment page for **Schedule Appointment**, and routes for `admin_dashboard`, `admin_record_payment` and `admin_issue_invoice`.
 8. **Notifications** for estimates and customer answers (only complaints create notifications now), and `notify_admins` should include `role = 'admin'` users who are not staff.
 9. **Login redirect:** `LOGIN_URL = 'login'` is missing in settings.
+10. **Material process:** after the administrator approves a purchase request, the **customer approves the purchase** before the handyman buys, and the **material quotation is made from the actual costs on the receipts**. Now, forwarding a request creates a material quotation at the estimated cost straight away.
+11. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
 
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.

@@ -11,7 +11,8 @@ from bookings.models import ServiceRequest, ServiceRequestAssignment
 
 from .forms import (LabourEstimateForm, MaterialReceiptForm, MaterialRequestForm, NoteForm, PaymentForm,
                     QuotationForm)
-from .models import (LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation)
+from .models import (LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation,
+                     request_payment_state)
 
 
 def role_required(role):
@@ -85,7 +86,14 @@ def quotation_list(request):
 @role_required('admin')
 def quotation_detail_admin(request, pk):
     quotation = get_object_or_404(Quotation.objects.select_related('request', 'request__customer', 'labour_estimate'), pk=pk)
-    return render(request, 'payments/quotation_admin_detail.html', {'quotation': quotation})
+    # Payment comes after BOTH the labour and the material quotation are accepted, so the page
+    # also needs the other quotation of the same request and the request's payment state.
+    other_type = Quotation.MATERIAL if quotation.quotation_type == Quotation.LABOUR else Quotation.LABOUR
+    other = (quotation.request.quotations.filter(quotation_type=other_type)
+             .exclude(status__in=[Quotation.CANCELLED, Quotation.DECLINED]).order_by('-created_at').first())
+    return render(request, 'payments/quotation_admin_detail.html', {
+        'quotation': quotation, 'other': other, 'request_payment': request_payment_state(quotation.request),
+    })
 
 
 @role_required('admin')

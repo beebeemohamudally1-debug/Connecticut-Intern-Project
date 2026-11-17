@@ -74,16 +74,26 @@ class Command(BaseCommand):
         # (key, service, customer, handyman, labour, breakdown, estimate status, quotation status)
         rows = [
             ('needs_review', 'Bathroom tap replacement', 0, 0, '1800', 'Remove old tap\nFit new tap\nTest for leaks', 'submitted', None),
+            ('needs_review_2', 'Ceiling light fitting', 1, 1, '1200', 'Remove old fitting\nInstall new light\nTest switch', 'submitted', None),
+            ('needs_review_3', 'Kitchen tap leak', 2, 0, '950', 'Replace washer\nTighten fittings', 'submitted', None),
+            ('needs_review_4', 'Window latch repair', 3, 1, '700', 'Replace latch\nAdjust frame', 'submitted', None),
+            ('estimate_revision_2', 'Tile regrouting', 3, 0, '3400', 'Remove old grout\nRegrout bathroom wall', 'revision_requested', None),
             ('needs_quote', 'Pipe leak repair', 0, 1, '4500', 'Repair leaking pipe\nReplace fittings\nPressure test', 'approved', None),
             ('estimate_revision', 'Door lock fitting', 1, 0, '2600', 'Fit new lock\nAdjust door', 'revision_requested', None),
             ('draft', 'Kitchen shelf install', 1, 1, '1500', 'Fix brackets\nMount two shelves', 'approved', 'draft'),
             ('sent', 'Ceiling fan installation', 1, 0, '2000', 'Mount fan\nConnect wiring\nTest speeds', 'approved', 'sent'),
             ('changes_requested', 'Wall painting', 2, 1, '6500', 'Prepare walls\nTwo coats of paint', 'approved', 'revision_requested'),
+            ('changes_requested_2', 'Deck staining', 0, 0, '4800', 'Sand the deck\nApply two coats of stain', 'approved', 'revision_requested'),
+            ('changes_requested_3', 'Bathroom fan install', 3, 1, '2200', 'Cut vent\nInstall fan\nConnect wiring', 'approved', 'revision_requested'),
             ('accepted', 'Garden fence repair', 2, 0, '3000', 'Replace panels\nLevel posts\nPaint section', 'approved', 'accepted'),
+            ('accepted_waiting', 'Gate repair', 0, 0, '2800', 'Fix hinges\nRealign gate\nOil lock', 'approved', 'accepted'),
             ('paid', 'Water heater service', 3, 1, '2400', 'Drain tank\nReplace element\nTest', 'approved', 'paid'),
             ('declined', 'Roof gutter cleaning', 3, 0, '5700', 'Clear gutters\nFlush downpipes', 'approved', 'declined'),
             ('cancelled', 'Shower installation', 0, 1, '4200', 'Remove old unit\nInstall shower\nSeal and test', 'approved', 'cancelled'),
         ]
+        # Rows without a quotation (estimates to review, quote or wait on) are created last,
+        # so they show at the top of the lists (newest first).
+        rows.sort(key=lambda r: r[7] is None)
         self.ids = {}
         for key, service, c, h, amount, breakdown, est_status, q_status in rows:
             req = ServiceRequest.objects.create(
@@ -95,7 +105,8 @@ class Command(BaseCommand):
                                                     status='accepted', sent_by=admin)
             est = LabourEstimate.objects.create(
                 request=req, handyman=handymen[h], amount=Decimal(amount), breakdown=breakdown, status=est_status,
-                admin_note='Please split the cost per task.' if est_status == 'revision_requested' else '',
+                admin_note={'estimate_revision': 'Please split the cost per task.',
+                            'estimate_revision_2': 'The labour cost looks high for one wall. Please check it.'}.get(key, '') if est_status == 'revision_requested' else '',
                 reviewed_by=None if est_status == 'submitted' else admin,
                 reviewed_at=None if est_status == 'submitted' else timezone.now())
             self.ids[key] = {'request': req.pk, 'estimate': est.pk}
@@ -105,28 +116,42 @@ class Command(BaseCommand):
             q = Quotation.objects.create(
                 request=req, labour_estimate=est, work_description=breakdown, total_amount=total,
                 status='accepted' if q_status == 'paid' else q_status, created_by=admin,
-                customer_note='Could the price be lower? We can supply the paint.' if q_status == 'revision_requested' else '',
+                customer_note={'changes_requested': 'Could the price be lower? We can supply the paint.',
+                               'changes_requested_2': 'Please do one coat only, and finish before Friday.',
+                               'changes_requested_3': 'Can you use the existing vent instead of cutting a new one?'}.get(key, '') if q_status == 'revision_requested' else '',
                 responded_at=timezone.now() if q_status in ('accepted', 'paid', 'declined', 'revision_requested') else None)
             if q_status == 'paid':
                 Payment.objects.create(quotation=q, amount=total, date_received=date(2026, 11, 15),
                                        method='bank_transfer', reference='DEMO-PAY-001', recorded_by=admin)
             self.ids[key]['quotation'] = q.pk
 
-        # Materials: one waiting for review, one already forwarded as a material quotation
+        # Materials (part B) and payment (part C): payment comes after BOTH quotations are accepted.
+        # Gate repair: labour accepted, purchase request waiting for review (no material quotation yet).
         MaterialPurchaseRequest.objects.create(
-            request_id=self.ids['accepted']['request'], handyman=handymen[0],
-            items='4 fence panels\n2 posts\n1 tin of wood paint', estimated_cost=Decimal('3200'))
+            request_id=self.ids['accepted_waiting']['request'], handyman=handymen[0],
+            items='2 gate hinges\n1 padlock', estimated_cost=Decimal('900'))
+        # Garden fence: labour and material quotations both accepted, not paid yet (ready to pay).
+        self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False)
+        # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
+        self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True)
+
+    def material(self, admin, handyman, key, items, cost, paid):
         mat = MaterialPurchaseRequest.objects.create(
-            request_id=self.ids['paid']['request'], handyman=handymen[1],
-            items='1 heating element\n1 thermostat', estimated_cost=Decimal('1900'))
-        mat.forward(admin)
+            request_id=self.ids[key]['request'], handyman=handyman, items=items, estimated_cost=Decimal(cost))
+        q = mat.forward(admin)
+        q.status, q.responded_at = 'accepted', timezone.now()
+        q.save()
+        if paid:
+            Payment.objects.create(quotation=q, amount=q.total_amount, date_received=date(2026, 11, 15),
+                                   method='bank_transfer', reference='DEMO-PAY-002', recorded_by=admin)
 
     # -------------------------------------------------------------------- links
     def print_links(self):
         ids = {}
         for key, service in [('needs_quote', 'Pipe leak repair'), ('draft', 'Kitchen shelf install'),
                              ('sent', 'Ceiling fan installation'), ('changes_requested', 'Wall painting'),
-                             ('accepted', 'Garden fence repair'), ('paid', 'Water heater service'),
+                             ('accepted', 'Garden fence repair'), ('accepted_waiting', 'Gate repair'),
+                             ('paid', 'Water heater service'),
                              ('declined', 'Roof gutter cleaning'), ('cancelled', 'Shower installation')]:
             req = ServiceRequest.objects.filter(customer__username__startswith='demo_', service_category=service).first()
             if not req:
@@ -145,7 +170,8 @@ class Command(BaseCommand):
             out(f'  {BASE}/payments/quotations/new/{i["request"]}/?estimate={i["estimate"]}')
         out('\nQuotation details')
         for key, label in [('draft', 'Draft'), ('sent', 'Sent, awaiting customer'), ('changes_requested', 'Changes requested'),
-                           ('accepted', 'Accepted, unpaid'), ('paid', 'Paid'), ('declined', 'Declined'), ('cancelled', 'Cancelled')]:
+                           ('accepted_waiting', 'Accepted, no materials'), ('accepted', 'Both accepted, unpaid'),
+                           ('paid', 'Both paid'), ('declined', 'Declined'), ('cancelled', 'Cancelled')]:
             if key in ids and ids[key]['quotation']:
                 out(f'  {label + ":":26} {BASE}/payments/quotations/{ids[key]["quotation"]}/')
         out('\nEdit / revise quotation')
@@ -153,6 +179,6 @@ class Command(BaseCommand):
             if key in ids and ids[key]['quotation']:
                 out(f'  {label + ":":26} {BASE}/payments/quotations/{ids[key]["quotation"]}/edit/')
         if 'accepted' in ids and ids['accepted']['quotation']:
-            out('\nRecord payment (accepted quotation)')
+            out('\nRecord payment (both quotations accepted)')
             out(f'  {BASE}/payments/quotations/{ids["accepted"]["quotation"]}/pay/')
         out('')

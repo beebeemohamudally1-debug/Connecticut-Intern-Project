@@ -39,16 +39,16 @@
     <p class="lq-stat-hint">Customer wants changes</p>
   </div>
   <div class="card lq-stat lq-s-review">
-    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting payment</p>
+    <div class="lq-stat-top"><p class="lq-stat-label">Accepted, unpaid</p>
       <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span></div>
     <p class="lq-stat-num" data-stat="unpaid">00</p>
-    <p class="lq-stat-hint">Accepted, not paid yet</p>
+    <p class="lq-stat-hint">Paid once materials are accepted</p>
   </div>
   <div class="card lq-stat lq-s-accepted">
     <div class="lq-stat-top"><p class="lq-stat-label">Paid</p>
       <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
     <p class="lq-stat-num" data-stat="paid">00</p>
-    <p class="lq-stat-hint">Ready for an appointment</p>
+    <p class="lq-stat-hint">Labour payment recorded</p>
   </div>
 </section>
 
@@ -107,7 +107,7 @@
         <td data-label="Service">{{ q.request.service_category|default:"-" }}</td>
         <td data-label="Labour quote"><span class="lq-amt">MUR {{ q.total_amount|floatformat:"2g" }}</span>{% if q.status == 'accepted' %}<span class="lq-sub">{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</span>{% endif %}</td>
         <td data-label="Updated">{% firstof q.responded_at|date:"d M Y" q.created_at|date:"d M Y" %}</td>
-        <td data-label="Status"><span class="b lq-{% if st == 'paid' %}accepted{% elif st == 'unpaid' %}ready{% elif st == 'draft' %}handyman{% else %}{{ st }}{% endif %}">{% if st == 'draft' %}Draft{% elif st == 'pending' %}Awaiting customer{% elif st == 'revision' %}{% if q.status == 'revised' %}Revised, not sent{% else %}Changes requested{% endif %}{% elif st == 'paid' %}Paid{% elif st == 'unpaid' %}Awaiting payment{% elif st == 'rejected' %}Declined{% else %}Cancelled{% endif %}</span></td>
+        <td data-label="Status"><span class="b lq-{% if st == 'paid' %}accepted{% elif st == 'unpaid' %}ready{% elif st == 'draft' %}handyman{% else %}{{ st }}{% endif %}">{% if st == 'draft' %}Draft{% elif st == 'pending' %}Awaiting customer{% elif st == 'revision' %}{% if q.status == 'revised' %}Revised, not sent{% else %}Changes requested{% endif %}{% elif st == 'paid' %}Paid{% elif st == 'unpaid' %}Accepted{% elif st == 'rejected' %}Declined{% else %}Cancelled{% endif %}</span></td>
         <td data-label=""><a class="btn o s" href="{% url 'payments:quotation_detail_admin' q.pk %}">View<span class="sr-only"> quotation {{ q.pk }}</span></a></td>
       </tr>
       {% endwith %}
