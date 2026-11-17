@@ -3,6 +3,7 @@ from datetime import date
 
 from django.shortcuts import render
 from django.db.models import Count, Q
+
 from dashboard.permissions import role_required
 from jobs.models import Job
 
@@ -19,27 +20,69 @@ def job_summary_report(request):
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
 
-    if status in dict(Job.STATUS_CHOICES):
-        jobs = jobs.filter(status=status)
+    errors = []
+    start = None
+    end = None
 
-    try:
-        if start_date:
+    valid_statuses = dict(Job.STATUS_CHOICES)
+
+    # Validate job status
+    if status:
+        if status in valid_statuses:
+            jobs = jobs.filter(status=status)
+        else:
+            errors.append('Invalid job status selected.')
+
+    # Validate start date
+    if start_date:
+        try:
+            start = date.fromisoformat(start_date)
+        except ValueError:
+            errors.append('Invalid start date.')
+
+    # Validate end date
+    if end_date:
+        try:
+            end = date.fromisoformat(end_date)
+        except ValueError:
+            errors.append('Invalid end date.')
+
+    # Check date range
+    if start and end and start > end:
+        errors.append(
+            'Start date cannot be later than end date.'
+        )
+
+    # Apply valid filters
+    if not errors:
+        if start:
             jobs = jobs.filter(
-                created_at__date__gte=date.fromisoformat(start_date)
+                created_at__date__gte=start
             )
-        if end_date:
+
+        if end:
             jobs = jobs.filter(
-                created_at__date__lte=date.fromisoformat(end_date)
+                created_at__date__lte=end
             )
-    except ValueError:
-        pass
+
+    # Do not show misleading results
+    if errors:
+        jobs = jobs.none()
 
     stats = jobs.aggregate(
         total_jobs=Count('id'),
-        assigned_jobs=Count('id', filter=Q(status=Job.ASSIGNED)),
-        in_progress_jobs=Count('id', filter=Q(status=Job.IN_PROGRESS)),
-        completed_jobs=Count('id', filter=Q(status=Job.COMPLETED)),
-        cancelled_jobs=Count('id', filter=Q(status=Job.CANCELLED)),
+        assigned_jobs=Count(
+            'id', filter=Q(status=Job.ASSIGNED)
+        ),
+        in_progress_jobs=Count(
+            'id', filter=Q(status=Job.IN_PROGRESS)
+        ),
+        completed_jobs=Count(
+            'id', filter=Q(status=Job.COMPLETED)
+        ),
+        cancelled_jobs=Count(
+            'id', filter=Q(status=Job.CANCELLED)
+        ),
     )
 
     context = {
@@ -47,9 +90,18 @@ def job_summary_report(request):
         'jobs': jobs,
         'status_choices': Job.STATUS_CHOICES,
         'selected_status': status,
+        'selected_status_label': valid_statuses.get(
+            status, 'All statuses'
+        ),
         'start_date': start_date,
         'end_date': end_date,
+        'errors': errors,
+        'filters_valid': not errors,
         **stats,
     }
 
-    return render(request, 'reports/job_summary.html', context)
+    return render(
+        request,
+        'reports/job_summary.html',
+        context
+    )
