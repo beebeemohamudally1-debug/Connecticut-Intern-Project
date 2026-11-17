@@ -1,0 +1,116 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Private Feedback - Assess customer reviews (admin). View: reviews.views.admin_reviews
+  Context: reviews (Review list with job, customer, assessed_by; filtered by ?status=),
+  selected_status, pending_count, approved_count, rejected_count.
+  The status tabs use the view's ?status= filter. Search, the date filter and the pages
+  work in the browser on the rows sent.
+{% endcomment %}
+
+{% block title %}Private Feedback | HandyConnect{% endblock %}
+{% block page %}reviews{% endblock %}
+{% block crumb %}Private Feedback{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'reviews/css/admin_reviews.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Private Feedback</h1>
+    <p class="sub">Assess the feedback customers leave on their completed jobs.</p>
+  </div>
+</div>
+
+<section class="lq-stats rv-stats" aria-label="Feedback totals">
+  <a class="card lq-stat lq-s-review" href="?status=pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting assessment</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span></div>
+    <p class="lq-stat-num">{{ pending_count|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Feedback to check</p>
+  </a>
+  <a class="card lq-stat lq-s-accepted" href="?status=approved">
+    <div class="lq-stat-top"><p class="lq-stat-label">Approved</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num">{{ approved_count|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Assessed and kept</p>
+  </a>
+  <a class="card lq-stat rv-s-rejected" href="?status=rejected">
+    <div class="lq-stat-top"><p class="lq-stat-label">Rejected</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></span></div>
+    <p class="lq-stat-num">{{ rejected_count|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Assessed and rejected</p>
+  </a>
+</section>
+
+<section class="card lq-card" data-reviews data-page-size="5">
+  <nav class="lq-tabs" aria-label="Feedback status">
+    <a href="?" {% if not selected_status %}aria-current="page"{% endif %}>All</a>
+    <a href="?status=pending" {% if selected_status == 'pending' %}aria-current="page"{% endif %}>Awaiting assessment</a>
+    <a href="?status=approved" {% if selected_status == 'approved' %}aria-current="page"{% endif %}>Approved</a>
+    <a href="?status=rejected" {% if selected_status == 'rejected' %}aria-current="page"{% endif %}>Rejected</a>
+  </nav>
+
+  <div class="lq-tools rv-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by customer, handyman or job</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Customer, handyman or job..." data-search>
+    </label>
+    <label><span class="sr-only">Date</span>
+      <select class="in" data-days>
+        <option value="">All dates</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="365">Last 12 months</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table rv-table">
+    <thead>
+      <tr>
+        <th scope="col">Feedback</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Rating</th>
+        <th scope="col">Comment</th>
+        <th scope="col">Date</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reviews %}
+      {% with customer=r.customer handyman=r.job.handyman %}
+      <tr data-row data-date="{{ r.created_at|date:'Y-m-d' }}"
+          data-text="fb-{{ r.pk }} {{ r.job.reference|lower }} {% firstof customer.get_full_name customer.username %} {% firstof handyman.get_full_name handyman.username %} {{ r.job.service_name|lower }}">
+        <td data-label="Feedback"><span class="lq-id">FB-{{ r.pk|stringformat:"04d" }}</span><span class="lq-sub" title="{{ r.job.service_name }}">{{ r.job.reference }}</span></td>
+        <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
+        <td data-label="Handyman">{% firstof handyman.get_full_name handyman.username %}</td>
+        <td data-label="Rating"><span class="rv-stars" aria-label="{{ r.rating }} out of 5">{% for i in "12345" %}<span{% if forloop.counter <= r.rating %} class="on"{% endif %}>&#9733;</span>{% endfor %}</span></td>
+        <td data-label="Comment"><span class="rv-comment">{{ r.comment }}</span></td>
+        <td data-label="Date">{{ r.created_at|date:"d M Y" }}</td>
+        <td data-label="Status"><span class="b lq-{% if r.status == 'pending' %}review{% elif r.status == 'approved' %}accepted{% else %}rejected{% endif %}">{% if r.status == 'pending' %}Awaiting assessment{% else %}{{ r.get_status_display }}{% endif %}</span></td>
+        <td data-label=""><a class="btn o s" href="{% url 'reviews:review_detail' r.pk %}">{% if r.status == 'pending' %}Assess{% else %}View{% endif %}<span class="sr-only"> feedback {{ r.pk }}</span></a></td>
+      </tr>
+      {% endwith %}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty {% if reviews %}hidden{% endif %}>{% if reviews %}Nothing matches that search. Try clearing the filters.{% else %}No feedback here yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'reviews/js/admin_reviews.js' %}"></script>
+{% endblock %}
