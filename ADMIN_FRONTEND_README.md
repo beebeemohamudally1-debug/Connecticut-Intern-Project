@@ -1,9 +1,10 @@
 # Admin pages (frontend)
 
-This file lists the admin pages built so far. **The admin frontend is still in progress:** only the pages in the table below exist, and more sections (for example Services, Skills, Service Requests, Appointments, Material Quotations, Payments, Reports and Reviews) are still to be built. **Labour Quotations** is only partly built (see below).
-Each view in `accounts/admin_views.py` sends **sample data** and renders one template.
+This file lists the admin pages built so far. **The admin frontend is still in progress:** more sections (for example Services, Skills, Service Requests, Appointments, Material Quotations, Payments, Reports and Reviews) are still to be built.
 
-**Integration has not been done yet.** Every page here shows sample data and its buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
+There are two kinds of pages:
+- **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
+- **Service Quotations** (see its own section below): built on the existing **payments** pages, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -24,7 +25,7 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 | `users/handyman/suspended/` | `suspended_handyman` | `accounts/admin_handyman_profile.html` | `SUSPENDED_HANDYMAN` |
 | `users/handyman/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | `APPLICANT` |
 | `users/handyman/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | `APPROVED_APPLICANT` |
-| `notifications/` | `notifications` | `notifications/admin_notifications.html` | `NOTIFICATIONS` |
+| `notifications/` | `notifications` | `notifications/admin_notifications.html` | none: real notifications for the logged-in admin |
 | `work-progress/` | `work_progress` | `jobs/admin_work_progress.html` | `WORK_PROGRESS` |
 | `work-progress/job/` | `work_progress_job` | `jobs/admin_job_progress.html` | `JOB_PROGRESS` |
 | `work-progress/reports/` | `work_progress_reports` | `jobs/admin_daily_reports.html` | `DAILY_REPORTS` |
@@ -35,10 +36,6 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 | `complaints/case/customer/` | `complaint_customer` | `complaints/admin_complaint_conversation.html` | `CONVERSATIONS['customer']` |
 | `complaints/case/handyman/` | `complaint_handyman` | `complaints/admin_complaint_conversation.html` | `CONVERSATIONS['handyman']` |
 | `complaints/case/resolve/` | `complaint_resolve` | `complaints/admin_complaint_resolve.html` | `CASE_RESOLVE` |
-| `labour-quotations/` | `labour_quotations` | `payments/admin_labour_quotations.html` | `LABOUR_QUOTATIONS` |
-| `labour-quotations/review/` | `labour_estimate_review` | `payments/admin_review_estimate.html` | `LABOUR_ESTIMATE` |
-
-The Labour Quotations templates are in `templates/payments/`, with their CSS and JS in `static/payments/`, even though they are routed through `accounts_admin`.
 
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
@@ -59,41 +56,37 @@ The full list of names is in the comment at the top of each template. Summary:
 - **Case Overview** (also the resolved view) – `page`: reference, subject, description, job, filed_by, against, created_at, status, status_label, is_resolved, evidence (name, size, url), customer_msgs, handyman_msgs, activity (from `ComplaintLog`), and when resolved: outcome, resolved_by, resolved_at. The links are `queue_url`, `customer_url`, `handyman_url`, `resolve_url`. "Start investigation" posts `status=in_progress` to `complaints:resolution` (`status_url`).
 - **Private chats** (customer and handyman use one template) – `page`: the complaint fields above, `who` (`Customer` or `Handyman`), `person` (name, first_name, initials, email), `recipient_id`, `messages` (author, role, at, body, from_admin) for **that person only**, and `case_url`, `other_url`, `other_label`. Send posts `recipient` and `body` to `complaints:enquiry` (`enquiry_url`). The reply box is hidden when `is_resolved`.
 - **Resolve Case** – `page`: reference, subject, filed_by, against, `case_url`, `resolution_url`, `checks` (customer_replied, handyman_replied, has_evidence). The form posts `status=resolved` and `outcome` (required) to `complaints:resolution`.
-- **Service Quotations (overview)** – `page.stats` (review, pending, revision, accepted), `page.customers` (names for the filter) and `page.quotes` (reference, handyman, request, customer, service, amount, amount_note, updated_at, status, status_label, url). There is **one row per request**: the latest quotation if there is one, otherwise the handyman's estimate. `status` is `review`, `ready`, `handyman`, `pending`, `revision`, `accepted`, `rejected` or `cancelled` (see the table below). Review and Prepare quote rows open the review and quotation pages; other rows open the quotation details page.
-- **Review Labour Estimate** – `page`: reference, request, customer, handyman, service, submitted, status_label, amount, breakdown (list of lines), documents (title, file, url), back_url, prepare_url, action_url. The three buttons post `action` (`approve`, `revision` or `reject`) and `note` to `payments:estimate_action`. A note is required for revision and reject.
-
 `status` for jobs is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
 
 `status` for complaints is `pending`, `in_progress` or `resolved`. The complaint pages have no assigned admin, category, priority, internal notes or payment amount, because the complaints app has no data for them.
 
-## Labour Quotations: what is built and what is still to do
-**Built (frontend only, sample data):** Service Quotations overview and Review Labour Estimate (with its approve, revision and reject pop-ups).
+## Service Quotations (connected to the backend)
+Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
 
-**Still to build (frontend):** Create / Revise Service Quotation, Service Quotation Details, and the three customer-response pop-ups (accepted, requested a revision, rejected). Until then, Prepare quote and the View buttons on the overview lead to pages that do not exist yet (404).
-
-How the overview `status` is worked out for each request:
-
-| `status` | Label | When |
+| Page | URL | Template |
 |---|---|---|
-| `review` | Needs review | estimate submitted |
-| `ready` | Needs quote | estimate approved, no quotation yet |
-| `handyman` | Awaiting handyman | estimate revision requested |
-| `pending` | Awaiting customer | quotation sent |
-| `revision` | Changes requested | quotation revision requested or revised |
-| `accepted` | Accepted | quotation accepted |
-| `rejected` | Declined | estimate rejected or quotation declined |
-| `cancelled` | Cancelled | quotation cancelled |
+| Labour estimates tab (Review pop-up) | `/payments/estimates/` | `payments/estimate_list.html` |
+| Quotations tab | `/payments/quotations/` | `payments/quotation_list.html` |
+| Create Service Quotation | `/payments/quotations/new/<request_id>/?estimate=<id>` | `payments/quotation_form.html` |
+| Revise Service Quotation | `/payments/quotations/<id>/edit/` | `payments/quotation_edit.html` (new) |
+| Service Quotation Details (customer-response prompts) | `/payments/quotations/<id>/` | `payments/quotation_admin_detail.html` |
 
-**What the pages need that the backend does not have yet:**
-1. **A single-estimate page.** There is only `estimate_list`. The review page needs one `LabourEstimate` loaded by id, with the names listed above.
-2. **After an action** (approve, revision, reject), return to the Service Quotations overview, and show the three buttons only while the estimate status is `submitted`.
-3. **The combined overview list**: one row per request, using the latest quotation if there is one, otherwise the estimate, with the `status` above and the four counts.
-4. **Estimate documents.** The low-fi shows "Documents attached", but `LabourEstimate` has no file field or related model.
-5. **Estimate line items.** The low-fi shows description, quantity and cost per line, but `LabourEstimate` only has `amount` and one text `breakdown`. The page shows the text line by line.
-6. **"Response required by" date** for a revision request. There is nowhere to store it, so the pop-up does not ask for it.
-7. **Admin margin (15%).** Needed for the next pages. `Quotation` only stores `total_amount`, so the labour cost, margin and total cannot be shown separately yet.
-8. **Login redirect.** `LOGIN_URL = 'login'` is missing in settings, so a logged-out visit goes to `/accounts/login/` (404). The app login is `/login`.
-9. **Migration.** The new payments models need one migration (`0002`) committed by one person, so it does not clash.
+CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** points to `payments:estimate_list`.
+
+**Change in `payments/views.py`:** `quotation_edit` renders `quotation_edit.html` instead of the shared `form_page.html` (still used by the handyman forms), and **Send to Customer** on Revise saves and sends in one step.
+
+**Demo data:** `python manage.py seed_payments_demo` (`--reset` to start again) creates demo users (password `demo12345`), estimates and quotations in every status, and prints the links. Local testing only.
+
+**Still needed from the backend**
+1. **Note to handyman** on Revise (shown but not connected): allow an estimate revision after approval when the customer asks for changes.
+2. **A single-estimate page** (`estimates/<id>/`) for a full Review Labour Estimate page; for now the review is a pop-up on the list.
+3. **Not stored yet:** line items (quantity, unit cost), the admin margin, estimate documents, a "response required by" date for revision requests, a note to customer, a decline reason and a "closed" status.
+4. **Activity log** (including when a quotation was sent). The activity steps are built from the dates that exist, so "sent" has no date.
+5. **Response prompts:** whether the admin has seen a customer's answer is kept in the browser (`localStorage`). Storing it would make it work per admin on any computer.
+6. **Type filter** in `quotation_list`, so material quotations get their own list.
+7. **Links and routes:** an appointment page for **Schedule Appointment**, and routes for `admin_dashboard`, `admin_record_payment` and `admin_issue_invoice`.
+8. **Notifications** for estimates and customer answers (only complaints create notifications now), and `notify_admins` should include `role = 'admin'` users who are not staff.
+9. **Login redirect:** `LOGIN_URL = 'login'` is missing in settings.
 
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.

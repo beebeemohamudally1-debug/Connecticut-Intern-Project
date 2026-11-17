@@ -12,6 +12,7 @@
   var pages = box.querySelector('[data-pages]');
   var size = parseInt(box.dataset.pageSize, 10) || 5;
   var status = box.querySelector('[data-status]');
+  var noun = box.dataset.noun || 'quotation';
   var current = 1;
 
   function matches(row) {
@@ -44,7 +45,7 @@
     empty.hidden = found.length !== 0;
     count.textContent = found.length
       ? 'Showing ' + (start + 1) + '–' + Math.min(start + size, found.length) +
-        ' of ' + found.length + ' quotation' + (found.length === 1 ? '' : 's') + ' · Latest update first'
+        ' of ' + found.length + ' ' + noun + (found.length === 1 ? '' : 's') + ' · Latest update first'
       : '';
 
     pages.innerHTML = '';

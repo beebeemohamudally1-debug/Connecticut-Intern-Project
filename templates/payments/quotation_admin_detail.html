@@ -1,48 +1,186 @@
 {% extends "base_admin.html" %}
-{% block title %}Quotation details | HandyConnect{% endblock %}
-{% block page %}invoices{% endblock %}
+{% load static %}
+{% comment %}
+  Service Quotations - Service Quotation Details (admin). View: payments.views.quotation_detail_admin
+  Context: quotation (with request, request.customer and labour_estimate).
+  Works for labour and material quotations.
+  - Item list: the lines of work_description (there are no line items, quantities or unit costs).
+  - Margin: total_amount minus labour_estimate.amount, worked out in the browser.
+  - Activity: built from created_at, revision_number, responded_at, status and payment
+    (there is no activity log, so "sent" has no date).
+  - Buttons follow the model rules: Send / Re-issue (draft, revised), Edit / Revise
+    (draft, revised, revision_requested), Cancel (not cancelled, declined or paid),
+    Record payment (ready_for_payment).
+  - Customer response prompt (accepted, revision_requested, declined): opens by itself once per
+    answer in this browser (localStorage), and from "View response". There is no "closed" status
+    or decline reason in the backend, so "Mark as Closed" only stops the prompt opening again.
+    Schedule Appointment has no URL yet.
+{% endcomment %}
+
+{% block title %}Service Quotation Details | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
 {% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/quotation_admin_detail.css' %}">
+
+{% with q=quotation customer=quotation.request.customer est=quotation.labour_estimate %}
+<a class="back" href="{% url 'payments:quotation_list' %}">&larr; Back to Service Quotations</a>
+
 <div class="bar">
   <div>
-    <div class="lab">Admin · {{ quotation.get_quotation_type_display }} quotation</div>
-    <h1>Request {{ quotation.request.reference }}</h1>
+    <h1>{% if q.quotation_type == 'material' %}Material{% else %}Service{% endif %} Quotation Details</h1>
+    <p class="sub">Q-{{ q.pk }} &bull;
+      <span class="qd-pill is-{{ q.status }}{% if q.is_paid %} is-paid{% endif %}">{% if q.status == 'sent' %}Awaiting customer{% elif q.status == 'revision_requested' %}Changes requested{% elif q.status == 'revised' %}Revised, not sent{% elif q.is_paid %}Paid{% else %}{{ q.get_status_display }}{% endif %}</span>
+    </p>
   </div>
-  <span class="b {% if quotation.status == 'accepted' %}gr{% elif quotation.status == 'declined' or quotation.status == 'cancelled' %}re{% else %}ye{% endif %}">{{ quotation.get_status_display }}</span>
+  {% if messages %}<div class="qd-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+  <div class="qd-top-actions">
+    {% if q.status != 'cancelled' and q.status != 'declined' and not q.is_paid %}<button class="btn o" type="button" data-open="modal-cancel">Cancel</button>{% endif %}
+    {% if q.status == 'draft' or q.status == 'revised' or q.status == 'revision_requested' %}<a class="btn o" href="{% url 'payments:quotation_edit' q.pk %}">Revise Quotation</a>{% endif %}
+    {% if q.status == 'draft' or q.status == 'revised' %}<button class="btn soft-green" type="button" data-open="modal-send">{% if q.status == 'revised' %}Re-issue to Customer{% else %}Send to Customer{% endif %}</button>{% endif %}
+  </div>
 </div>
-{% include "payments/_messages.html" %}
-<div class="g2">
-  <div class="card">
-    <h2>Quotation</h2>
-    <p style="margin:0 0 16px">{{ quotation.work_description|linebreaksbr }}</p>
-    <div class="row t"><span>Fixed total</span><span>MUR {{ quotation.total_amount }}</span></div>
-    <div class="row"><span class="mut">Customer</span><span>{{ quotation.request.customer }}</span></div>
-    <div class="row"><span class="mut">Revision</span><span>{{ quotation.revision_number }}</span></div>
-    {% if quotation.labour_estimate %}<div class="row"><span class="mut">Handyman estimate</span><span>MUR {{ quotation.labour_estimate.amount }}</span></div>{% endif %}
-    {% if quotation.customer_note %}<p class="mut" style="margin:16px 0 0">Customer's revision request: {{ quotation.customer_note }}</p>{% endif %}
-    <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap">
-      {% if quotation.status == 'draft' or quotation.status == 'revised' %}
-      <form method="post" action="{% url 'payments:quotation_send' quotation.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'payments:quotation_list' %}"><button class="btn">{% if quotation.status == 'revised' %}Re-issue to customer{% else %}Send to customer{% endif %}</button></form>
+
+<div class="qd-top">
+  <section class="card qd-main" data-amounts data-total="{{ q.total_amount|stringformat:'s' }}"{% if est and q.quotation_type == 'labour' %} data-labour="{{ est.amount|stringformat:'s' }}"{% endif %}>
+    <h2>{% if q.quotation_type == 'material' %}Material{% else %}Labour{% endif %} Quotation</h2>
+    <table class="qd-table">
+      <thead><tr><th>Item</th><th class="n">{% if est and q.quotation_type == 'labour' %}Handyman estimate{% endif %}</th></tr></thead>
+      <tbody>
+        {% for line in q.work_description.splitlines %}{% if line.strip %}
+        <tr><td>{{ line }}</td><td class="n">{% if forloop.first and est and q.quotation_type == 'labour' %}MUR {{ est.amount|floatformat:"2g" }}{% endif %}</td></tr>
+        {% endif %}{% endfor %}
+      </tbody>
+    </table>
+    <div class="qd-sum">
+      {% if q.quotation_type == 'labour' %}
+      {% if est %}<div class="qd-row"><span>Administrator margin <span data-pct></span></span><strong data-margin>-</strong></div>{% endif %}
+      <div class="qd-row"><span>Material charges</span><strong>Not included</strong></div>
       {% endif %}
-      {% if quotation.status == 'draft' or quotation.status == 'revised' or quotation.status == 'revision_requested' %}
-      <a class="btn o" href="{% url 'payments:quotation_edit' quotation.pk %}">{% if quotation.status == 'revision_requested' %}Revise{% else %}Edit{% endif %}</a>
-      {% endif %}
-      {% if quotation.status != 'cancelled' and quotation.status != 'declined' and not quotation.is_paid %}
-      <form method="post" action="{% url 'payments:quotation_cancel' quotation.pk %}">{% csrf_token %}<button class="btn o">Cancel quotation</button></form>
+      <div class="qd-total"><span>Total quoted</span><strong>MUR {{ q.total_amount|floatformat:"2g" }}</strong></div>
+    </div>
+  </section>
+
+  <div class="qd-right">
+    <section class="card">
+      <h2>Issued To</h2>
+      <p class="qd-to">{% firstof customer.get_full_name customer.username %}</p>
+      <p class="mut qd-job">Prepared for: {{ q.request.reference }} &bull; {{ q.request.service_category|default:"Service request" }}</p>
+    </section>
+
+    <section class="card">
+      <h2>Customer Response</h2>
+      <dl class="qd-resp">
+        <div><dt>Status</dt><dd>{% if q.status == 'accepted' or q.status == 'revision_requested' or q.status == 'declined' %}<button class="qd-link" type="button" data-open="modal-response">View response</button> {% endif %}{% if q.status == 'draft' or q.status == 'revised' %}Not sent yet{% elif q.status == 'sent' %}Awaiting response{% elif q.status == 'revision_requested' %}Asked for changes{% else %}{{ q.get_status_display }}{% endif %}</dd></div>
+        <div><dt>Issued on</dt><dd>{{ q.created_at|date:"d M Y" }}</dd></div>
+        <div><dt>Current version</dt><dd>{{ q.revision_number }}</dd></div>
+        <div><dt>Payment status</dt><dd>{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</dd></div>
+        {% if q.is_paid %}
+        <div><dt>Received</dt><dd>{{ q.payment.date_received|date:"d M Y" }} &bull; {{ q.payment.get_method_display }}{% if q.payment.reference %} &bull; {{ q.payment.reference }}{% endif %}</dd></div>
+        {% elif q.status != 'cancelled' and q.status != 'declined' %}
+        <div><dt>Payment readiness</dt><dd>{% if q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'payments:payment_record' q.pk %}">Record payment</a>{% else %}<span class="mut">{{ q.readiness_issue }}</span>{% endif %}</dd></div>
+        {% endif %}
+      </dl>
+      {% if q.customer_note %}<p class="qd-asked"><strong>Customer asked:</strong> {{ q.customer_note }}</p>{% endif %}
+      {% if q.is_paid %}<a class="btn soft-blue qd-wide" href="#">Schedule Appointment</a>{% endif %}
+    </section>
+  </div>
+</div>
+
+<section class="card qd-activity">
+  <h2>Quotation Activity</h2>
+  <ol class="qd-steps">
+    <li class="done"><span class="qd-dot"></span><strong>Quotation created</strong><span>{{ q.created_at|date:"d M Y" }}</span></li>
+    {% if q.status == 'draft' %}
+    <li class="current"><span class="qd-dot"></span><strong>Not sent to the customer yet</strong><span>Draft</span></li>
+    {% else %}
+      {% if q.status != 'cancelled' or q.responded_at or q.revision_number > 1 %}<li class="done"><span class="qd-dot"></span><strong>Quotation sent to customer</strong><span></span></li>{% endif %}
+      {% if q.revision_number > 1 %}<li class="done"><span class="qd-dot"></span><strong>Revised and sent again (version {{ q.revision_number }})</strong><span></span></li>{% endif %}
+      {% if q.status == 'sent' %}<li class="current"><span class="qd-dot"></span><strong>Awaiting customer response</strong><span>In progress</span></li>
+      {% elif q.status == 'revision_requested' %}<li class="current warn"><span class="qd-dot"></span><strong>Customer asked for changes</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li>
+      {% elif q.status == 'revised' %}<li class="done"><span class="qd-dot"></span><strong>Customer asked for changes</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li><li class="current"><span class="qd-dot"></span><strong>Revised, waiting to be re-issued</strong><span>In progress</span></li>
+      {% elif q.status == 'accepted' %}<li class="done"><span class="qd-dot"></span><strong>Accepted by customer</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li>
+        {% if q.is_paid %}<li class="done"><span class="qd-dot"></span><strong>Payment received ({{ q.payment.get_method_display|lower }})</strong><span>{{ q.payment.date_received|date:"d M Y" }}</span></li>
+        {% else %}<li class="current"><span class="qd-dot"></span><strong>Awaiting payment</strong><span>In progress</span></li>{% endif %}
+      {% elif q.status == 'declined' %}<li class="stop"><span class="qd-dot"></span><strong>Declined by customer</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li>
+      {% elif q.status == 'cancelled' %}<li class="stop"><span class="qd-dot"></span><strong>Quotation cancelled</strong><span></span></li>{% endif %}
+    {% endif %}
+  </ol>
+</section>
+
+{# ---------- Customer response prompt (low-fi p17). Opens by itself the first time the admin  ---------- #}
+{# ---------- views the answer (remembered in this browser only), and from "View response". ---------- #}
+{% if q.status == 'accepted' or q.status == 'revision_requested' or q.status == 'declined' %}
+<dialog class="qd-modal qd-response is-{{ q.status }}" id="modal-response" aria-labelledby="rs-title"
+        data-response-key="hc-response-{{ q.pk }}-{{ q.status }}-{{ q.responded_at|date:'U' }}"{% if not q.is_paid %} data-auto{% endif %}>
+  <div class="qd-rs">
+    <span class="qd-rs-icon" aria-hidden="true">
+      {% if q.status == 'accepted' %}<svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg>
+      {% elif q.status == 'revision_requested' %}<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      {% else %}<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>{% endif %}
+    </span>
+    <h2 id="rs-title">{% if q.status == 'accepted' %}Customer Accepted Quotation{% elif q.status == 'revision_requested' %}Customer Requested a Revision{% else %}Customer Rejected Quotation{% endif %}</h2>
+    <dl class="qd-rs-info">
+      <div><dt>Name</dt><dd>{% firstof customer.get_full_name customer.username %}</dd></div>
+      <div><dt>Job ID</dt><dd>{{ q.request.reference }} &bull; Q-{{ q.pk }}</dd></div>
+      <div><dt>Answered on</dt><dd>{{ q.responded_at|date:"d M Y"|default:"-" }}</dd></div>
+    </dl>
+    {% if q.status == 'accepted' %}
+      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% else %}Proceed to check the payment status.{% endif %}</p>
+    {% elif q.status == 'revision_requested' %}
+      <div class="qd-rs-box"><p class="qd-rs-label">Requested changes</p><p>{{ q.customer_note|default:"No details given." }}</p></div>
+    {% else %}
+      {# The backend does not store a reason when the customer declines #}
+      <div class="qd-rs-box"><p class="qd-rs-label">Reason</p><p class="mut">{{ q.customer_note|default:"No reason given." }}</p></div>
+    {% endif %}
+    <div class="qd-btns">
+      {% if q.status == 'declined' %}
+        <button class="btn o" type="button" data-close>Close</button>
+        <button class="btn soft-red" type="button" data-close data-seen>Mark as Closed</button>
+      {% else %}
+        <button class="btn o" type="button" data-close>Later</button>
+        {% if q.status == 'accepted' %}
+          {% if q.ready_for_payment %}<a class="btn soft-green" href="{% url 'payments:payment_record' q.pk %}" data-seen>Check Payment Status</a>
+          {% else %}<button class="btn soft-green" type="button" data-close data-seen>OK</button>{% endif %}
+        {% else %}
+          <a class="btn soft-warn" href="{% url 'payments:quotation_edit' q.pk %}" data-seen>Revise Quotation</a>
+        {% endif %}
       {% endif %}
     </div>
   </div>
-  <div class="card">
-    <h2>Payment readiness</h2>
-    {% if quotation.ready_for_payment %}
-    <p style="margin:0 0 16px">Ready to be paid.</p>
-    <a class="btn" href="{% url 'payments:payment_record' quotation.pk %}">Record payment</a>
-    {% elif quotation.is_paid %}
-    <div class="row"><span class="mut">Status</span><span class="b gr">Paid</span></div>
-    <div class="row"><span class="mut">Received</span><span>{{ quotation.payment.date_received }}</span></div>
-    <div class="row"><span class="mut">Method</span><span>{{ quotation.payment.get_method_display }}</span></div>
-    {% else %}
-    <p class="mut" style="margin:0">Not ready: {{ quotation.readiness_issue }}</p>
-    {% endif %}
-  </div>
-</div>
+</dialog>
+{% endif %}
+
+{# ---------- Cancel (POST payments:quotation_cancel) ---------- #}
+<dialog class="qd-modal" id="modal-cancel" aria-labelledby="cn-title">
+  <form method="post" action="{% url 'payments:quotation_cancel' q.pk %}">
+    {% csrf_token %}
+    <h2 id="cn-title">Cancel this quotation?</h2>
+    <p class="mut">{% firstof customer.get_full_name customer.username %} will no longer be able to accept quotation Q-{{ q.pk }}. This cannot be undone.</p>
+    <div class="qd-btns">
+      <button class="btn o" type="button" data-close>Keep Quotation</button>
+      <button class="btn soft-red" type="submit">Cancel Quotation</button>
+    </div>
+  </form>
+</dialog>
+
+{# ---------- Send / re-issue (POST payments:quotation_send, back to this page) ---------- #}
+<dialog class="qd-modal" id="modal-send" aria-labelledby="sd-title">
+  <form method="post" action="{% url 'payments:quotation_send' q.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'payments:quotation_detail_admin' q.pk %}">
+    <h2 id="sd-title">{% if q.status == 'revised' %}Re-issue{% else %}Send{% endif %} the quotation?</h2>
+    <p class="mut">{% firstof customer.get_full_name customer.username %} will receive a quotation for <strong>MUR {{ q.total_amount|floatformat:"2g" }}</strong>. They can accept it, ask for changes or decline it.</p>
+    <div class="qd-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-green" type="submit">{% if q.status == 'revised' %}Re-issue{% else %}Send{% endif %} to Customer</button>
+    </div>
+  </form>
+</dialog>
+{% endwith %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/quotation_admin_detail.js' %}"></script>
 {% endblock %}

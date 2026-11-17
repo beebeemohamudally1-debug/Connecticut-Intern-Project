@@ -1,40 +1,171 @@
 {% extends "base_admin.html" %}
-{% block title %}Labour estimates | HandyConnect{% endblock %}
-{% block page %}invoices{% endblock %}
+{% load static %}
+{% comment %}
+  Service Quotations - Labour estimates tab (admin). View: payments.views.estimate_list
+  Context: estimates (LabourEstimate list, with request and handyman).
+  Review = a pop-up per submitted estimate that posts to payments:estimate_action
+  (action approve | revision | reject, note needed for revision and reject).
+  Approved estimates link to payments:quotation_create, or to the quotation once it exists.
+  The number cards, filters and pages work in the browser on the rows on the page.
+{% endcomment %}
+
+{% block title %}Service Quotations | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
 {% block content %}
-<div class="lab">Admin · Quotations</div>
-<h1>Labour estimates</h1>
-<p class="sub">Review the handymen's labour estimates before a quotation is issued.</p>
-{% include "payments/_messages.html" %}
-<div class="card">
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Handyman</th><th>Amount (MUR)</th><th>Breakdown</th><th>Status</th><th>Review</th></tr></thead>
-    <tbody>
-    {% for e in estimates %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Service Quotations</h1>
+    <p class="sub">Manage handyman estimates, labour margins and customer decisions.</p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<section class="lq-stats" aria-label="Estimate totals">
+  <div class="card lq-stat lq-s-review">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting estimate review</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="review">00</p>
+    <p class="lq-stat-hint">Handyman costs to check</p>
+  </div>
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">Needs quote</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="ready">00</p>
+    <p class="lq-stat-hint">Approved, quote not made yet</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Awaiting handyman</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="handyman">00</p>
+    <p class="lq-stat-hint">Revision asked from handyman</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Quotes created</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="quoted">00</p>
+    <p class="lq-stat-hint">See the Quotations tab</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-queue data-page-size="5" data-noun="estimate">
+  <nav class="lq-tabs" aria-label="Service Quotations">
+    <a href="{% url 'payments:estimate_list' %}" aria-current="page">Labour estimates</a>
+    <a href="{% url 'payments:quotation_list' %}">Quotations</a>
+  </nav>
+
+  <div class="lq-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by request, customer or handyman</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Request, customer or handyman..." data-search>
+    </label>
+    <label><span class="sr-only">Customer</span>
+      <select class="in" data-customer><option value="">All customers</option></select>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="review">Needs review</option>
+        <option value="ready">Needs quote</option>
+        <option value="handyman">Awaiting handyman</option>
+        <option value="quoted">Quote created</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table">
+    <thead>
       <tr>
-        <td>{{ e.request.reference }}</td>
-        <td>{{ e.handyman }}</td>
-        <td>{{ e.amount }}</td>
-        <td>{{ e.breakdown|truncatechars:60 }}</td>
-        <td><span class="b {% if e.status == 'approved' %}gr{% elif e.status == 'submitted' %}ye{% elif e.status == 'rejected' %}re{% endif %}">{{ e.get_status_display }}</span></td>
-        <td>
-          {% if e.status == 'submitted' %}
-          <form method="post" action="{% url 'payments:estimate_action' e.pk %}" style="display:flex;gap:8px;flex-wrap:wrap">
-            {% csrf_token %}
-            <input class="in" name="note" placeholder="Reason (needed to reject or ask for a revision)" style="width:220px">
-            <button class="btn s" name="action" value="approve">Approve</button>
-            <button class="btn o s" name="action" value="revision">Request revision</button>
-            <button class="btn o s" name="action" value="reject">Reject</button>
-          </form>
-          {% elif e.status == 'approved' %}
-          <a class="btn s" href="{% url 'payments:quotation_create' e.request.pk %}?estimate={{ e.pk }}">Create quotation</a>
-          {% else %}<span class="mut">{{ e.admin_note|default:"-" }}</span>{% endif %}
+        <th scope="col">Request</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Service</th>
+        <th scope="col">Labour estimate</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in estimates %}
+      {% with quote=e.quotations.first customer=e.request.customer %}
+      {% if e.status == 'submitted' %}{% firstof 'review' as st %}{% elif e.status == 'revision_requested' %}{% firstof 'handyman' as st %}{% elif e.status == 'rejected' %}{% firstof 'rejected' as st %}{% elif quote %}{% firstof 'quoted' as st %}{% else %}{% firstof 'ready' as st %}{% endif %}
+      <tr data-row data-status="{{ st }}" data-customer="{% firstof customer.get_full_name customer.username %}"
+          data-text="{{ e.request.reference|lower }} {% firstof customer.get_full_name customer.username %} {% firstof e.handyman.get_full_name e.handyman.username %} {{ e.request.service_category|lower }}">
+        <td data-label="Request"><span class="lq-id">{{ e.request.reference }}</span><span class="lq-sub">Estimate {{ e.pk }}</span></td>
+        <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
+        <td data-label="Handyman">{% firstof e.handyman.get_full_name e.handyman.username %}</td>
+        <td data-label="Service">{{ e.request.service_category|default:"-" }}</td>
+        <td data-label="Labour estimate"><span class="lq-amt">MUR {{ e.amount|floatformat:"2g" }}</span></td>
+        <td data-label="Updated">{% firstof e.reviewed_at|date:"d M Y" e.created_at|date:"d M Y" %}</td>
+        <td data-label="Status"><span class="b lq-{% if st == 'quoted' %}accepted{% else %}{{ st }}{% endif %}">{% if st == 'review' %}Needs review{% elif st == 'ready' %}Needs quote{% elif st == 'handyman' %}Awaiting handyman{% elif st == 'quoted' %}Quote created{% else %}Rejected{% endif %}</span></td>
+        <td data-label="">
+          {% if st == 'review' %}<button class="btn o s" type="button" data-open="est-{{ e.pk }}">Review</button>
+          {% elif st == 'ready' %}<a class="btn o s" href="{% url 'payments:quotation_create' e.request.pk %}?estimate={{ e.pk }}">Prepare quote</a>
+          {% elif st == 'quoted' %}<a class="btn o s" href="{% url 'payments:quotation_detail_admin' quote.pk %}">View quote</a>
+          {% else %}<button class="btn o s" type="button" data-open="est-{{ e.pk }}">View</button>{% endif %}
         </td>
       </tr>
-    {% empty %}
-      <tr><td colspan="6" class="mut">No estimates yet.</td></tr>
-    {% endfor %}
+      {% endwith %}
+      {% endfor %}
     </tbody>
   </table>
-</div>
+
+  <p class="lq-empty" data-empty hidden>{% if estimates %}Nothing matches that search. Try clearing the filters.{% else %}No estimates yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+
+{# ---------- One pop-up per estimate: review (submitted) or read only (the others) ---------- #}
+{% for e in estimates %}
+{% if e.status != 'approved' %}
+<dialog class="ql-modal" id="est-{{ e.pk }}" aria-labelledby="est-{{ e.pk }}-title">
+  <form method="post" action="{% url 'payments:estimate_action' e.pk %}" data-review>
+    {% csrf_token %}
+    <h2 id="est-{{ e.pk }}-title">{% if e.status == 'submitted' %}Review labour estimate{% else %}Labour estimate{% endif %}</h2>
+    <dl class="ql-ctx">
+      <div><dt>Request</dt><dd>{{ e.request.reference }}</dd></div>
+      <div><dt>Handyman</dt><dd>{% firstof e.handyman.get_full_name e.handyman.username %}</dd></div>
+      <div><dt>Amount</dt><dd>MUR {{ e.amount|floatformat:"2g" }}</dd></div>
+    </dl>
+    <div class="ql-break">
+      <p class="ql-label">Breakdown</p>
+      <p>{{ e.breakdown|default:"No breakdown given."|linebreaksbr }}</p>
+    </div>
+    {% if e.status == 'submitted' %}
+    <label class="ql-label" for="note-{{ e.pk }}">Note to the handyman <span class="mut">(needed to reject or ask for a revision)</span></label>
+    <textarea class="in" id="note-{{ e.pk }}" name="note" rows="3" placeholder="Say what should change, or why it is rejected."></textarea>
+    <p class="ql-error" data-error hidden>Please add a note first.</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Close</button>
+      <button class="btn soft-red" name="action" value="reject">Reject</button>
+      <button class="btn soft-warn" name="action" value="revision">Request revision</button>
+      <button class="btn soft-green" name="action" value="approve">Approve</button>
+    </div>
+    {% else %}
+    <div class="ql-break">
+      <p class="ql-label">{% if e.status == 'rejected' %}Reason for rejecting{% else %}Revision asked{% endif %}</p>
+      <p>{{ e.admin_note|default:"-"|linebreaksbr }}</p>
+    </div>
+    <div class="ql-btns"><button class="btn o" type="button" data-close>Close</button></div>
+    {% endif %}
+  </form>
+</dialog>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'payments/js/admin_labour_quotations.js' %}"></script>
 {% endblock %}
