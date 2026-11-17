@@ -1,0 +1,28 @@
+{% extends "base_handyman.html" %}
+{% block title %}My materials | HandyConnect{% endblock %}
+{% block page %}materials{% endblock %}
+{% block content %}
+<div class="lab">Handyman · Materials</div>
+<h1>My material requests</h1>
+<p class="sub">Purchase requests and receipts. You can upload a receipt once the customer accepts the material quotation.</p>
+{% include "payments/_messages.html" %}
+<div class="card">
+  <table class="tb">
+    <thead><tr><th>Request</th><th>Materials</th><th>Estimate (MUR)</th><th>Status</th><th>Receipts</th><th></th></tr></thead>
+    <tbody>
+    {% for p in purchases %}
+      <tr>
+        <td>{{ p.request.reference }}</td>
+        <td>{{ p.items|truncatechars:50 }}</td>
+        <td>{{ p.estimated_cost }}</td>
+        <td><span class="b {% if p.status == 'forwarded' %}gr{% elif p.status == 'rejected' %}re{% else %}ye{% endif %}">{{ p.get_status_display }}</span>{% if p.quotation %} · {{ p.quotation.get_status_display }}{% endif %}</td>
+        <td>{{ p.receipts.all|length }}</td>
+        <td>{% if p.quotation.status == 'accepted' %}<a class="btn s" href="{% url 'payments:receipt_upload' p.pk %}">Upload receipt</a>{% endif %}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="mut">No material requests yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

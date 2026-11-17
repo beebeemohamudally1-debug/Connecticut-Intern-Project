@@ -1,0 +1,99 @@
+/* Labour Quotations - Review Labour Estimate (section 6) */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+[hidden] { display: none !important; }
+
+.back { display: inline-block; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: #2A69B5; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+
+.bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.bar h1 { font-size: 26px; }
+.bar .sub { margin-bottom: 0; }
+
+
+/* Status pill (same look as the Overview) */
+.re-pill { padding: 4px 12px; font-size: 12px; font-weight: 600; border-radius: 100px; color: #A66A16; background: #FFF4DF; }
+.re-pill::before { background: #A66A16; }
+.re-pill.is-quote    { color: #2866B1; background: #ECF3FA; }
+.re-pill.is-quote::before    { background: #2866B1; }
+.re-pill.is-handyman { color: #718199; background: #F4F7FA; }
+.re-pill.is-handyman::before { background: #718199; }
+.re-pill.is-declined { color: #C84C55; background: #FDEBEC; }
+.re-pill.is-declined::before { background: #C84C55; }
+
+/* ---------- Layout: estimate on the left, information on the right, actions below ---------- */
+.re-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: stretch; }
+.re-grid .card { padding: 18px 28px; box-shadow: var(--card-shadow); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.re-grid .card:hover { box-shadow: var(--card-hover); transform: translateY(-2px); }
+.re-grid h2 { margin: 0; font-size: 18px; }
+.re-grid dl, .re-grid dd, .re-grid p, .re-grid ul { margin: 0; }
+.re-grid dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.re-grid dd { margin-top: 3px; font-size: 15px; font-weight: 600; color: #263D54; overflow-wrap: anywhere; }
+
+.re-main { display: flex; flex-direction: column; gap: 16px; }
+.re-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 24px; }
+
+.re-break { padding: 14px 16px; background: var(--grey-bg); border-radius: 10px; }
+.re-break h3 { margin: 0 0 8px; font-size: 14px; color: var(--navy); }
+.re-break ul { padding-left: 18px; font-size: 14px; line-height: 1.6; color: var(--text); }
+.re-total { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--navy); }
+.re-total strong { font-size: 18px; }
+
+.re-refbar { margin-bottom: 16px; box-shadow: var(--card-shadow); transition: transform 0.15s ease, box-shadow 0.15s ease; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 28px !important; font-size: 15px; color: var(--navy); }
+.re-refbar:hover { box-shadow: var(--card-hover); transform: translateY(-2px); }
+.re-side { display: flex; flex-direction: column; }
+.re-info { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin-top: 12px !important; }
+.re-docs-title { margin-top: 18px !important; }
+
+.re-docs { list-style: none; padding: 0; margin-top: 8px !important; }
+.re-docs li { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.re-docs li + li { border-top: 1px solid var(--line); }
+.re-doc-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; background: #EAF1F8; border-radius: 10px; }
+.re-doc-icon .ico { width: 18px; height: 18px; fill: none; stroke: var(--navy); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.re-doc-text { display: grid; flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+.re-doc-text strong { font-size: 14px; color: var(--navy); }
+.re-none { font-size: 14px; color: var(--muted); }
+.re-docs .btn { min-width: 84px; text-align: center; }
+
+.re-next { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.re-next .mut { margin-top: 4px; font-size: 14px; }
+.re-actions { display: flex; gap: 10px; }
+.re-demo-note { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.re-actions .btn { min-width: 160px; text-align: center; justify-content: center; }
+
+/* Soft green, soft amber and soft red (same as Manage Users) */
+.btn.soft-green { color: #11836D; background: #E6F6EF; border-color: #E5EAF0; }
+.btn.soft-warn { color: #B76B27; background: #FFF3E9; border-color: #E5EAF0; }
+.btn.soft-red { color: #B74555; background: #FEEDF0; border-color: #E5EAF0; }
+
+/* ---------- Pop-ups ---------- */
+.re-modal {
+  width: min(460px, calc(100% - 32px)); padding: 0; color: var(--text);
+  background: var(--white); border: 0; border-radius: 14px; box-shadow: 0 20px 50px rgba(20, 45, 72, 0.3);
+}
+.re-modal.wide { width: min(560px, calc(100% - 32px)); }
+.re-modal::backdrop { background: rgba(20, 45, 72, 0.45); }
+.re-modal form { display: flex; flex-direction: column; gap: 12px; padding: 24px 28px; }
+.re-modal h2, .re-modal p, .re-modal dd, .re-modal dt { margin: 0; }
+.re-modal h2 { font-size: 20px; color: var(--navy); }
+.re-ctx { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 14px; background: var(--grey-bg); border-radius: 10px; }
+.re-ctx dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.re-ctx dd { margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--navy); }
+.re-label { font-size: 13px; font-weight: 600; color: var(--navy); }
+.re-modal textarea.in { width: 100%; max-width: none; height: auto; resize: vertical; font: inherit; font-size: 14px; }
+.re-modal textarea.in[aria-invalid="true"] { border-color: #BA4947; }
+.re-error { font-size: 12px; color: #BA4947; }
+.re-btns { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+/* ---------- Small screens ---------- */
+@media (max-width: 1023px) {
+  .re-grid { grid-template-columns: 1fr; }
+  .re-facts { grid-template-columns: 1fr; }
+  .re-next { flex-direction: column; align-items: flex-start; }
+  .re-actions { flex-direction: column; width: 100%; }
+  .re-btns { flex-direction: column-reverse; }
+  .re-ctx { grid-template-columns: 1fr; }
+}

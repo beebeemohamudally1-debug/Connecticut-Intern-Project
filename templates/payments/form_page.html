@@ -1,0 +1,19 @@
+{% extends base_template %}
+{% block title %}{{ title }} | HandyConnect{% endblock %}
+{% block page %}{{ nav_page }}{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<p class="sub">{{ subtitle }}</p>
+{% include "payments/_messages.html" %}
+<div class="card" style="max-width:640px">
+  {% if extra %}<p class="mut" style="margin:0 0 16px">{{ extra }}</p>{% endif %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% include "payments/_form_fields.html" %}
+    <div style="display:flex;gap:12px;margin-top:12px">
+      <button class="btn">{{ button }}</button>
+      {% if back_url %}<a class="btn o" href="{% url back_url %}">Cancel</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

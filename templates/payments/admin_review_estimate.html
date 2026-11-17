@@ -1,0 +1,147 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Labour Quotations - Review Labour Estimate (section 6).
+  Data comes from the view as `page`:
+    reference, request (REQ id), customer, handyman, service, submitted (datetime),
+    status_label ("Needs review"), amount, breakdown (list of lines),
+    documents (list of title, file, url), back_url.
+
+  BACKEND NOTES (see ADMIN_FRONTEND_README.md):
+  - LabourEstimate has `amount` and one text `breakdown`. The low-fi table with
+    description / quantity / cost per line needs line items; until then the
+    breakdown text is shown line by line (view: breakdown.splitlines()).
+  - "Documents attached" needs a file field or related model on LabourEstimate.
+  - "Response required by" (revision pop-up) needs a date field. Not shown for now.
+  - Buttons post to payments:estimate_action (action = approve | revision | reject
+    with `note`). A note is required for revision and reject.
+{% endcomment %}
+
+{% block title %}Review Labour Estimate | HandyConnect{% endblock %}
+{% block page %}labour-quotes{% endblock %}
+{% block crumb %}Service Quotations{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_review_estimate.css' %}">
+
+<a class="back" href="{{ page.back_url|default:'#' }}">&larr; Back to Service Quotations</a>
+
+<div class="bar">
+  <div>
+    <h1>Review Labour Estimate</h1>
+    <p class="sub">Check the handyman's labour cost before it goes into a customer quotation. Materials are not included.</p>
+  </div>
+</div>
+
+<div class="card re-refbar">
+  <strong>{{ page.reference }} / {{ page.request }}</strong>
+  <span class="b re-pill" data-pill>{{ page.status_label }}</span>
+</div>
+
+<div class="re-grid">
+  <section class="card re-main">
+    <h2>Handyman Labour Estimate</h2>
+
+    <dl class="re-facts">
+      <div><dt>Selected handyman</dt><dd>{{ page.handyman }}</dd></div>
+      <div><dt>Estimated labour cost</dt><dd>MUR {{ page.amount }}</dd></div>
+      <div><dt>Materials</dt><dd>Excluded</dd></div>
+    </dl>
+
+    <div class="re-break">
+      <h3>Handyman estimate breakdown</h3>
+      <ul>
+        {% for line in page.breakdown %}<li>{{ line }}</li>{% endfor %}
+      </ul>
+      <div class="re-total"><span>Estimated labour total</span><strong>MUR {{ page.amount }}</strong></div>
+    </div>
+  </section>
+
+  <aside class="card re-side">
+    <h2>Request Information</h2>
+    <dl class="re-info">
+      <div><dt>Request ID</dt><dd>{{ page.request }}</dd></div>
+      <div><dt>Customer</dt><dd>{{ page.customer }}</dd></div>
+      <div><dt>Service</dt><dd>{{ page.service }}</dd></div>
+      <div><dt>Submission status</dt><dd>Submitted {{ page.submitted|date:"d M" }}</dd></div>
+    </dl>
+
+    <h2 class="re-docs-title">Documents Attached</h2>
+    <ul class="re-docs">
+      {% for d in page.documents %}
+      <li>
+        <span class="re-doc-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+        <span class="re-doc-text"><strong>{{ d.title }}</strong><span>{{ d.file }}</span></span>
+        <a class="btn o s" href="{{ d.url|default:'#' }}">View<span class="sr-only"> {{ d.title }}</span></a>
+      </li>
+      {% empty %}
+      <li class="re-none">No documents were attached.</li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <section class="card re-next" data-next data-back-url="{{ page.back_url|default:'#' }}" data-prepare-url="{{ page.prepare_url|default:'#' }}" data-amount="{{ page.amount }}" data-handyman="{{ page.handyman }}">
+    <div>
+      <h2>Next Action</h2>
+      <p class="mut">Review the labour cost before approving it or asking the handyman to change it.</p>
+    </div>
+    <div class="re-actions">
+      <button class="btn soft-green" type="button" data-open="approve">Approve Cost</button>
+      <button class="btn soft-warn" type="button" data-open="revision">Request Revision</button>
+      <button class="btn soft-red" type="button" data-open="reject">Reject Cost</button>
+    </div>
+  </section>
+</div>
+
+{# ---------- Pop-ups (backend: POST to payments:estimate_action) ---------- #}
+<dialog class="re-modal" id="modal-approve" aria-labelledby="ap-title">
+  <form method="post" action="{{ page.action_url }}" data-form="approve">
+    {% csrf_token %}<input type="hidden" name="action" value="approve">
+    <h2 id="ap-title">Approve labour cost?</h2>
+    <p class="mut">MUR {{ page.amount }} from {{ page.handyman }} will be approved. You can then prepare the customer quotation.</p>
+    <div class="re-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-green" type="submit">Approve Cost</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="re-modal wide" id="modal-revision" aria-labelledby="rv-title">
+  <form method="post" action="{{ page.action_url }}" data-form="revision" novalidate>
+    {% csrf_token %}<input type="hidden" name="action" value="revision">
+    <h2 id="rv-title">Request estimate revision</h2>
+    <p class="mut">The handyman will see your note and can send a new estimate.</p>
+    <dl class="re-ctx">
+      <div><dt>Handyman</dt><dd>{{ page.handyman }}</dd></div>
+      <div><dt>Customer</dt><dd>{{ page.customer }}</dd></div>
+      <div><dt>Current estimate</dt><dd>MUR {{ page.amount }}</dd></div>
+    </dl>
+    <label class="re-label" for="rv-note">Requested changes</label>
+    <textarea class="in" id="rv-note" name="note" rows="4" placeholder="Explain what the handyman should change..." data-note></textarea>
+    <p class="re-error" data-error hidden>Please say what should change.</p>
+    <div class="re-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-warn" type="submit">Send Revision Request</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="re-modal" id="modal-reject" aria-labelledby="rj-title">
+  <form method="post" action="{{ page.action_url }}" data-form="reject" novalidate>
+    {% csrf_token %}<input type="hidden" name="action" value="reject">
+    <h2 id="rj-title">Reject labour cost?</h2>
+    <p class="mut">The estimate will be closed. Please give the handyman a reason.</p>
+    <label class="re-label" for="rj-note">Reason</label>
+    <textarea class="in" id="rj-note" name="note" rows="4" placeholder="Why is this estimate being rejected?" data-note></textarea>
+    <p class="re-error" data-error hidden>Please give a reason.</p>
+    <div class="re-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-red" type="submit">Reject Cost</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_review_estimate.js' %}"></script>
+{% endblock %}
