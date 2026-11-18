@@ -1,11 +1,11 @@
-
 from datetime import date
 
 from django.shortcuts import render
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 
 from dashboard.permissions import role_required
 from jobs.models import Job
+from payments.models import Quotation
 
 
 @role_required('admin')
@@ -84,6 +84,20 @@ def job_summary_report(request):
             'id', filter=Q(status=Job.CANCELLED)
         ),
     )
+
+    # FR-A-12.3: the accepted quotation amount and the payment status of each job,
+    # taken from the accepted quotations of the job's service request (labour + material).
+    jobs = list(jobs.select_related('service_request').prefetch_related(Prefetch(
+        'service_request__quotations',
+        queryset=Quotation.objects.filter(status=Quotation.ACCEPTED).select_related('payment'),
+        to_attr='accepted_quotations',
+    )))
+    for job in jobs:
+        quotes = job.service_request.accepted_quotations if job.service_request else []
+        paid = [q for q in quotes if q.is_paid]
+        job.quotation_amount = sum(q.total_amount for q in quotes) if quotes else None
+        job.payment_state = ('none' if not quotes else 'paid' if len(paid) == len(quotes)
+                             else 'partial' if paid else 'unpaid')
 
     context = {
         'report_title': 'Job Summary Report',
