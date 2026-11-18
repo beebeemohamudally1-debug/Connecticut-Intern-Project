@@ -41,7 +41,6 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 
 | URL | Name | Template | Sample data in the view |
 |---|---|---|---|
-| `profile/` | `profile` | `accounts/admin_profile.html` | `ADMIN_PROFILE` |
 | `users/` | `users` | `accounts/admin_users.html` | `USERS_PAGE` |
 | `users/customer/` | `customer_detail` | `accounts/admin_customer_detail.html` | `CUSTOMER` |
 | `users/customer/suspended/` | `suspended_customer` | `accounts/admin_customer_detail.html` | `SUSPENDED_CUSTOMER` |
@@ -54,14 +53,36 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
 ## What each page needs
-The full list of names is in the comment at the top of each template. Summary:
+The full list of names is in the comment at the top of each template. The connected pages have more detail in their own sections below. Summary:
 
-- **Admin Profile** – `admin`: name, initials, email, role, status (the logged-in administrator).
+**Pages still on sample data**
+
 - **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is that user's details, profile or verification page.
 - **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status).
 - **Handyman Profile** – `handyman`: name, initials, id, kind, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services.
 - **Registration Verification** – `applicant`: id, name, email, submitted, status (`Pending`, `Approved` or `Rejected`), decided, notes, documents (title, file, action). Approve and Reject show only for `Pending`.
+
+**Pages connected to the backend**
+
 - **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`.
+- **Admin Profile** – `admin`: name, initials, email, role, status, from the logged-in user. Saving is not connected yet (no update view).
+- **Labour estimates tab** – `estimates` (`LabourEstimate` list). The Review pop-up posts to the payments approve and revision views.
+- **Quotations tab** – `quotations` (`Quotation` list, labour quotations).
+- **Create Service Quotation** – `form`, `service_request`, `estimate`.
+- **Revise Service Quotation** – `form`, `quotation`.
+- **Service Quotation Details** – `quotation`, `other` (the material quotation of the same request) and `request_payment` (payment state of the whole request).
+- **Private Feedback list** – `reviews`, `selected_status`, and `pending_count`, `approved_count`, `rejected_count`.
+- **Feedback Details** – `review`. Approve and Reject post to `reviews:approve_review` and `reviews:reject_review`.
+- **Job Summary Report** – `jobs` (each with `quotation_amount` and `payment_state`), the counts `total_jobs`, `assigned_jobs`, `in_progress_jobs`, `completed_jobs`, `cancelled_jobs`, and the filters `start_date`, `end_date`, `selected_status`, `status_choices`, `errors`.
+- **Complaint Queue** – `page.stats` (total, pending, in_progress, resolved) and `page.complaints` (reference, subject, filed_by, role, job, created_at, status, url).
+- **Case Overview / Resolve Case** – `page`: the complaint (reference, subject, description, job, filed_by, against, status), evidence, message counts, activity, the outcome once resolved, and the page links. Resolve also gets `page.checks` (customer_replied, handyman_replied, has_evidence).
+- **Private chat** – the same `page`, plus who, person (name, initials, email), recipient_id, messages (author, from_admin, at, body) and next_url.
+- **Work Progress Overview** – `page.services` and `page.jobs` (reference, service, customer, handyman, percent, due, status, status_label, url).
+- **Job Progress Details** – `job`: reference, title, handyman, customer, started, due, service, request_ref, scheduled, status, percent, overdue, latest_note, last_report, is_flagged, flag_reason, timeline, reports_url, evidence_url.
+- **Daily Work Reports** – `page`: reference, service, customer, job_url, handymen, reports (report_date, updated_at, handyman, details, percent, photos, url).
+- **Work Evidence** – `page`: reference, title, back_url, back_label, report_date, updated_at, handyman, status, photos (caption, filename, url), notes, notes_title, is_flagged, flag_reason, flag_url, next_url.
+
+Job `status` is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
 
 ## Service Quotations (connected to the backend)
 Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
@@ -175,8 +196,19 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 **Still needed from the backend**
 1. `WorkEvidence` has no link to a `ProgressReport`, so photos are matched to a report by upload day. A `report` field on `WorkEvidence` would make this exact.
 
+## Admin Profile (partly connected)
+| Page | URL | Template |
+|---|---|---|
+| Admin Profile | `/admin-portal/profile/` | `accounts/admin_profile.html` |
+
+- The `profile` view in `accounts/admin_views.py` (admin only) shows the **logged-in** administrator: name (`get_full_name()`, or the username), initials, email, and status from `is_active`.
+
+**Still needed from the backend**
+1. **Saving:** there is no profile update view yet, so **Save changes** only updates the page and shows a demo message. When one exists, set the form's `action` to it, remove `data-demo` from the form, and read `full_name` and `email` from the POST.
+2. **Change Password:** there is no change-password page yet, so the button links to `#`. Point it to that page when the authentication pages exist.
+
 ## Integration (not done yet)
-1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.
+1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to the Manage Users views in `accounts/admin_views.py`. Right now anyone can open those pages (the other admin views already have it).
 2. **Real data:** in each view, replace the sample dictionary with real data, keeping the same names.
 3. **One user per page:** add the id to the URLs, for example `users/customer/<int:pk>/` (Complaints and Work Progress already do this). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
 4. **Buttons:** turn these into forms that post to real views:

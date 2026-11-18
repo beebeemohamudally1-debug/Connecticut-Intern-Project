@@ -12,18 +12,22 @@ from dashboard.permissions import role_required
 from jobs.models import Job
 from notifications.models import Notification
 
-# Sample data until the real administrator is connected
-ADMIN_PROFILE = {
-    'name': 'Admin User',
-    'initials': 'AU',
-    'email': 'admin@handyconnect.example',
-    'role': 'Administrator',
-    'status': 'Active',
-}
-
+@role_required('admin')
 def profile(request):
-    """Admin Profile."""
-    return render(request, 'accounts/admin_profile.html', {'admin': ADMIN_PROFILE})
+    """Admin Profile: the logged-in administrator.
+
+    Saving is not connected yet: the accounts app has no profile update view
+    (the form keeps data-demo until one exists).
+    """
+    u = request.user
+    admin = {
+        'name': _person_name(u),
+        'initials': _initials(u),
+        'email': u.email,
+        'role': 'Administrator',
+        'status': 'Active' if u.is_active else 'Inactive',
+    }
+    return render(request, 'accounts/admin_profile.html', {'admin': admin})
 
 # Sample data for Manage Users until the real accounts are connected
 USERS_PAGE = {
