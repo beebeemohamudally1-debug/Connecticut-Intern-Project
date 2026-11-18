@@ -17,7 +17,7 @@
                         (WorkEvidence belongs to the job, so count by uploaded_at)
         url          -> the Work Evidence page for this report
   A report has no status of its own, so the pill shows its percent complete.
-  BACKEND: replace the sample data with the real reports. The filter and page
+  Connected: accounts/admin_views.py daily_reports. The filter and page
   buttons work in the browser on the cards sent (3 per page).
 {% endcomment %}
 
@@ -78,7 +78,7 @@
   </article>
   {% endfor %}
 
-  <p class="dr-empty" data-empty hidden>No reports for this handyman.</p>
+  <p class="dr-empty" data-empty hidden>{% if page.reports %}No reports for this handyman.{% else %}No daily reports have been submitted for this job yet.{% endif %}</p>
 </section>
 
 <div class="dr-foot">

@@ -4,7 +4,7 @@ This file lists the admin pages built so far. **The admin frontend is still in p
 
 There are two kinds of pages:
 - **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
-- **Service Quotations**, **Private Feedback**, **Reports** and **Complaints** (see their own sections below): connected to the **payments**, **reviews**, **reports** and **complaints** apps, so they **already use the real backend**.
+- **Service Quotations**, **Private Feedback**, **Reports**, **Complaints** and **Work Progress** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints** and **jobs** apps, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -13,7 +13,7 @@ python manage.py runserver
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
 
 ## Demo data (for the pages connected to the backend)
-Service Quotations, Private Feedback, Reports and Complaints show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+Service Quotations, Private Feedback, Reports, Complaints and Work Progress show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
 ```
 python manage.py seed_demo
 ```
@@ -25,6 +25,7 @@ It creates:
 - customer reviews (to assess, approved, rejected)
 - complaints in every status (pending, in progress with private messages and a file, resolved with an outcome)
 - jobs in every status, created on different days in the last two months and linked to the demo requests (so the report shows quotation amounts and payment states)
+- arrival times, daily reports and photos for the open and completed jobs, with one delayed job and one flagged job
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
@@ -49,10 +50,6 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 | `users/handyman/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | `APPLICANT` |
 | `users/handyman/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | `APPROVED_APPLICANT` |
 | `notifications/` | `notifications` | `notifications/admin_notifications.html` | none: real notifications for the logged-in admin |
-| `work-progress/` | `work_progress` | `jobs/admin_work_progress.html` | `WORK_PROGRESS` |
-| `work-progress/job/` | `work_progress_job` | `jobs/admin_job_progress.html` | `JOB_PROGRESS` |
-| `work-progress/reports/` | `work_progress_reports` | `jobs/admin_daily_reports.html` | `DAILY_REPORTS` |
-| `work-progress/evidence/` | `work_progress_evidence` | `jobs/admin_work_evidence.html` | `WORK_EVIDENCE` |
 
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
@@ -65,13 +62,6 @@ The full list of names is in the comment at the top of each template. Summary:
 - **Handyman Profile** – `handyman`: name, initials, id, kind, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services.
 - **Registration Verification** – `applicant`: id, name, email, submitted, status (`Pending`, `Approved` or `Rejected`), decided, notes, documents (title, file, action). Approve and Reject show only for `Pending`.
 - **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`.
-- **Work Progress Overview** – `page.services` and `page.jobs` (reference, service, customer, handyman, percent, due, status, status_label, url).
-- **Job Progress Details** – `job`: see the template comment. `request_ref` comes from `job.service_request.reference`.
-- **Daily Work Reports** – `page`: reference, service, customer, job_url, handymen, reports (one per `ProgressReport`).
-- **Work Evidence** – `page`: reference, title, report details, photos (one per `WorkEvidence`), notes, is_flagged, flag_reason, flag_url. The Flag form posts `reason` to `jobs:flag`.
-
-`status` for jobs is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
-
 
 ## Service Quotations (connected to the backend)
 Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
@@ -139,9 +129,8 @@ Built on the existing `reports` app. Needs an account with `role = 'admin'` **an
 
 **Change in `reports/views.py`:** for FR-A-12.3, `job_summary_report` also adds to each job `quotation_amount` (total of the accepted labour and material quotations of its service request) and `payment_state` (`paid`, `partial`, `unpaid` or `none`). Nothing else in the view changed.
 
-**For the backend to confirm**
-1. The date filter uses the date the job was **created** (`created_at`). If FR-A-12.4 means the scheduled or completed date, the view needs to filter on that field instead (the page labels would then change to match).
-2. A job without a linked service request shows "No quotation".
+- The date filter uses the date the job was **created** (`created_at`), as agreed for FR-A-12.4.
+- A job without a linked service request shows "No quotation".
 
 ## Complaints (connected to the backend)
 The admin pages stay in the admin portal (the complaints app's own `complaint_list.html` and `complaint_detail.html` are shared with customers and handymen, so they were not changed). Their views in `accounts/admin_views.py` now read the real `Complaint`, `ComplaintMessage`, `ComplaintEvidence` and `ComplaintLog` data, and only admins can open them.
@@ -163,10 +152,33 @@ The admin pages stay in the admin portal (the complaints app's own `complaint_li
 1. Admin notifications for new complaints link to `complaints:detail` (the shared page). They could link to `accounts_admin:complaint_case` instead (the notifications test checks the current link, so it needs updating too).
 2. No assigned admin, category, priority or internal notes: the complaints app has no fields for them.
 
+## Work Progress (connected to the backend)
+The admin pages stay in the admin portal (the jobs app's own `job_list.html` and `job_detail.html` are shared with customers and handymen, so they were not changed). Their views in `accounts/admin_views.py` now read the real `Job`, `TimeLog`, `ProgressReport` and `WorkEvidence` data, and only admins can open them.
+
+| Page | URL | Template |
+|---|---|---|
+| Work Progress Overview | `/admin-portal/work-progress/` | `jobs/admin_work_progress.html` |
+| Job Progress Details | `/admin-portal/work-progress/<id>/` | `jobs/admin_job_progress.html` |
+| Daily Work Reports | `/admin-portal/work-progress/<id>/reports/` | `jobs/admin_daily_reports.html` |
+| Work Evidence (latest report) | `/admin-portal/work-progress/<id>/evidence/` | `jobs/admin_work_evidence.html` |
+| Work Evidence (one report) | `/admin-portal/work-progress/<id>/evidence/<report id>/` | `jobs/admin_work_evidence.html` |
+
+- The overview lists every job except cancelled ones. `status` is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`, not a stored status).
+- Progress is the latest report's `percent_complete` (0 with no report, 100 once the job is completed).
+- The timeline is built from `created_at`, the first `TimeLog`, each `ProgressReport`, a missed due date, `completed_at` and the flag. Only the assignment and the latest 3 events are shown, so it fits one screen; every report is on Daily Work Reports.
+- `WorkEvidence` belongs to the job, not to a report, so a report's photos are the ones uploaded on the report's day. Photos open through `jobs:evidence_file`.
+- The notes card shows `completion_notes` once the job is completed, and the report's details before that.
+- **Flag Submission** / **Remove Flag** posts `reason` to `jobs:flag`.
+
+**Change in `jobs/views.py`:** `flag_job` goes back to the page in the form's `next` field (only addresses on this site). Without `next` it goes to `jobs:detail` as before, so the shared pages and the tests are unchanged.
+
+**Still needed from the backend**
+1. `WorkEvidence` has no link to a `ProgressReport`, so photos are matched to a report by upload day. A `report` field on `WorkEvidence` would make this exact.
+
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.
 2. **Real data:** in each view, replace the sample dictionary with real data, keeping the same names.
-3. **One user, job or complaint per page:** add the id to the URLs, for example `users/customer/<int:pk>/` and `work-progress/<int:pk>/` (Complaints already does this). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
+3. **One user per page:** add the id to the URLs, for example `users/customer/<int:pk>/` (Complaints and Work Progress already do this). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
 4. **Buttons:** turn these into forms that post to real views:
    - Suspend, Reactivate and Delete (`accounts/_user_modals.html`)
    - Approve and Reject (`admin_handyman_verify.html`)
