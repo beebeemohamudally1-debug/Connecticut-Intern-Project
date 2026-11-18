@@ -1,5 +1,5 @@
 """Fill the local database with demo data for the admin pages (Service Quotations, payments,
-materials, Private Feedback, Job Summary, Complaints and Work Progress).
+materials, Private Feedback, Job Summary, Complaints, Work Progress and Manage Users).
 
 Run:      python manage.py seed_demo
 Start over: python manage.py seed_demo --reset
@@ -17,7 +17,7 @@ from django.db import transaction
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from bookings.models import ServiceRequest, ServiceRequestAssignment
+from bookings.models import HandymanProfileRequest, ServiceRequest, ServiceRequestAssignment
 from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
 from jobs.models import Job, ProgressReport, TimeLog, WorkEvidence
 from reviews.models import Review
@@ -46,11 +46,12 @@ class Command(BaseCommand):
         self.print_links()
 
     # ------------------------------------------------------------------ helpers
-    def user(self, username, role, first, last):
+    def user(self, username, role, first, last, phone='', active=True):
         # The admin portal pages also need is_staff (dashboard.permissions.role_required)
         u, made = User.objects.get_or_create(
             username=username, defaults={'role': role, 'first_name': first, 'last_name': last,
-                                         'email': f'{username}@example.com', 'is_staff': role == 'admin'})
+                                         'email': f'{username}@example.com', 'is_staff': role == 'admin',
+                                         'phone': phone, 'is_active': active})
         if made:
             u.set_password('demo12345')
             u.save()
@@ -70,6 +71,7 @@ class Command(BaseCommand):
         Review.objects.filter(customer__username__startswith='demo_').delete()
         Job.objects.filter(customer__username__startswith='demo_').delete()
         ServiceRequestAssignment.objects.filter(service_request__customer__username__startswith='demo_').delete()
+        HandymanProfileRequest.objects.filter(handyman__username__startswith='demo_').delete()
         ServiceRequest.objects.filter(customer__username__startswith='demo_').delete()
         User.objects.filter(username__startswith='demo_').delete()
         self.stdout.write('Old demo data deleted.')
@@ -77,12 +79,16 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------- create
     def create(self):
         admin = self.user('demo_admin', 'admin', 'Demo', 'Admin')
-        customers = [self.user('demo_aisha', 'customer', 'Aisha', 'Khan'),
-                     self.user('demo_priya', 'customer', 'Priya', 'Nair'),
-                     self.user('demo_david', 'customer', 'David', 'Park'),
-                     self.user('demo_sarah', 'customer', 'Sarah', 'Thompson')]
-        handymen = [self.user('demo_marcus', 'handyman', 'Marcus', 'Reed'),
-                    self.user('demo_alex', 'handyman', 'Alex', 'Smith')]
+        customers = [self.user('demo_aisha', 'customer', 'Aisha', 'Khan', '5 712 3344'),
+                     self.user('demo_priya', 'customer', 'Priya', 'Nair', '5 845 1209'),
+                     self.user('demo_david', 'customer', 'David', 'Park', '5 903 6672'),
+                     self.user('demo_sarah', 'customer', 'Sarah', 'Thompson', '5 987 6543')]
+        handymen = [self.user('demo_marcus', 'handyman', 'Marcus', 'Reed', '5 731 1145'),
+                    self.user('demo_alex', 'handyman', 'Alex', 'Smith', '5 644 2091')]
+        # Manage Users: suspended accounts (is_active = False) and approved skills / services
+        self.user('demo_daniel', 'customer', 'Daniel', 'Brooks', '5 412 7788', active=False)
+        self.user('demo_jean', 'handyman', 'Jean', 'Laval', '5 220 4810', active=False)
+        self.profile_requests(admin, handymen)
 
         # (key, service, customer, handyman, labour, breakdown, estimate status, quotation status)
         rows = [
@@ -256,6 +262,32 @@ class Command(BaseCommand):
         move(c, Complaint.RESOLVED, when + timedelta(days=2), 'Outcome recorded',
              outcome='The handyman returned at no charge and removed the paint marks. The customer confirmed the floor is clean.')
 
+    def profile_requests(self, admin, handymen):
+        """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""
+        now = timezone.now()
+        H = HandymanProfileRequest
+        rows = [
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Pipe installation', H.STATUS_APPROVED, 30),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Water heater repair', H.STATUS_APPROVED, 29),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Bathroom plumbing', H.STATUS_APPROVED, 28),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Pipe leak repair', H.STATUS_APPROVED, 28),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Tap replacement', H.STATUS_APPROVED, 27),
+            (0, H.TYPE_SERVICE, H.ACTION_MODIFY, 'Tap replacement', 'Tap and mixer replacement', H.STATUS_APPROVED, 10),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gate repair', H.STATUS_APPROVED, 8),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Roof repair', H.STATUS_PENDING, 2),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Electrical repair', H.STATUS_APPROVED, 25),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Painting', H.STATUS_APPROVED, 24),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Light fitting', H.STATUS_APPROVED, 24),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Wall painting', H.STATUS_APPROVED, 23),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gas fitting', H.STATUS_REJECTED, 12),
+        ]
+        for h, kind, action, current, requested, status, days in rows:
+            done = status != H.STATUS_PENDING
+            H.objects.create(handyman=handymen[h], request_type=kind, action=action, current_value=current,
+                             requested_value=requested, status=status,
+                             reviewed_by=admin if done else None,
+                             reviewed_at=now - timedelta(days=days - 1) if done else None)
+
     def work_progress(self, admin, customers, handymen, report_jobs):
         """Arrival times, daily reports and photos for Monitor Work Progress,
         with one delayed job and one flagged job."""
@@ -372,6 +404,7 @@ class Command(BaseCommand):
         out(f'  Materials:         {BASE}/payments/materials/')
         out(f'  Private feedback:  {BASE}/reviews/admin/')
         out(f'  Work progress:     {BASE}/admin-portal/work-progress/')
+        out(f'  Manage users:      {BASE}/admin-portal/users/')
         if 'needs_quote' in ids:
             i = ids['needs_quote']
             out('\nCreate quotation (from an approved estimate)')

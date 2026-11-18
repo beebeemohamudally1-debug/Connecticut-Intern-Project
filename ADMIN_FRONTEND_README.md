@@ -3,8 +3,8 @@
 This file lists the admin pages built so far. **The admin frontend is still in progress:** more sections (for example Services, Skills, Service Requests, Appointments, Material Quotations, Payments, Reports and Reviews) are still to be built.
 
 There are two kinds of pages:
-- **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
-- **Service Quotations**, **Private Feedback**, **Reports**, **Complaints** and **Work Progress** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints** and **jobs** apps, so they **already use the real backend**.
+- **Sample-data pages** (the table under "Pages"): only the two Registration Verification pages are left. Their views send **sample data** and their buttons only show a demo message, because the backend has no handyman verification yet.
+- **Service Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users** and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -13,7 +13,7 @@ python manage.py runserver
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
 
 ## Demo data (for the pages connected to the backend)
-Service Quotations, Private Feedback, Reports, Complaints and Work Progress show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+Service Quotations, Private Feedback, Reports, Complaints, Work Progress and Manage Users show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
 ```
 python manage.py seed_demo
 ```
@@ -26,6 +26,7 @@ It creates:
 - complaints in every status (pending, in progress with private messages and a file, resolved with an outcome)
 - jobs in every status, created on different days in the last two months and linked to the demo requests (so the report shows quotation amounts and payment states)
 - arrival times, daily reports and photos for the open and completed jobs, with one delayed job and one flagged job
+- phone numbers, two suspended accounts, and approved / pending / rejected skill and service changes for the handymen
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
@@ -41,11 +42,6 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 
 | URL | Name | Template | Sample data in the view |
 |---|---|---|---|
-| `users/` | `users` | `accounts/admin_users.html` | `USERS_PAGE` |
-| `users/customer/` | `customer_detail` | `accounts/admin_customer_detail.html` | `CUSTOMER` |
-| `users/customer/suspended/` | `suspended_customer` | `accounts/admin_customer_detail.html` | `SUSPENDED_CUSTOMER` |
-| `users/handyman/` | `handyman_profile` | `accounts/admin_handyman_profile.html` | `HANDYMAN` |
-| `users/handyman/suspended/` | `suspended_handyman` | `accounts/admin_handyman_profile.html` | `SUSPENDED_HANDYMAN` |
 | `users/handyman/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | `APPLICANT` |
 | `users/handyman/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | `APPROVED_APPLICANT` |
 | `notifications/` | `notifications` | `notifications/admin_notifications.html` | none: real notifications for the logged-in admin |
@@ -57,14 +53,14 @@ The full list of names is in the comment at the top of each template. The connec
 
 **Pages still on sample data**
 
-- **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is that user's details, profile or verification page.
-- **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status).
-- **Handyman Profile** – `handyman`: name, initials, id, kind, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services.
 - **Registration Verification** – `applicant`: id, name, email, submitted, status (`Pending`, `Approved` or `Rejected`), decided, notes, documents (title, file, action). Approve and Reject show only for `Pending`.
 
 **Pages connected to the backend**
 
 - **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`.
+- **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is the user's Customer Details or Handyman Profile page.
+- **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status, state).
+- **Handyman Profile** – `handyman`: name, initials, id, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services, reports_url.
 - **Admin Profile** – `admin`: name, initials, email, role, status, from the logged-in user. Saving is not connected yet (no update view).
 - **Labour estimates tab** – `estimates` (`LabourEstimate` list). The Review pop-up posts to the payments approve and revision views.
 - **Quotations tab** – `quotations` (`Quotation` list, labour quotations).
@@ -207,15 +203,32 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 1. **Saving:** there is no profile update view yet, so **Save changes** only updates the page and shows a demo message. When one exists, set the form's `action` to it, remove `data-demo` from the form, and read `full_name` and `email` from the POST.
 2. **Change Password:** there is no change-password page yet, so the button links to `#`. Point it to that page when the authentication pages exist.
 
+## Manage Users (connected to the backend)
+| Page | URL | Template |
+|---|---|---|
+| Manage Users | `/admin-portal/users/` | `accounts/admin_users.html` |
+| Customer Details | `/admin-portal/users/customer/<id>/` | `accounts/admin_customer_detail.html` |
+| Handyman Profile | `/admin-portal/users/handyman/<id>/` | `accounts/admin_handyman_profile.html` |
+
+- The views in `accounts/admin_views.py` read `accounts.User` (every customer and handyman, newest first). Only admins can open them.
+- Status is `Active` or `Suspended`, from `is_active`. The suspended sample pages were removed: the same templates show both.
+- Customer Details: the counts and recent requests come from `bookings.ServiceRequest`; completed jobs from `jobs.Job`. The user has no address field, so the address is the one on the latest service request.
+- Handyman Profile: completed and assigned jobs come from `jobs.Job`. Skills and services are worked out from the handyman's **approved** `bookings.HandymanProfileRequest` changes (add, modify, remove, oldest first). **View Daily Work Report** opens the reports of the handyman's latest job.
+
+**Still needed from the backend**
+1. **Suspend, Reactivate and Delete** (`accounts/_user_modals.html`): no views yet, so the buttons only show a demo message.
+2. **Handyman registration verification:** no model for the documents, the verified state or approve / reject. So **Pending Approval** shows 0, no user is `Pending`, the profile shows no Verified badge, and **View documents** still opens the sample verification page.
+3. **Service areas and availability:** no fields, so the profile shows "Not recorded".
+4. **Job history:** no page for one handyman's jobs, so the button links to `#`.
+5. **Service request page:** no admin page for one request, so the request ids on Customer Details are not links.
+
 ## Integration (not done yet)
-1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to the Manage Users views in `accounts/admin_views.py`. Right now anyone can open those pages (the other admin views already have it).
-2. **Real data:** in each view, replace the sample dictionary with real data, keeping the same names.
-3. **One user per page:** add the id to the URLs, for example `users/customer/<int:pk>/` (Complaints and Work Progress already do this). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
-4. **Buttons:** turn these into forms that post to real views:
+1. **Registration Verification:** once the backend has handyman verification, replace `APPLICANT` and `APPROVED_APPLICANT` with the real application, keeping the same names, and add the handyman id to the URLs.
+2. **Buttons:** turn these into forms that post to real views:
    - Suspend, Reactivate and Delete (`accounts/_user_modals.html`)
    - Approve and Reject (`admin_handyman_verify.html`)
    - Save on the Admin Profile (remove `data-demo` once it saves)
-5. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
-6. **Navbar search bar:** the search box at the top of every admin page (in `templates/base_admin.html`) is not connected yet. To connect it:
+3. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
+4. **Navbar search bar:** the search box at the top of every admin page (in `templates/base_admin.html`) is not connected yet. To connect it:
    - Make a search view (for example `admin-portal/search/`) that reads the search text from `request.GET['q']` and shows the matching users, jobs and service requests.
    - In `base_admin.html`, set the form's `action` to that URL, add `name="q"` to the `<input>`, and remove `data-demo` from the `<form>`.
