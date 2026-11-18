@@ -1,0 +1,95 @@
+/* Page-specific styles. Needs handyman_job_in_progress.css and handyman_assigned_jobs.css
+   (shared layout, stats, tabs, calendar and buttons). */
+
+.sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+a.atab { display: inline-block; text-decoration: none; }
+
+.req-title-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.req-title-row h2 { margin: 0; font-size: 18px; }
+.req-sub { margin: 0 0 18px; }
+
+.pill-new {
+    background: #fdeee6;
+    color: var(--orange-dark);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pill-new.none { background: var(--tag-bg); color: var(--muted); }
+
+/* Request card */
+.req {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.req:last-child { margin-bottom: 0; }
+
+.req-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.req-head h3 { margin: 0 0 4px; font-size: 15px; }
+.req-head p { margin: 0; }
+
+.pill {
+    display: inline-block;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pill.pending { background: #fdeee6; color: var(--orange-dark); }
+.pill.approved { background: #dcf3e5; color: #137a43; }
+.pill.declined { background: var(--tag-bg); color: var(--muted); }
+
+.req-body { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; align-items: start; }
+
+.cust { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.addr { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+.desc { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+.history { background: var(--tag-bg); border-radius: 10px; padding: 14px 16px; }
+.history-head { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 12px; }
+.history-head span { color: var(--muted); font-size: 11px; }
+.history ul { list-style: none; margin: 0; padding: 0; }
+.history li { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; font-size: 12px; }
+.history li:last-child { margin-bottom: 0; }
+.history li span { font-size: 10px; color: var(--muted); }
+
+/* Footer: date, budget, actions */
+.req-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--line);
+    margin-top: 18px;
+    padding-top: 16px;
+}
+.when { display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.when span { color: var(--muted); font-size: 11px; }
+
+.req-actions { display: flex; gap: 10px; }
+.req-actions .btn-outline,
+.req-actions .btn-solid { padding: 11px 20px; border-radius: 8px; }
+.req-result { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+.req.approved .req-result { color: #137a43; }
+
+.req.done { background: #fafbfc; }
+
+@media (max-width: 760px) {
+    .req-body { grid-template-columns: 1fr; }
+    .req-foot { flex-direction: column; align-items: stretch; }
+    .req-actions { justify-content: stretch; }
+    .req-actions > * { flex: 1; justify-content: center; }
+}

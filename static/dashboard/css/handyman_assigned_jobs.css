@@ -1,0 +1,172 @@
+/* Page-specific styles. Sidebar, topbar and base cards come from handyman_job_in_progress.css */
+
+.content.wide { max-width: 1100px; }
+
+.page-title { font-size: 26px; margin: 0 0 6px; }
+.page-sub { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+.sidebar-foot .help-text { opacity: .8; line-height: 1.5; }
+.sidebar-foot a { color: #fff; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+}
+.stat-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+.stat-top svg { color: var(--orange); }
+.stat-num { display: block; font-size: 28px; margin: 14px 0 12px; }
+.stat-note { margin: 0; font-size: 11px; color: #137a43; }
+
+/* Main grid */
+.aj-grid { display: grid; grid-template-columns: 1.9fr 1fr; gap: 18px; align-items: start; }
+.col-stack { display: flex; flex-direction: column; gap: 18px; }
+.col-stack .card { margin-bottom: 0; }
+[hidden] { display: none !important; }
+
+/* Tabs */
+.atabs {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    background: var(--info-bg);
+    border-radius: 10px;
+    padding: 6px;
+}
+.atab {
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.atab:hover { color: var(--ink); }
+.atab.active { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(20,48,77,.08); }
+
+/* Featured job */
+.job-top { display: flex; justify-content: space-between; align-items: center; }
+.chip {
+    background: #fdeee6;
+    color: var(--orange-dark);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.job-id { font-size: 11px; color: var(--muted); }
+.job-name { font-size: 20px; margin: 14px 0 16px; }
+.cust { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.cust strong { display: block; font-size: 13px; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0 18px; }
+.facts dt { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.facts dd { margin: 0; font-size: 13px; font-weight: 600; }
+
+.btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-solid, .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-solid { background: var(--orange); color: #fff; border: 1px solid var(--orange); }
+.btn-solid:hover { background: var(--orange-dark); }
+.btn-outline { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+.btn-outline:hover { background: var(--tag-bg); }
+.btn-outline.block { display: flex; justify-content: center; width: 100%; }
+
+/* Other panels */
+.panel-title { font-size: 16px; margin: 0 0 12px; }
+.mini { list-style: none; margin: 0; padding: 0; }
+.mini li { display: flex; flex-direction: column; gap: 3px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.mini li:last-child { border-bottom: 0; }
+.mini span { font-size: 12px; color: var(--muted); }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 560px; }
+thead th {
+    background: var(--tag-bg);
+    color: var(--muted);
+    font-weight: 500;
+    text-align: left;
+    padding: 10px 14px;
+}
+thead th:first-child { border-radius: 8px 0 0 8px; }
+thead th:last-child { border-radius: 0 8px 8px 0; }
+tbody th, tbody td { text-align: left; padding: 16px 14px; border-bottom: 1px solid var(--line); color: var(--muted); }
+tbody th { color: var(--ink); font-weight: 700; }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+
+.status { display: inline-block; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.status.scheduled { background: var(--tag-bg); color: var(--ink); }
+.status.completed { background: #dcf3e5; color: #137a43; }
+
+/* Calendar */
+.cal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.cal-head h2 { margin: 0 0 4px; }
+.cal-nav { display: flex; gap: 4px; }
+.cal-nav button {
+    width: 26px; height: 26px;
+    background: none;
+    border: 0;
+    border-radius: 6px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+}
+.cal-nav button:hover { background: var(--tag-bg); color: var(--ink); }
+
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 18px; }
+.dayb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: var(--tag-bg);
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 0;
+    font: inherit;
+    color: var(--ink);
+    cursor: pointer;
+}
+.dayb small { font-size: 9px; color: var(--muted); }
+.dayb span { font-size: 12px; font-weight: 600; }
+.dayb:hover { background: #dde5ee; }
+.dayb.on { background: var(--navy); color: #fff; }
+.dayb.on small { color: rgba(255,255,255,.7); }
+
+.day-title { font-size: 13px; margin: 0 0 12px; }
+.slot { border-radius: 10px; padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+.slot-when { font-size: 11px; }
+.slot strong { font-size: 13px; }
+.slot-who { font-size: 11px; color: var(--muted); }
+.slot.morning { background: #fdeee6; }
+.slot.morning .slot-when { color: var(--orange-dark); }
+.slot.afternoon { background: var(--tag-bg); }
+.slot.afternoon .slot-when { color: var(--muted); }
+.no-appt { margin: 0 0 12px; }
+.cal .btn-outline { margin-top: 6px; }
+
+.ready p { margin: 0; line-height: 1.6; }
+.ready h2 { margin-bottom: 8px; }
+
+@media (max-width: 980px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .aj-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+    .stats { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: 1fr; }
+}
