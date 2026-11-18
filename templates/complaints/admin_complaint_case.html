@@ -15,7 +15,7 @@
     activity                             -> ComplaintLog: title, detail, at, done (True/False)
     outcome, resolved_by, resolved_at    -> only when resolved
     queue_url, customer_url, handyman_url, resolve_url -> routes for the links
-    status_url                           -> complaints:resolution (POST status=inH_progress, used by "Start investigation" while pending)
+    status_url                           -> complaints:resolution (POST status=in_progress, used by "Start investigation" while pending)
     customer_name, handyman_name         -> the customer and the handyman on the case (either may have filed it)
   Connected: accounts.admin_views.complaint_case builds `page` from the real complaint.
   The forms send `next`, so complaints:resolution comes back to this page. Only admins can open this.
