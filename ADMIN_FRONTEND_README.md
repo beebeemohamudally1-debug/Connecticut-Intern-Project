@@ -4,7 +4,7 @@ This file lists the admin pages built so far. **The admin frontend is still in p
 
 There are two kinds of pages:
 - **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
-- **Service Quotations** and **Private Feedback** (see their own sections below): built on the existing **payments** and **reviews** pages, so they **already use the real backend**.
+- **Service Quotations**, **Private Feedback** and **Reports** (see their own sections below): built on the existing **payments**, **reviews** and **reports** pages, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -13,7 +13,7 @@ python manage.py runserver
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
 
 ## Demo data (for the pages connected to the backend)
-Service Quotations and Private Feedback show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+Service Quotations, Private Feedback and Reports show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
 ```
 python manage.py seed_demo
 ```
@@ -23,6 +23,7 @@ It creates:
 - labour quotations in every status (draft, sent, changes requested, accepted, paid, declined, cancelled)
 - material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid)
 - customer reviews (to assess, approved, rejected)
+- jobs in every status, created on different days in the last two months and linked to the demo requests (so the report shows quotation amounts and payment states)
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
@@ -131,6 +132,26 @@ Built on the existing `reviews` app: real views, URLs and the `Review` model. Ne
 **Still needed from the backend**
 1. No success message after Approve or Reject (the views do not add a Django message).
 2. No admin note or reason with the assessment.
+
+## Reports (connected to the backend)
+Built on the existing `reports` app. Needs an account with `role = 'admin'` **and staff status**.
+
+| Page | URL | Template |
+|---|---|---|
+| Job Summary Report | `/reports/job-summary/` | `reports/job_summary.html` |
+
+- The template was moved from `reports/templates/reports/` to the main `templates/reports/` (same name, so the view did not change).
+- CSS and JS: `static/reports/css/job_summary.css`, `static/reports/js/job_summary.js`.
+- The sidebar link **Reports** points to `reports:job_summary`.
+- Filters (a GET form): **Created from**, **Created to** and **Job status**. **Generate Report** reloads the page with the filters; **Clear** removes them. Wrong dates show the view's errors and no report.
+- The 5 cards are the view's counts (total, assigned, in progress, completed, cancelled). The table shows job, customer, handyman, service, quotation amount, payment status, job status, created and completed dates, 5 rows per page.
+- **Preview** shows the report as it will print (every row, no navigation); **Print** (or Ctrl+P) prints it on A4 landscape.
+
+**Change in `reports/views.py`:** for FR-A-12.3, `job_summary_report` also adds to each job `quotation_amount` (total of the accepted labour and material quotations of its service request) and `payment_state` (`paid`, `partial`, `unpaid` or `none`). Nothing else in the view changed.
+
+**For the backend to confirm**
+1. The date filter uses the date the job was **created** (`created_at`). If FR-A-12.4 means the scheduled or completed date, the view needs to filter on that field instead (the page labels would then change to match).
+2. A job without a linked service request shows "No quotation".
 
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.

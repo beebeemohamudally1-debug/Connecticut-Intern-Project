@@ -154,12 +154,31 @@ class Command(BaseCommand):
             when = timezone.now() - timedelta(days=days_ago)
             job = Job.objects.create(customer=customers[c], handyman=handymen[h], service_name=service,
                                      description=f'Demo job: {service}.', address='12 Royal Road, Port Louis',
-                                     status=Job.COMPLETED, completed_at=when - timedelta(hours=3))
+                                     status=Job.COMPLETED, completed_at=when - timedelta(hours=3),
+                                     scheduled_start=when - timedelta(days=1))
+            Job.objects.filter(pk=job.pk).update(created_at=when - timedelta(days=5))
             review = Review.objects.create(job=job, customer=customers[c], rating=rating, comment=comment)
             done = status != 'pending'
             Review.objects.filter(pk=review.pk).update(
                 created_at=when, status=status, assessed_by=admin if done else None,
                 assessed_at=when + timedelta(days=1) if done else None)
+
+        # Jobs for the Job Summary report (created after the review jobs, so they are listed first), linked to the requests above so the report shows
+        # the accepted quotation amount and the payment status.
+        now = timezone.now()
+        for key, status, h, days in [('paid', Job.COMPLETED, 1, 6), ('accepted', Job.ASSIGNED, 0, -3),
+                                     ('accepted_waiting', Job.ASSIGNED, 0, -5),
+                                     ('changes_requested', Job.IN_PROGRESS, 1, -1),
+                                     ('cancelled', Job.CANCELLED, 1, 2)]:
+            req = ServiceRequest.objects.get(pk=self.ids[key]['request'])
+            job = Job.objects.create(
+                service_request=req, customer=req.customer, handyman=handymen[h],
+                service_name=req.service_category, description=req.problem_description,
+                address=req.service_address, status=status, scheduled_start=now - timedelta(days=days),
+                completed_at=now - timedelta(days=days - 1) if status == Job.COMPLETED else None)
+            # created_at is set automatically; move it back so the report's date filter has a spread
+            Job.objects.filter(pk=job.pk).update(created_at=now - timedelta(days=abs(days) + 4))
+
 
     def material(self, admin, handyman, key, items, cost, paid):
         mat = MaterialPurchaseRequest.objects.create(

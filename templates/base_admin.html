@@ -77,7 +77,7 @@
       <a href="{% url 'accounts_admin:complaints' %}" data-nav="complaints">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
         Complaints</a>
-      <a href="#" data-nav="reports">
+      <a href="{% url 'reports:job_summary' %}" data-nav="reports">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
         Reports</a>
       <a href="{{ notifications_url }}" data-nav="notifications">
