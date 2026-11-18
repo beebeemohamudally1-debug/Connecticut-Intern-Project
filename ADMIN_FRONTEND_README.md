@@ -4,7 +4,7 @@ This file lists the admin pages built so far. **The admin frontend is still in p
 
 There are two kinds of pages:
 - **Sample-data pages** (the table under "Pages"): each view in `accounts/admin_views.py` sends **sample data** and renders one template. **Integration has not been done yet** for these: their buttons only show a demo message. Please do not change the templates when connecting real data; replace the sample data in the views, using the same names.
-- **Service Quotations**, **Private Feedback** and **Reports** (see their own sections below): built on the existing **payments**, **reviews** and **reports** pages, so they **already use the real backend**.
+- **Service Quotations**, **Private Feedback**, **Reports** and **Complaints** (see their own sections below): connected to the **payments**, **reviews**, **reports** and **complaints** apps, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -13,7 +13,7 @@ python manage.py runserver
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
 
 ## Demo data (for the pages connected to the backend)
-Service Quotations, Private Feedback and Reports show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+Service Quotations, Private Feedback, Reports and Complaints show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
 ```
 python manage.py seed_demo
 ```
@@ -23,6 +23,7 @@ It creates:
 - labour quotations in every status (draft, sent, changes requested, accepted, paid, declined, cancelled)
 - material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid)
 - customer reviews (to assess, approved, rejected)
+- complaints in every status (pending, in progress with private messages and a file, resolved with an outcome)
 - jobs in every status, created on different days in the last two months and linked to the demo requests (so the report shows quotation amounts and payment states)
 
 At the end it prints the links to open. To delete the demo data and create it again:
@@ -52,12 +53,6 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 | `work-progress/job/` | `work_progress_job` | `jobs/admin_job_progress.html` | `JOB_PROGRESS` |
 | `work-progress/reports/` | `work_progress_reports` | `jobs/admin_daily_reports.html` | `DAILY_REPORTS` |
 | `work-progress/evidence/` | `work_progress_evidence` | `jobs/admin_work_evidence.html` | `WORK_EVIDENCE` |
-| `complaints/` | `complaints` | `complaints/admin_complaint_queue.html` | `COMPLAINT_QUEUE` |
-| `complaints/case/` | `complaint_case` | `complaints/admin_complaint_case.html` | `CASE_OPEN` |
-| `complaints/case/resolved/` | `complaint_case_resolved` | `complaints/admin_complaint_case.html` | `CASE_RESOLVED` |
-| `complaints/case/customer/` | `complaint_customer` | `complaints/admin_complaint_conversation.html` | `CONVERSATIONS['customer']` |
-| `complaints/case/handyman/` | `complaint_handyman` | `complaints/admin_complaint_conversation.html` | `CONVERSATIONS['handyman']` |
-| `complaints/case/resolve/` | `complaint_resolve` | `complaints/admin_complaint_resolve.html` | `CASE_RESOLVE` |
 
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
@@ -74,14 +69,9 @@ The full list of names is in the comment at the top of each template. Summary:
 - **Job Progress Details** – `job`: see the template comment. `request_ref` comes from `job.service_request.reference`.
 - **Daily Work Reports** – `page`: reference, service, customer, job_url, handymen, reports (one per `ProgressReport`).
 - **Work Evidence** – `page`: reference, title, report details, photos (one per `WorkEvidence`), notes, is_flagged, flag_reason, flag_url. The Flag form posts `reason` to `jobs:flag`.
-- **Complaint Queue** – `page.stats` (total, pending, in_progress, resolved) and `page.complaints` (reference, subject, filed_by, role, role_label, job, created_at, status, status_label, url). `url` is that complaint's case page.
-- **Case Overview** (also the resolved view) – `page`: reference, subject, description, job, filed_by, against, created_at, status, status_label, is_resolved, evidence (name, size, url), customer_msgs, handyman_msgs, activity (from `ComplaintLog`), and when resolved: outcome, resolved_by, resolved_at. The links are `queue_url`, `customer_url`, `handyman_url`, `resolve_url`. "Start investigation" posts `status=in_progress` to `complaints:resolution` (`status_url`).
-- **Private chats** (customer and handyman use one template) – `page`: the complaint fields above, `who` (`Customer` or `Handyman`), `person` (name, first_name, initials, email), `recipient_id`, `messages` (author, role, at, body, from_admin) for **that person only**, and `case_url`, `other_url`, `other_label`. Send posts `recipient` and `body` to `complaints:enquiry` (`enquiry_url`). The reply box is hidden when `is_resolved`.
-- **Resolve Case** – `page`: reference, subject, filed_by, against, `case_url`, `resolution_url`, `checks` (customer_replied, handyman_replied, has_evidence). The form posts `status=resolved` and `outcome` (required) to `complaints:resolution`.
 
 `status` for jobs is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
 
-`status` for complaints is `pending`, `in_progress` or `resolved`. The complaint pages have no assigned admin, category, priority, internal notes or payment amount, because the complaints app has no data for them.
 
 ## Service Quotations (connected to the backend)
 Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
@@ -153,10 +143,30 @@ Built on the existing `reports` app. Needs an account with `role = 'admin'` **an
 1. The date filter uses the date the job was **created** (`created_at`). If FR-A-12.4 means the scheduled or completed date, the view needs to filter on that field instead (the page labels would then change to match).
 2. A job without a linked service request shows "No quotation".
 
+## Complaints (connected to the backend)
+The admin pages stay in the admin portal (the complaints app's own `complaint_list.html` and `complaint_detail.html` are shared with customers and handymen, so they were not changed). Their views in `accounts/admin_views.py` now read the real `Complaint`, `ComplaintMessage`, `ComplaintEvidence` and `ComplaintLog` data, and only admins can open them.
+
+| Page | URL | Template |
+|---|---|---|
+| Complaint Queue | `/admin-portal/complaints/` | `complaints/admin_complaint_queue.html` |
+| Case Overview (also a resolved case) | `/admin-portal/complaints/<id>/` | `complaints/admin_complaint_case.html` |
+| Private chat with the customer / handyman | `/admin-portal/complaints/<id>/customer/` and `.../handyman/` | `complaints/admin_complaint_conversation.html` |
+| Resolve Case | `/admin-portal/complaints/<id>/resolve/` | `complaints/admin_complaint_resolve.html` |
+
+- **Start investigation** posts `status=in_progress`, and **Resolve** posts `status=resolved` and `outcome`, to `complaints:resolution`. **Send** in a chat posts `recipient` and `body` to `complaints:enquiry` (the first enquiry also moves a pending complaint to in progress).
+- Each chat shows only the messages between the administrator and that person: enquiries sent to them and their own replies.
+- The activity line comes from `ComplaintLog`; files open through `complaints:evidence_file`.
+
+**Change in `complaints/views.py`:** `complaint_enquiry` and `complaint_resolution` go back to the page in the form's `next` field (only addresses on this site). Without `next` they go to `complaints:detail` as before, so the customer and handyman pages and the tests are unchanged.
+
+**Still needed from the backend**
+1. Admin notifications for new complaints link to `complaints:detail` (the shared page). They could link to `accounts_admin:complaint_case` instead (the notifications test checks the current link, so it needs updating too).
+2. No assigned admin, category, priority or internal notes: the complaints app has no fields for them.
+
 ## Integration (not done yet)
 1. **Access:** add `@role_required('admin')` (from `dashboard/permissions.py`) to every view in `accounts/admin_views.py`. Right now anyone can open these pages.
 2. **Real data:** in each view, replace the sample dictionary with real data, keeping the same names.
-3. **One user, job or complaint per page:** add the id to the URLs, for example `users/customer/<int:pk>/`, `work-progress/<int:pk>/` and `complaints/<int:pk>/` (with `customer/`, `handyman/` and `resolve/` after it). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
+3. **One user, job or complaint per page:** add the id to the URLs, for example `users/customer/<int:pk>/` and `work-progress/<int:pk>/` (Complaints already does this). The suspended pages can then go, because the same template already handles both `Active` and `Suspended`.
 4. **Buttons:** turn these into forms that post to real views:
    - Suspend, Reactivate and Delete (`accounts/_user_modals.html`)
    - Approve and Reject (`admin_handyman_verify.html`)

@@ -1,7 +1,14 @@
+import os
 from datetime import datetime
-from notifications.models import Notification
+
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.defaultfilters import filesizeformat
+from django.urls import reverse
+
+from complaints.models import Complaint, ComplaintMessage
 from dashboard.permissions import role_required
-from django.shortcuts import render
+from notifications.models import Notification
 
 # Sample data until the real administrator is connected
 ADMIN_PROFILE = {
@@ -310,95 +317,132 @@ def work_evidence(request):
     """Monitor Work Progress - Work Evidence & Completion Notes."""
     return render(request, 'jobs/admin_work_evidence.html', {'page': WORK_EVIDENCE})
 
-# Sample data for the Complaint Queue until the real complaints are connected
-COMPLAINT_QUEUE = {
-    'stats': {'total': 12, 'pending': 4, 'in_progress': 5, 'resolved': 3},
-    'complaints': [
-        {'reference': 'CMP-1152', 'subject': 'Access issue', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1051', 'created_at': datetime(2026, 10, 26, 9, 15), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1151', 'subject': 'Payment query', 'filed_by': 'Daniel Brooks', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1046', 'created_at': datetime(2026, 10, 26, 8, 40), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1150', 'subject': 'Invoice copy', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-0998', 'created_at': datetime(2026, 10, 25, 16, 5), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1149', 'subject': 'Missed appointment', 'filed_by': 'Amy Lee', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1043', 'created_at': datetime(2026, 10, 25, 13, 30), 'status': 'pending', 'status_label': 'Pending', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1147', 'subject': 'Work quality', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1042', 'created_at': datetime(2026, 10, 25, 8, 50), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1146', 'subject': 'Customer not home', 'filed_by': 'Sofia Martinez', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1039', 'created_at': datetime(2026, 10, 24, 11, 20), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1144', 'subject': 'Billing question', 'filed_by': 'Rachel Kim', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1032', 'created_at': datetime(2026, 10, 22, 10, 10), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1141', 'subject': 'Damaged tile', 'filed_by': 'David Park', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1028', 'created_at': datetime(2026, 10, 20, 15, 45), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1138', 'subject': 'Parking access', 'filed_by': 'James Carter', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-1022', 'created_at': datetime(2026, 10, 18, 9, 0), 'status': 'in_progress', 'status_label': 'In progress', 'url': '/admin-portal/complaints/case/'},
-        {'reference': 'CMP-1132', 'subject': 'Late arrival', 'filed_by': 'Emma Wilson', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1016', 'created_at': datetime(2026, 10, 14, 14, 25), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
-        {'reference': 'CMP-1128', 'subject': 'Wrong materials', 'filed_by': 'Priya Nair', 'role': 'customer', 'role_label': 'Customer', 'job': 'JOB-1011', 'created_at': datetime(2026, 10, 10, 12, 0), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
-        {'reference': 'CMP-1124', 'subject': 'Access delay', 'filed_by': 'Marcus Reed', 'role': 'handyman', 'role_label': 'Handyman', 'job': 'JOB-0980', 'created_at': datetime(2026, 10, 6, 10, 30), 'status': 'resolved', 'status_label': 'Resolved', 'url': '/admin-portal/complaints/case/resolved/'},
-    ],
-}
+# ---------- Complaints (section 12): real data from the complaints app ----------
+# The pages post to the complaints app's own views (complaints:enquiry and
+# complaints:resolution) with a `next` field, so the admin comes back to the same page.
+
+def _person_name(user):
+    return (user.get_full_name() or user.username) if user else 'Unknown'
 
 
+def _initials(user):
+    if not user:
+        return '?'
+    parts = (user.get_full_name() or user.username).split()
+    return ''.join(p[0] for p in parts[:2]).upper()
+
+
+def _complaint_people(c):
+    """The customer and the handyman on a complaint (either one may have filed it)."""
+    people = [u for u in (c.submitted_by, c.against) if u]
+    customer = next((u for u in people if u.role == 'customer'), None)
+    handyman = next((u for u in people if u.role == 'handyman'), None)
+    return customer, handyman
+
+
+def _thread(c, person):
+    """Messages between the administrator and one person: enquiries to them and their replies."""
+    if not person:
+        return []
+    return [m for m in c.messages.all() if m.recipient_id == person.pk or m.author_id == person.pk]
+
+
+def _case_page(c):
+    """Everything the case, chat and resolve pages need about one complaint."""
+    customer, handyman = _complaint_people(c)
+    customer_msgs, handyman_msgs = _thread(c, customer), _thread(c, handyman)
+    labels = dict(Complaint.STATUS_CHOICES)
+    activity = [{'title': log.note or f'Moved to {labels.get(log.to_status, log.to_status).lower()}',
+                 'at': log.created_at, 'done': True} for log in c.log.all()]
+    evidence = []
+    for e in c.evidence.all():
+        try:
+            size = filesizeformat(e.file.size)
+        except (OSError, ValueError):
+            size = ''
+        evidence.append({'name': os.path.basename(e.file.name), 'size': size,
+                         'url': reverse('complaints:evidence_file', args=[e.pk])})
+    return {
+        'pk': c.pk, 'reference': c.reference, 'subject': c.subject, 'description': c.description,
+        'status': c.status, 'status_label': c.get_status_display(), 'is_resolved': c.is_resolved,
+        'created_at': c.created_at, 'job': c.job.reference,
+        'filed_by': _person_name(c.submitted_by), 'against': _person_name(c.against),
+        'customer_name': _person_name(customer), 'handyman_name': _person_name(handyman),
+        'customer': customer, 'handyman': handyman, 'evidence': evidence,
+        'customer_msgs': len(customer_msgs), 'handyman_msgs': len(handyman_msgs),
+        'customer_thread': customer_msgs, 'handyman_thread': handyman_msgs,
+        'activity': activity,
+        'outcome': c.outcome, 'resolved_by': _person_name(c.resolved_by), 'resolved_at': c.resolved_at,
+        'queue_url': reverse('accounts_admin:complaints'),
+        'case_url': reverse('accounts_admin:complaint_case', args=[c.pk]),
+        'customer_url': reverse('accounts_admin:complaint_customer', args=[c.pk]),
+        'handyman_url': reverse('accounts_admin:complaint_handyman', args=[c.pk]),
+        'resolve_url': reverse('accounts_admin:complaint_resolve', args=[c.pk]),
+        'status_url': reverse('complaints:resolution', args=[c.pk]),
+        'enquiry_url': reverse('complaints:enquiry', args=[c.pk]),
+        'resolution_url': reverse('complaints:resolution', args=[c.pk]),
+    }
+
+
+def _get_complaint(pk):
+    return get_object_or_404(
+        Complaint.objects.select_related('submitted_by', 'against', 'job', 'resolved_by')
+        .prefetch_related('messages__author', 'log', 'evidence'), pk=pk)
+
+
+@role_required('admin')
 def complaint_queue(request):
-    """Complaints - Complaint Queue."""
-    return render(request, 'complaints/admin_complaint_queue.html', {'page': COMPLAINT_QUEUE})
-
-# ---------- Complaints: case pages (sample data until the real complaint is connected) ----------
-CASE_BASE = '/admin-portal/complaints/case/'
-
-_CASE = {
-    'reference': 'CMP-1147', 'subject': 'Work quality',
-    'description': 'The sink no longer leaks, but the cabinet floor still feels damp. I’m concerned there may be trapped moisture. Could someone inspect it and confirm it is safe?',
-    'job': 'JOB-1042', 'filed_by': 'Emma Wilson', 'against': 'Marcus Reed',
-    'created_at': datetime(2026, 10, 25, 8, 50),
-    'evidence': [{'name': 'cabinet-moisture.jpg', 'size': '1.8 MB', 'url': '#'}, {'name': 'repair-after.jpg', 'size': '1.9 MB', 'url': '#'}],
-    'customer_msgs': 2, 'customer_last': datetime(2026, 10, 25, 11, 10),
-    'handyman_msgs': 2, 'handyman_last': datetime(2026, 10, 25, 10, 35),
-    'queue_url': '/admin-portal/complaints/', 'customer_url': CASE_BASE + 'customer/', 'handyman_url': CASE_BASE + 'handyman/',
-    'resolve_url': CASE_BASE + 'resolve/', 'status_url': '',
-}
-
-_ACTIVITY = [
-    {'title': 'Complaint received', 'at': datetime(2026, 10, 25, 8, 50), 'done': True},
-    {'title': 'Investigation opened', 'at': datetime(2026, 10, 25, 10, 0), 'done': True},
-    {'title': 'Enquiry sent to customer', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
-    {'title': 'Enquiry sent to handyman', 'at': datetime(2026, 10, 25, 10, 20), 'done': True},
-    {'title': 'Customer replied', 'at': datetime(2026, 10, 25, 11, 10), 'done': True},
-]
-
-CASE_OPEN = dict(_CASE, status='in_progress', status_label='In progress', is_resolved=False,
-                 activity=_ACTIVITY + [{'title': 'Resolved', 'detail': 'Awaiting outcome', 'done': False}])
-
-CASE_RESOLVED = dict(_CASE, status='resolved', status_label='Resolved', is_resolved=True,
-                     outcome='No-charge follow-up completed on 27 Oct. No active leak; moisture readings normal. Drying guidance provided and the customer confirmed the cabinet is dry. Original payment unchanged.',
-                     resolved_by='Olivia Chen', resolved_at=datetime(2026, 10, 27, 15, 30),
-                     activity=_ACTIVITY + [{'title': 'Resolved', 'at': datetime(2026, 10, 27, 15, 30), 'done': True}])
-
-CONVERSATIONS = {
-    'customer': dict(CASE_OPEN, who='Customer', other_label='Handyman', other_url=CASE_BASE + 'handyman/', case_url=CASE_BASE,
-        person={'name': 'Emma Wilson', 'first_name': 'Emma', 'initials': 'EW', 'email': 'emma.wilson@email.com'}, recipient_id=1, enquiry_url='',
-        messages=[
-            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Thanks for letting us know, Emma. Is there fresh water under the sink, or does the wood feel damp from before the repair? A current photo would help.'},
-            {'author': 'Emma Wilson', 'role': 'Customer', 'from_admin': False, 'at': datetime(2026, 10, 25, 11, 10), 'body': 'There’s no fresh drip. The wood feels damp near the back. I’ve attached a photo taken this morning.'},
-        ]),
-    'handyman': dict(CASE_OPEN, who='Handyman', other_label='Customer', other_url=CASE_BASE + 'customer/', case_url=CASE_BASE,
-        person={'name': 'Marcus Reed', 'first_name': 'Marcus', 'initials': 'MR', 'email': 'marcus.reed@email.com'}, recipient_id=2, enquiry_url='',
-        messages=[
-            {'author': 'Olivia Chen', 'role': 'Administrator', 'from_admin': True, 'at': datetime(2026, 10, 25, 10, 20), 'body': 'Hi Marcus. We are reviewing a moisture concern after the sink repair. Please describe your leak test and whether any moisture remained at handover.'},
-            {'author': 'Marcus Reed', 'role': 'Handyman', 'from_admin': False, 'at': datetime(2026, 10, 25, 10, 35), 'body': 'The connection stayed dry during a 10-minute test. The rear panel was still damp from the original leak. I can return for a moisture check on Oct 27 at no charge.'},
-        ]),
-}
-
-CASE_RESOLVE = dict(CASE_OPEN, case_url=CASE_BASE, resolution_url='',
-                    checks={'customer_replied': True, 'handyman_replied': True, 'has_evidence': True})
+    """Complaints - Complaint Queue (all complaints, newest first)."""
+    rows = [{
+        'reference': c.reference, 'subject': c.subject, 'filed_by': _person_name(c.submitted_by),
+        'role': c.submitted_by.role, 'role_label': c.submitted_by.get_role_display(),
+        'job': c.job.reference, 'created_at': c.created_at,
+        'status': c.status, 'status_label': c.get_status_display(),
+        'url': reverse('accounts_admin:complaint_case', args=[c.pk]),
+    } for c in Complaint.objects.select_related('submitted_by', 'job')]
+    stats = {'total': len(rows)}
+    for key in (Complaint.PENDING, Complaint.IN_PROGRESS, Complaint.RESOLVED):
+        stats[key] = sum(1 for r in rows if r['status'] == key)
+    return render(request, 'complaints/admin_complaint_queue.html', {'page': {'stats': stats, 'complaints': rows}})
 
 
-def complaint_case(request):
-    """Complaints - Case Overview."""
-    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_OPEN})
+@role_required('admin')
+def complaint_case(request, pk):
+    """Complaints - Case Overview (also shows a resolved case)."""
+    return render(request, 'complaints/admin_complaint_case.html', {'page': _case_page(_get_complaint(pk))})
 
 
-def complaint_case_resolved(request):
-    """Complaints - Case Overview of a resolved complaint."""
-    return render(request, 'complaints/admin_complaint_case.html', {'page': CASE_RESOLVED})
+@role_required('admin')
+def complaint_conversation(request, pk, who):
+    """Complaints - private conversation with the customer or the handyman."""
+    page = _case_page(_get_complaint(pk))
+    person = page[who]
+    if person is None:
+        raise Http404('This complaint has no ' + who + '.')
+    other = 'handyman' if who == 'customer' else 'customer'
+    page.update({
+        'who': who.capitalize(), 'other_label': other.capitalize(), 'other_url': page[other + '_url'],
+        'person': {'name': _person_name(person), 'first_name': person.first_name or person.username,
+                   'initials': _initials(person), 'email': person.email},
+        'recipient_id': person.pk,
+        'messages': [{'author': _person_name(m.author), 'from_admin': m.kind == ComplaintMessage.ENQUIRY,
+                      'at': m.created_at, 'body': m.body} for m in page[who + '_thread']],
+        'next_url': page[who + '_url'],
+    })
+    return render(request, 'complaints/admin_complaint_conversation.html', {'page': page})
 
 
-def complaint_conversation(request, who):
-    """Complaints - private conversation ('customer' or 'handyman')."""
-    return render(request, 'complaints/admin_complaint_conversation.html', {'page': CONVERSATIONS[who]})
-
-
-def complaint_resolve(request):
-    """Complaints - Resolve case."""
-    return render(request, 'complaints/admin_complaint_resolve.html', {'page': CASE_RESOLVE})
+@role_required('admin')
+def complaint_resolve(request, pk):
+    """Complaints - Resolve case (a resolved case goes back to its overview)."""
+    c = _get_complaint(pk)
+    if c.is_resolved:
+        return redirect('accounts_admin:complaint_case', pk=c.pk)
+    page = _case_page(c)
+    customer, handyman = page['customer'], page['handyman']
+    page['checks'] = {
+        'customer_replied': any(m.author_id == getattr(customer, 'pk', None) for m in page['customer_thread']),
+        'handyman_replied': any(m.author_id == getattr(handyman, 'pk', None) for m in page['handyman_thread']),
+        'has_evidence': bool(page['evidence']),
+    }
+    return render(request, 'complaints/admin_complaint_resolve.html', {'page': page})

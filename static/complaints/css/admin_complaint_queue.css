@@ -88,8 +88,6 @@
 
 /* View button: team outlined style, with a blue touch */
 .cq-table td .btn { min-width: 100px; text-align: center; }
-.cq-table td .btn.o { color: var(--blue); border-color: #BFD3F7; }
-.cq-table td .btn.o:hover { color: #fff; background: var(--blue); border-color: var(--blue); filter: none; }
 
 /* Status pills */
 .cq-table .b {

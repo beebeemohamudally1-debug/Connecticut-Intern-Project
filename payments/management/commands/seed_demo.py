@@ -13,9 +13,11 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from bookings.models import ServiceRequest, ServiceRequestAssignment
+from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
 from jobs.models import Job
 from reviews.models import Review
 from payments.models import LabourEstimate, MaterialPurchaseRequest, Payment, Quotation
@@ -59,6 +61,11 @@ class Command(BaseCommand):
         MaterialPurchaseRequest.objects.filter(**demo).delete()
         Quotation.objects.filter(**demo).delete()
         LabourEstimate.objects.filter(**demo).delete()
+        demo_complaints = Complaint.objects.filter(submitted_by__username__startswith='demo_')
+        ComplaintLog.objects.filter(complaint__in=demo_complaints).delete()
+        ComplaintEvidence.objects.filter(complaint__in=demo_complaints).delete()
+        ComplaintMessage.objects.filter(complaint__in=demo_complaints).delete()
+        demo_complaints.delete()
         Review.objects.filter(customer__username__startswith='demo_').delete()
         Job.objects.filter(customer__username__startswith='demo_').delete()
         ServiceRequestAssignment.objects.filter(service_request__customer__username__startswith='demo_').delete()
@@ -150,6 +157,7 @@ class Command(BaseCommand):
             (2, 0, 'Light fitting', 5, 'approved', 'Quick and tidy. Would book again.', 25),
             (3, 0, 'Fence painting', 1, 'rejected', 'Terrible!!! call me now 5 999 9999', 40),
         ]
+        review_jobs = []
         for c, h, service, rating, status, comment, days_ago in reviews:
             when = timezone.now() - timedelta(days=days_ago)
             job = Job.objects.create(customer=customers[c], handyman=handymen[h], service_name=service,
@@ -157,6 +165,7 @@ class Command(BaseCommand):
                                      status=Job.COMPLETED, completed_at=when - timedelta(hours=3),
                                      scheduled_start=when - timedelta(days=1))
             Job.objects.filter(pk=job.pk).update(created_at=when - timedelta(days=5))
+            review_jobs.append(job)
             review = Review.objects.create(job=job, customer=customers[c], rating=rating, comment=comment)
             done = status != 'pending'
             Review.objects.filter(pk=review.pk).update(
@@ -179,6 +188,70 @@ class Command(BaseCommand):
             # created_at is set automatically; move it back so the report's date filter has a spread
             Job.objects.filter(pk=job.pk).update(created_at=now - timedelta(days=abs(days) + 4))
 
+
+        self.complaints(admin, review_jobs)
+
+    def complaints(self, admin, jobs):
+        """Demo complaints in every status, with private messages, a photo and a status log."""
+        now = timezone.now()
+
+        def make(job, by_customer, subject, description, days_ago):
+            filer, other = (job.customer, job.handyman) if by_customer else (job.handyman, job.customer)
+            c = Complaint.objects.create(submitted_by=filer, against=other, job=job,
+                                         subject=subject, description=description)
+            when = now - timedelta(days=days_ago)
+            Complaint.objects.filter(pk=c.pk).update(created_at=when)
+            c.created_at = when   # keep it when the status is saved later
+            log = ComplaintLog.objects.create(complaint=c, actor=filer, to_status=Complaint.PENDING,
+                                              note='Complaint submitted')
+            ComplaintLog.objects.filter(pk=log.pk).update(created_at=when)
+            return c, when
+
+        def say(c, author, body, when, recipient=None):
+            kind = ComplaintMessage.ENQUIRY if recipient else ComplaintMessage.RESPONSE
+            m = ComplaintMessage.objects.create(complaint=c, author=author, recipient=recipient, kind=kind, body=body)
+            ComplaintMessage.objects.filter(pk=m.pk).update(created_at=when)
+
+        def move(c, to, when, note, outcome=''):
+            ComplaintLog.objects.filter(pk=ComplaintLog.objects.create(
+                complaint=c, actor=admin, from_status=c.status, to_status=to, note=note).pk).update(created_at=when)
+            c.status = to
+            if outcome:
+                c.outcome, c.resolved_by, c.resolved_at = outcome, admin, when
+            c.save()
+
+        # Pending: nobody has looked yet
+        make(jobs[2], True, 'Door still squeaks',
+             'The hinge was replaced but the door still squeaks when it closes. The handyman also arrived an hour late.', 2)
+        make(jobs[3], False, 'Customer was not home',
+             'I arrived at the agreed time but nobody was home, and the customer did not answer the phone.', 1)
+
+        # In progress: enquiries sent, one person replied, with a photo
+        c, when = make(jobs[0], True, 'Cabinet still damp',
+                       'The sink no longer leaks, but the cabinet floor still feels damp. Could someone check it is safe?', 6)
+        say(c, admin, 'Thanks for letting us know. Is there fresh water under the sink, or is the wood damp from before? A photo would help.',
+            when + timedelta(hours=2), recipient=c.submitted_by)
+        say(c, admin, 'We are looking into a moisture concern after the sink repair. Was the cabinet dry when you finished?',
+            when + timedelta(hours=2, minutes=5), recipient=c.against)
+        move(c, Complaint.IN_PROGRESS, when + timedelta(hours=2), 'Enquiry sent')
+        say(c, c.submitted_by, 'There is no fresh drip. The wood feels damp near the back. I have attached a photo.',
+            when + timedelta(hours=5))
+        ComplaintEvidence.objects.create(complaint=c, uploaded_by=c.submitted_by,
+                                         file=ContentFile(b'%PDF-1.4 demo photo', name='cabinet-moisture.pdf'))
+
+        # Resolved: both replied, outcome recorded
+        c, when = make(jobs[1], True, 'Paint marks on the floor',
+                       'There are paint marks on the wooden floor near the wall that was painted.', 12)
+        say(c, admin, 'Could you send a photo of the marks and tell us how large they are?', when + timedelta(hours=3),
+            recipient=c.submitted_by)
+        say(c, admin, 'The customer reports paint marks on the floor. Was the floor covered while you worked?',
+            when + timedelta(hours=3, minutes=10), recipient=c.against)
+        move(c, Complaint.IN_PROGRESS, when + timedelta(hours=3), 'Enquiry sent')
+        say(c, c.submitted_by, 'Three small marks near the skirting board, each about the size of a coin.', when + timedelta(hours=6))
+        say(c, c.against, 'The floor was covered, but one sheet moved. I can come back and clean it at no charge.',
+            when + timedelta(hours=8))
+        move(c, Complaint.RESOLVED, when + timedelta(days=2), 'Outcome recorded',
+             outcome='The handyman returned at no charge and removed the paint marks. The customer confirmed the floor is clean.')
 
     def material(self, admin, handyman, key, items, cost, paid):
         mat = MaterialPurchaseRequest.objects.create(

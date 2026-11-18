@@ -65,8 +65,6 @@
 /* Main action: orange outline and orange text (soft, not a solid block) */
 .btn.accent { color: #D9622B; background: #fff; border: 1.5px solid var(--orange); }
 .btn.accent:hover { color: #C2531E; background: #FFEFE6; filter: none; }
-.btn.o { color: var(--blue); border-color: #BFD3F7; }
-.btn.o:hover { color: #fff; background: var(--blue); border-color: var(--blue); filter: none; }
 
 /* Private chat */
 .cc-chat { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
@@ -98,3 +96,7 @@
   .cc-lock { display: none; }
 }
 @media (max-width: 767px) { .bar h1 { font-size: 22px; } .cc-msg { max-width: 92%; } .cc-reply { flex-direction: column; align-items: stretch; } }
+/* Messages from the server after sending, starting or resolving */
+.cc-flash { margin: 0 0 14px; }
+.cc-flash p { margin: 0 0 6px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: #11836D; background: #E6F6EF; border: 1px solid #CDEBDD; border-radius: 10px; }
+.cc-flash p.error { color: #B74555; background: #FEEDF0; border-color: #F5C9D0; }
