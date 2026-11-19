@@ -2,9 +2,19 @@
 {% load static %}
 {% comment %}
   Customer Details (section 3, screen 02).
-  Data comes from the view as `customer`: name, initials, id, registered,
-  email, phone, address, status ("Active" or "Suspended"), counts
-  (submitted, completed, pending, cancelled) and requests (id, title, status).
+  Data comes from the view as `customer` (accounts/admin_views.py customer_detail):
+    name, initials, email, phone   -> accounts.User
+    id                             -> USR-<user id>
+    registered                     -> user.date_joined
+    status                         -> 'Active' or 'Suspended' (user.is_active)
+    address                        -> the latest ServiceRequest's service_address
+                                      (the user has no address field)
+    counts                         -> submitted (all), pending (still open) and
+                                      cancelled service requests; completed = the
+                                      customer's completed jobs (jobs.Job)
+    requests                       -> id (reference), title (service_category),
+                                      status (label), state ('done' | 'wait' | 'cancel')
+  Suspend, Reactivate and Delete are still demo only (no backend views).
   Layout follows Figma: profile beside overview, contact beside recent requests.
   The three pop-ups live in _user_modals.html (screens 05, 06, 07).
 {% endcomment %}
@@ -14,7 +24,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=2">
 {% url 'accounts_admin:users' as users_url %}
 
 <a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
@@ -84,10 +94,12 @@
     <ul class="reqs" data-paged data-page-size="3">
       {% for r in customer.requests %}
       <li>
-        <a class="req-id" href="#">{{ r.id }}</a>
+        <span class="req-id">{{ r.id }}</span>
         <span>{{ r.title }}</span>
-        <span class="req-status {% if r.status == 'Completed' %}done{% elif r.status == 'Pending' %}wait{% elif r.status == 'Cancelled' %}cancel{% endif %}">{{ r.status }}</span>
+        <span class="req-status {{ r.state }}">{{ r.status }}</span>
       </li>
+      {% empty %}
+      <li class="mut reqs-none">No service requests yet.</li>
       {% endfor %}
     </ul>
     {# 3 requests per page; page buttons are built by admin_user_detail.js. BACKEND: if you paginate on the server, send one page at a time. #}

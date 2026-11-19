@@ -16,7 +16,9 @@
     outcome, resolved_by, resolved_at    -> only when resolved
     queue_url, customer_url, handyman_url, resolve_url -> routes for the links
     status_url                           -> complaints:resolution (POST status=in_progress, used by "Start investigation" while pending)
-  BACKEND: replace the sample data with the real complaint. Only admins can open this.
+    customer_name, handyman_name         -> the customer and the handyman on the case (either may have filed it)
+  Connected: accounts.admin_views.complaint_case builds `page` from the real complaint.
+  The forms send `next`, so complaints:resolution comes back to this page. Only admins can open this.
   A resolved complaint cannot be changed, so the controls are replaced by the outcome.
 {% endcomment %}
 
@@ -25,8 +27,7 @@
 {% block crumb %}Complaints / {{ page.reference }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
-
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}?v=2">
 <div class="bar">
   <div>
     <h1>{{ page.subject }}</h1>
@@ -34,6 +35,10 @@
   </div>
   <a class="btn o s" href="{{ page.queue_url|default:'#' }}">&larr; Back to queue</a>
 </div>
+
+{% if messages %}
+<div class="cc-flash" role="status">{% for m in messages %}<p class="{{ m.tags }}">{{ m }}</p>{% endfor %}</div>
+{% endif %}
 
 {% if page.is_resolved %}
 <p class="cc-banner"><strong>Resolved on {{ page.resolved_at|date:"d M Y" }}</strong> Both people were told the outcome, separately.</p>
@@ -67,9 +72,10 @@
     </ol>
     {% if page.status == 'pending' %}
     <p class="mut">Nobody has started yet. Begin when you are ready to look into it.</p>
-    <form method="post" action="{{ page.status_url|default:'#' }}" data-demo="Starting the investigation is not connected yet.">
+    <form method="post" action="{{ page.status_url|default:'#' }}">
       {% csrf_token %}
       <input type="hidden" name="status" value="in_progress">
+      <input type="hidden" name="next" value="{{ page.case_url }}">
       <button class="btn accent" type="submit">Start investigation</button>
     </form>
     {% else %}
@@ -84,16 +90,16 @@
   <section class="card cc-card cc-act cc-blue">
     <span class="cc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
     <div>
-      <h3>{{ page.filed_by }}</h3>
-      <p class="mut">Private chat &middot; {{ page.customer_msgs }} message{{ page.customer_msgs|pluralize }}</p>
+      <h3>{{ page.customer_name }}</h3>
+      <p class="mut">Customer &middot; private chat &middot; {{ page.customer_msgs }} message{{ page.customer_msgs|pluralize }}</p>
     </div>
     <a class="btn o s" href="{{ page.customer_url|default:'#' }}">{% if page.is_resolved %}Read{% else %}Open chat{% endif %}</a>
   </section>
   <section class="card cc-card cc-act cc-orange">
     <span class="cc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
     <div>
-      <h3>{{ page.against }}</h3>
-      <p class="mut">Private chat &middot; {{ page.handyman_msgs }} message{{ page.handyman_msgs|pluralize }}</p>
+      <h3>{{ page.handyman_name }}</h3>
+      <p class="mut">Handyman &middot; private chat &middot; {{ page.handyman_msgs }} message{{ page.handyman_msgs|pluralize }}</p>
     </div>
     <a class="btn o s" href="{{ page.handyman_url|default:'#' }}">{% if page.is_resolved %}Read{% else %}Open chat{% endif %}</a>
   </section>

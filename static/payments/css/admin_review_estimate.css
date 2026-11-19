@@ -65,6 +65,7 @@
 .re-actions .btn { min-width: 160px; text-align: center; justify-content: center; }
 
 /* Soft green, soft amber and soft red (same as Manage Users) */
+.btn.soft-blue { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
 .btn.soft-green { color: #11836D; background: #E6F6EF; border-color: #E5EAF0; }
 .btn.soft-warn { color: #B76B27; background: #FFF3E9; border-color: #E5EAF0; }
 .btn.soft-red { color: #B74555; background: #FEEDF0; border-color: #E5EAF0; }

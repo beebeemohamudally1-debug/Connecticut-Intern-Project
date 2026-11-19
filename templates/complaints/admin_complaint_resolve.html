@@ -16,8 +16,7 @@
 {% block crumb %}Complaints / {{ page.reference }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
-
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}?v=2">
 <div class="bar">
   <div>
     <h1>Close this case</h1>
@@ -26,13 +25,17 @@
   <a class="btn o s" href="{{ page.case_url|default:'#' }}">&larr; Back to case</a>
 </div>
 
+{% if messages %}
+<div class="cc-flash" role="status">{% for m in messages %}<p class="{{ m.tags }}">{{ m }}</p>{% endfor %}</div>
+{% endif %}
 <div class="cc-top">
   <section class="card cc-card">
     <h2>What was decided?</h2>
     <p class="mut">Explain the outcome in plain words. Please don't copy anything from the private chats.</p>
-    <form method="post" action="{{ page.resolution_url|default:'#' }}" data-demo="Resolving is not connected yet." data-resolve>
+    <form method="post" action="{{ page.resolution_url|default:'#' }}" data-resolve>
       {% csrf_token %}
       <input type="hidden" name="status" value="resolved">
+      <input type="hidden" name="next" value="{{ page.resolve_url }}">
       <label class="sr-only" for="outcome">Resolution outcome</label>
       <textarea class="in cc-outcome" id="outcome" name="outcome" rows="7" required placeholder="For example: We arranged a free follow-up visit and the problem is fixed..."></textarea>
       <p class="cc-notice">After this, the case is closed and can't be changed.</p>
@@ -46,8 +49,8 @@
   <section class="card cc-card">
     <h2>Before you close it</h2>
     <ul class="cc-check">
-      <li class="{% if page.checks.customer_replied %}ok{% endif %}">You heard from {{ page.filed_by }}</li>
-      <li class="{% if page.checks.handyman_replied %}ok{% endif %}">You heard from {{ page.against }}</li>
+      <li class="{% if page.checks.customer_replied %}ok{% endif %}">You heard from {{ page.customer_name }} (customer)</li>
+      <li class="{% if page.checks.handyman_replied %}ok{% endif %}">You heard from {{ page.handyman_name }} (handyman)</li>
       <li class="{% if page.checks.has_evidence %}ok{% endif %}">You looked at the photos</li>
     </ul>
     <p class="cc-quote">Both {{ page.filed_by }} and {{ page.against }} will get the outcome as a separate notification.</p>

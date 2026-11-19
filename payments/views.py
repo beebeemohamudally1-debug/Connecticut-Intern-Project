@@ -11,7 +11,8 @@ from bookings.models import ServiceRequest, ServiceRequestAssignment
 
 from .forms import (LabourEstimateForm, MaterialReceiptForm, MaterialRequestForm, NoteForm, PaymentForm,
                     QuotationForm)
-from .models import (LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation)
+from .models import (LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation,
+                     request_payment_state)
 
 
 def role_required(role):
@@ -85,7 +86,14 @@ def quotation_list(request):
 @role_required('admin')
 def quotation_detail_admin(request, pk):
     quotation = get_object_or_404(Quotation.objects.select_related('request', 'request__customer', 'labour_estimate'), pk=pk)
-    return render(request, 'payments/quotation_admin_detail.html', {'quotation': quotation})
+    # Payment comes after BOTH the labour and the material quotation are accepted, so the page
+    # also needs the other quotation of the same request and the request's payment state.
+    other_type = Quotation.MATERIAL if quotation.quotation_type == Quotation.LABOUR else Quotation.LABOUR
+    other = (quotation.request.quotations.filter(quotation_type=other_type)
+             .exclude(status__in=[Quotation.CANCELLED, Quotation.DECLINED]).order_by('-created_at').first())
+    return render(request, 'payments/quotation_admin_detail.html', {
+        'quotation': quotation, 'other': other, 'request_payment': request_payment_state(quotation.request),
+    })
 
 
 @role_required('admin')
@@ -125,11 +133,16 @@ def quotation_edit(request, pk):
         total, text = form.cleaned_data['total_amount'], form.cleaned_data['work_description']
         revising = quotation.status == Quotation.REVISION_REQUESTED
         action = (lambda: quotation.revise(request.user, total, text)) if revising else (lambda: quotation.update(total, text))
-        if _run(request, action, 'Quotation revised. Send it to re-issue it.' if revising else 'Quotation updated.'):
+        if 'send' in request.POST:   # Send to Customer: save, then send it in one step
+            action_then_send = action
+            action = lambda: (action_then_send(), quotation.send())
+            done = 'Quotation sent to the customer.'
+        else:
+            done = 'Quotation revised. Send it to re-issue it.' if revising else 'Quotation updated.'
+        if _run(request, action, done):
             return redirect('payments:quotation_detail_admin', pk=pk)
-    extra = f"Customer asked: {quotation.customer_note}" if quotation.customer_note else ''
-    return _form_page(request, form, title='Edit quotation', subtitle=f'{quotation.get_quotation_type_display()} quotation for {quotation.request.reference}',
-                      base='base_admin.html', nav='invoices', back='payments:quotation_list', extra=extra)
+    # Admin layout for Edit / Revise (the shared form_page.html stays for the handyman forms)
+    return render(request, 'payments/quotation_edit.html', {'form': form, 'quotation': quotation})
 
 
 @role_required('admin')

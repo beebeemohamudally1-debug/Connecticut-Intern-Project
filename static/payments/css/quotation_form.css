@@ -1,0 +1,51 @@
+/* Service Quotations - Create Service Quotation (admin).
+   Uses the shared pieces from admin_review_estimate.css and adds only what is new. */
+
+.btn.soft-blue { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
+.re-actions .btn, .re-btns .btn { font: inherit; font-size: 14px; cursor: pointer; }
+
+.qf-form { align-items: stretch; gap: 12px; }
+.qf-form.re-grid .card { padding: 14px 28px; }
+.qf-form .re-main { gap: 12px; }
+.qf-form .re-info { gap: 8px 16px; margin-top: 8px !important; }
+
+.qf-alert { margin: 0; padding: 10px 14px; font-size: 14px; color: #B74555; background: #FEEDF0; border-radius: 10px; }
+.qf-error { margin: 6px 0 0; font-size: 12px; color: #BA4947; }
+.qf-lines { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+.qf-problem { margin: 8px 0 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+
+.re-break label { display: block; }
+.re-break textarea.in { width: 100%; max-width: none; height: auto; resize: vertical; font: inherit; font-size: 14px; background: var(--white); }
+.re-break .in[aria-invalid="true"] { border-color: #BA4947; }
+.qf-amount { width: 160px; max-width: none; height: 36px; text-align: right; font-size: 15px; font-weight: 600; background: var(--white); }
+
+/* Edit / Revise: what the customer asked for, and server messages beside the heading */
+.qf-asked { margin: 0; padding: 10px 14px; font-size: 14px; color: #8A4E1B; background: #FFF3E9; border-radius: 10px; }
+.qf-asked strong { color: #B76B27; }
+.qf-msg .card { margin: 0 !important; padding: 8px 16px; font-size: 14px; font-weight: 600; color: #B74555; background: #FEEDF0; border-color: #F5C9D0; box-shadow: none; }
+.qf-calc > strong { font-size: 15px; color: #263D54; }
+.re-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Revise: note to handyman (not connected yet) */
+.qf-hnote { flex: 1; display: flex; flex-direction: column; }
+.qf-hnote h2 em { font-size: 13px; font-weight: 400; font-style: normal; color: var(--muted); }
+.qf-hnote textarea.in { flex: 1; width: 100%; max-width: none; min-height: 80px; margin-top: 8px; resize: vertical; font: inherit; font-size: 14px; }
+.qf-hnote-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.qf-hnote-foot p { margin: 0; font-size: 12px; line-height: 1.4; }
+.qf-hnote-foot .btn { flex: none; font: inherit; font-size: 14px; }
+.qf-hnote-foot .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Margin row inside the grey box */
+.qf-calc { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--navy); }
+.qf-calc-val { display: inline-flex; align-items: center; gap: 12px; }
+.qf-calc-val strong { min-width: 100px; text-align: right; font-size: 15px; color: #263D54; }
+.qf-pct { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 400; color: var(--muted); }
+.qf-pct input.in { width: 72px; max-width: none; height: 34px; padding: 4px 8px; text-align: right; font-size: 14px; background: var(--white); }
+.qf-pct input[aria-invalid="true"] { border-color: #BA4947; }
+
+/* Pop-ups */
+.qf-confirm, .qf-preview { display: flex; flex-direction: column; gap: 12px; padding: 24px 28px; }
+.qf-confirm h2, .qf-confirm p, .qf-preview h2, .qf-preview h3, .qf-preview p { margin: 0; }
+.qf-confirm h2 { font-size: 20px; color: var(--navy); }
+.qf-preview h3 { font-size: 14px; color: var(--navy); }
+.qf-pv-text { white-space: pre-line; font-size: 14px; line-height: 1.6; }

@@ -62,7 +62,7 @@
       <a href="{{ work_progress_url }}" data-nav="progress">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg>
         Work Progress</a>
-      <a href="{% url 'accounts_admin:labour_quotations' %}" data-nav="labour-quotes">
+      <a href="{% url 'payments:estimate_list' %}" data-nav="labour-quotes">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
         Service Quotations</a>
       <a href="#" data-nav="material-quotes">
@@ -77,13 +77,13 @@
       <a href="{% url 'accounts_admin:complaints' %}" data-nav="complaints">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
         Complaints</a>
-      <a href="#" data-nav="reports">
+      <a href="{% url 'reports:job_summary' %}" data-nav="reports">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
         Reports</a>
       <a href="{{ notifications_url }}" data-nav="notifications">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         Notifications</a>
-      <a href="#" data-nav="reviews">
+      <a href="{% url 'reviews:admin_reviews' %}" data-nav="reviews">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
         Reviews</a>
     </nav>
