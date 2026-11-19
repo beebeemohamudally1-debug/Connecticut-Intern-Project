@@ -4,6 +4,10 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from datetime import timedelta
+from django.utils import timezone
+from accounts import verification
+from accounts.models import EmailVerification
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
@@ -56,5 +60,46 @@ class PermissionTests(TestCase):
         request.user = User.objects.create_user(username='c2', email='c2@example.com', password=PASSWORD)
         with self.assertRaises(PermissionDenied):
             view(request)
+            
+class VerificationTests(TestCase):
+    EMAIL = 'new@example.com'
+
+    def test_correct_code_works_once(self):
+        code = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'ok')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'none')
+
+    def test_three_wrong_attempts_lock_the_code(self):
+        code = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000000'), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000001'), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000002'), 'locked')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'locked')
+
+    def test_expired_code(self):
+        code = verification.issue(self.EMAIL, 'register')
+        EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=6))
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'expired')
+
+    def test_cooldown_blocks_immediate_resend(self):
+        verification.issue(self.EMAIL, 'register')
+        with self.assertRaises(verification.VerificationLimit) as ctx:
+            verification.issue(self.EMAIL, 'register')
+        self.assertEqual(ctx.exception.reason, 'cooldown')
+
+    def test_hourly_limit(self):
+        for _ in range(5):
+            verification.issue(self.EMAIL, 'register')
+            EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=5))
+        with self.assertRaises(verification.VerificationLimit) as ctx:
+            verification.issue(self.EMAIL, 'register')
+        self.assertEqual(ctx.exception.reason, 'hourly')
+
+    def test_new_code_replaces_old_one(self):
+        old = verification.issue(self.EMAIL, 'register')
+        EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=2))
+        new = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', old), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', new), 'ok')
 
 # Create your tests here.
