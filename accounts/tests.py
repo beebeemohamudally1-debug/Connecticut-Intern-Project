@@ -8,6 +8,8 @@ from datetime import timedelta
 from django.utils import timezone
 from accounts import verification
 from accounts.models import EmailVerification
+from unittest.mock import patch
+from accounts import auth_messages as M
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
@@ -102,4 +104,78 @@ class VerificationTests(TestCase):
         self.assertEqual(verification.verify(self.EMAIL, 'register', old), 'wrong')
         self.assertEqual(verification.verify(self.EMAIL, 'register', new), 'ok')
 
+class RegistrationFlowTests(TestCase):
+    EMAIL = 'anna@example.com'
+    PASSWORD = 'Str0ngPass!word'
+    DETAILS = {
+        'first_name': 'Anna', 'surname': 'Dupont', 'additional_names': '', 'username': 'anna_d',
+        'phone': '51234567', 'region': 'Flacq', 'address': '12 Main Road',
+        'terms': 'on', 'privacy': 'on',
+    }
+
+    def setUp(self):
+        # fixed code and no real email
+        for target, kwargs in (('accounts.verification.send_code', {'return_value': True}),
+                               ('accounts.verification.secrets.randbelow', {'return_value': 123456})):
+            patcher = patch(target, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def verify_email(self, email=None):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': email or self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        return self.client.post(reverse('accounts:register_verify'), {'code': '123456'})
+
+    def reach_details_page(self):
+        self.verify_email()
+        self.client.post(reverse('accounts:register_password'),
+                         {'password': self.PASSWORD, 'confirm': self.PASSWORD})
+
+    def test_full_customer_registration_creates_user(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_customer'), self.DETAILS)
+        self.assertRedirects(r, reverse('accounts:register_done'), fetch_redirect_response=False)
+        user = User.objects.get(email=self.EMAIL)
+        self.assertEqual(user.role, 'customer')
+        self.assertEqual(user.region.name, 'Flacq')
+        self.assertTrue(user.check_password(self.PASSWORD))
+
+    def test_registered_email_is_refused(self):
+        User.objects.create_user(username='old', email=self.EMAIL, password=self.PASSWORD)
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        r = self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL.upper()})
+        self.assertEqual(r.context['errors']['email'], M.REG_EMAIL_TAKEN)
+
+    def test_wrong_code_is_refused(self):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        r = self.client.post(reverse('accounts:register_verify'), {'code': '000000'})
+        self.assertEqual(r.context['state'], 'wrong')
+        self.assertEqual(r.context['attempts_left'], 2)
+
+    def test_cannot_skip_email_verification(self):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        r = self.client.get(reverse('accounts:register_password'))
+        self.assertRedirects(r, reverse('accounts:register_expired'), fetch_redirect_response=False)
+
+    def test_weak_password_is_refused(self):
+        self.verify_email()
+        r = self.client.post(reverse('accounts:register_password'), {'password': 'abc', 'confirm': 'abc'})
+        self.assertIn('password', r.context['errors'])
+
+    def test_bad_phone_is_refused(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_customer'), {**self.DETAILS, 'phone': '123'})
+        self.assertIn('phone', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_username_check(self):
+        User.objects.create_user(username='taken_name', email='t@example.com', password=self.PASSWORD)
+        url = reverse('accounts:username_check')
+        self.assertEqual(self.client.get(url, {'username': 'free_name'}).status_code, 200)
+        self.assertEqual(self.client.get(url, {'username': 'TAKEN_NAME'}).status_code, 409)
+        self.assertEqual(self.client.get(url, {'username': 'a!'}).status_code, 400)
 # Create your tests here.
