@@ -1,174 +1,182 @@
-{% load static %}
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Handyman Dashboard</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Handyman Dashboard | HandyConnect</title>
     <link rel="stylesheet" href="{% static 'dashboard/css/handyman_dashboard.css' %}">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 </head>
-<body>
-
-<div class="container">
+<body data-page="dashboard" data-uid="{{ hc_uid|default:'guest' }}">
+<div class="layout">
 
     <aside class="sidebar">
-        <div class="logo">
-            <h2>HandyConnect</h2>
-        </div>
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            HandyConnect
+        </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
 
-        <ul class="nav-links">
-            <li><a href="{% url 'handyman_dashboard' %}" class="active">
-                <i class="fas fa-house"></i> Dashboard
-            </a></li>
+        <nav class="nav" aria-label="Main">
+            <a class="active" aria-current="page" href="{% url 'dashboard:handyman_dashboard' %}">Dashboard</a>
+            <a href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}">Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress' %}">Job Tracking</a>
+            <a href="{% url 'dashboard:job_completed' %}">Job Completion</a>
+        </nav>
 
-            <li><a href="{% url 'assigned_jobs' %}">
-                <i class="fas fa-briefcase"></i> Assigned Jobs
-            </a></li>
-
-            <li><a href="{% url 'job_requests' %}">
-                <i class="fas fa-envelope-open-text"></i> Job Requests
-            </a></li>
-
-            <li><a href="{% url 'job_tracking' %}">
-                <i class="fas fa-location-dot"></i> Job Tracking
-            </a></li>
-
-            <li><a href="{% url 'job_progress' %}">
-                <i class="fas fa-spinner"></i> Job In Progress
-            </a></li>
-
-            <li><a href="{% url 'job_completed' %}">
-                <i class="fas fa-circle-check"></i> Job Completed
-            </a></li>
-
-            <li><a href="{% url 'report_customer' %}">
-                <i class="fas fa-triangle-exclamation"></i> Report Customer
-            </a></li>
-
-            <li><a href="{% url 'notifications' %}">
-                <i class="fas fa-bell"></i> Notifications
-            </a></li>
-        </ul>
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
     </aside>
 
-    <main class="content">
-
+    <div class="main">
         <header class="topbar">
-            <h1>Handyman Dashboard</h1>
-
-            <div class="top-actions">
-                <button class="notification-btn">
-                    <i class="fas fa-bell"></i>
-                </button>
-
-                <div class="profile">
-                    <span>name of person</span>
-                </div>
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a></div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
+                </a>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
             </div>
         </header>
 
-        <section class="stats-grid">
+        <main class="content">
+<h1 class="page-title">Welcome back, {{ hc_first|default:"there" }}.</h1>
+<p class="page-sub">Here&rsquo;s a quick look at your work.</p>
 
-            <div class="card">
-                <h3>Assigned Jobs</h3>
-                <p>12</p>
-            </div>
+<div class="stats">
+    <a class="stat" href="{% url 'dashboard:assigned_jobs' %}"><span>Assigned jobs</span><strong id="s-assigned">0</strong><small>Scheduled and waiting</small></a>
+    <a class="stat" href="{% url 'dashboard:job_requests' %}"><span>Pending requests</span><strong id="s-requests">0</strong><small>Waiting for your answer</small></a>
+    <a class="stat" href="{% url 'dashboard:job_in_progress' %}"><span>In progress</span><strong id="s-progress">0</strong><small>Currently on site</small></a>
+    <a class="stat" href="{% url 'dashboard:job_completed' %}"><span>Completed</span><strong id="s-completed">0</strong><small>Finished jobs</small></a>
+</div>
 
-            <div class="card">
-                <h3>Pending Requests</h3>
-                <p>4</p>
-            </div>
+<div class="grid2">
+    <section class="card" id="next-job">
+        <h2>Up next</h2>
+        <p class="muted" id="next-empty" hidden>No scheduled jobs. Check your job requests.</p>
+        <div id="next-body" hidden>
+            <p class="muted small" id="n-id"></p>
+            <h3 id="n-service" style="margin:4px 0 6px;font-size:20px"></h3>
+            <p class="muted" id="n-meta"></p>
+            <p style="margin:14px 0"><a class="btn" href="{% url 'dashboard:job_in_progress' %}">Open job</a></p>
+        </div>
+    </section>
 
-            <div class="card">
-                <h3>In Progress</h3>
-                <p>6</p>
-            </div>
-
-            <div class="card">
-                <h3>Completed</h3>
-                <p>48</p>
-            </div>
-
-        </section>
-
-        <section class="job-card">
-
-            <div class="job-header" onclick="toggleJob()">
-                <h2>Kitchen Sink Leak Repair</h2>
-                <span id="arrow">▲</span>
-            </div>
-
-            <div class="job-body" id="jobContent">
-
-                <div class="job-info">
-                    <h3>Job Brief</h3>
-
-                    <p>
-                        Water is dripping from the pipe below the kitchen sink.
-                        Inspect, replace damaged seal and test the installation.
-                    </p>
-
-                    <ul>
-                        <li>Inspect drain assembly</li>
-                        <li>Replace worn P-trap seal</li>
-                        <li>Leak test</li>
-                        <li>Clean work area</li>
-                    </ul>
-                </div>
-
-                <div class="milestones">
-                    <h3>Job Milestones</h3>
-
-                    <div class="status done">Assigned</div>
-                    <div class="status done">Scheduled</div>
-                    <div class="status active">In Progress</div>
-                    <div class="status">Completed</div>
-
-                    <button class="report-btn">
-                        Report Customer
-                    </button>
-                </div>
-
-            </div>
-
-        </section>
-
-        <section class="material-request">
-
-            <h3>Materials Request</h3>
-
-            <textarea
-                placeholder="Need to purchase new pipe fittings and seal kit...">
-            </textarea>
-
-            <input type="file">
-
-            <button class="send-btn">
-                Send Request
-            </button>
-
-        </section>
-
-    </main>
-
+    <section class="card">
+        <h2>Materials request</h2>
+        <div class="notice ok" id="m-ok" hidden><strong>Request sent</strong><p>The administrator has been notified.</p></div>
+        <form id="mat-form">
+            <label class="field" for="m-text">What do you need? <i>*</i></label>
+            <textarea id="m-text" rows="4" required placeholder="e.g. Pipe fittings and a seal kit for MJO-1042"></textarea>
+            <button class="btn" type="submit">Send request</button>
+        </form>
+    </section>
+</div>
+</main>
+    </div>
 </div>
 
 <script>
-function toggleJob() {
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
+(function () {
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
 
-    const content = document.getElementById('jobContent');
-    const arrow = document.getElementById('arrow');
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+    };
 
-    if(content.style.display === 'none') {
-        content.style.display = 'flex';
-        arrow.innerHTML = '▲';
-    } else {
-        content.style.display = 'none';
-        arrow.innerHTML = '▼';
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+})();
+
+</script>
+<script>
+(function () {
+    var jobs = HC.get('jobs'), reqs = HC.get('requests');
+    function n(s) { return jobs.filter(function (j) { return j.status === s; }).length; }
+    document.getElementById('s-assigned').textContent = n('scheduled');
+    document.getElementById('s-progress').textContent = n('in_progress');
+    document.getElementById('s-completed').textContent = n('completed');
+    document.getElementById('s-requests').textContent = reqs.filter(function (r) { return r.state === 'pending'; }).length;
+
+    var next = jobs.filter(function (j) { return j.status === 'in_progress'; })[0] || jobs.filter(function (j) { return j.status === 'scheduled'; })[0];
+    document.getElementById(next ? 'next-body' : 'next-empty').hidden = false;
+    if (next) {
+        document.getElementById('n-id').textContent = next.id;
+        document.getElementById('n-service').textContent = next.service;
+        document.getElementById('n-meta').textContent = next.customer + ' \u00b7 ' + next.slot + ' \u00b7 MUR ' + next.amount;
     }
-}
+
+    document.getElementById('mat-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var t = document.getElementById('m-text');
+        HC.notify('job', 'Materials request sent', t.value.trim().slice(0, 80));
+        t.value = '';
+        document.getElementById('m-ok').hidden = false;
+    });
+})();
 </script>
 
 </body>
