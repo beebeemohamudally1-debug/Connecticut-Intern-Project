@@ -1,10 +1,10 @@
 # Admin pages (frontend)
 
-This file lists the admin pages built so far. **The admin frontend is still in progress:** more sections (for example Services, Skills, Service Requests, Appointments, Material Quotations, Payments, Reports and Reviews) are still to be built.
+This file lists the admin pages built so far. **The admin frontend is still in progress:** more sections (for example Services, Skills, Service Requests and Payments) are still to be built.
 
 There are two kinds of pages:
 - **Sample-data pages** (the table under "Pages"): only the two Registration Verification pages are left. Their views send **sample data** and their buttons only show a demo message, because the backend has no handyman verification yet.
-- **Service Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users** and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
+- **Service Quotations**, **Material Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users**, **Appointments** (saving still needed) and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -13,7 +13,7 @@ python manage.py runserver
 Open any URL below, for example http://127.0.0.1:8000/admin-portal/users/
 
 ## Demo data (for the pages connected to the backend)
-Service Quotations, Private Feedback, Reports, Complaints, Work Progress and Manage Users show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
+Service Quotations, Material Quotations, Private Feedback, Reports, Complaints, Work Progress, Manage Users and Appointments show real data from the database, so they are empty until there is some. To fill your **local** database with demo data:
 ```
 python manage.py seed_demo
 ```
@@ -21,11 +21,12 @@ It creates:
 - demo users: one admin (`demo_admin`), customers and handymen, all with the password `demo12345`
 - labour estimates to review, approved and waiting for the handyman
 - labour quotations in every status (draft, sent, changes requested, accepted, paid, declined, cancelled)
-- material requests and quotations (labour accepted with no materials yet, both accepted and unpaid, both paid)
+- material purchase requests in every stage (admin review, rejected, with customer, changes requested, declined, approved, paid), with receipt images waiting for review and approved
 - customer reviews (to assess, approved, rejected)
 - complaints in every status (pending, in progress with private messages and a file, resolved with an outcome)
 - jobs in every status, created on different days in the last two months and linked to the demo requests (so the report shows quotation amounts and payment states)
 - arrival times, daily reports and photos for the open and completed jobs, with one delayed job and one flagged job
+- inspection and service appointments in every status (pending, confirmed, completed, cancelled), with one pending appointment that clashes with a confirmed one
 - phone numbers, two suspended accounts, and approved / pending / rejected skill and service changes for the handymen
 
 At the end it prints the links to open. To delete the demo data and create it again:
@@ -57,7 +58,8 @@ The full list of names is in the comment at the top of each template. The connec
 
 **Pages connected to the backend**
 
-- **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`.
+- **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`. A notification with a `url` has its title as a link, so the admin can open the page it is about (it is marked as read on the way).
+- **Logout** (profile menu in `base_admin.html`) posts to `accounts:logout`, like the other pages. That view is still a stub that only goes to the login page; the session is cleared once the auth backend is in.
 - **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is the user's Customer Details or Handyman Profile page.
 - **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status, state).
 - **Handyman Profile** – `handyman`: name, initials, id, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services, reports_url.
@@ -67,6 +69,7 @@ The full list of names is in the comment at the top of each template. The connec
 - **Create Service Quotation** – `form`, `service_request`, `estimate`.
 - **Revise Service Quotation** – `form`, `quotation`.
 - **Service Quotation Details** – `quotation`, `other` (the material quotation of the same request) and `request_payment` (payment state of the whole request).
+- **Material Quotations overview** – `purchase_requests` (each with `request`, `handyman`, `quotation`, and from the view `receipt_list`, `receipts_waiting`, `approved_total`, `difference`, `ready_to_schedule`).
 - **Private Feedback list** – `reviews`, `selected_status`, and `pending_count`, `approved_count`, `rejected_count`.
 - **Feedback Details** – `review`. Approve and Reject post to `reviews:approve_review` and `reviews:reject_review`.
 - **Job Summary Report** – `jobs` (each with `quotation_amount` and `payment_state`), the counts `total_jobs`, `assigned_jobs`, `in_progress_jobs`, `completed_jobs`, `cancelled_jobs`, and the filters `start_date`, `end_date`, `selected_status`, `status_choices`, `errors`.
@@ -77,6 +80,11 @@ The full list of names is in the comment at the top of each template. The connec
 - **Job Progress Details** – `job`: reference, title, handyman, customer, started, due, service, request_ref, scheduled, status, percent, overdue, latest_note, last_report, is_flagged, flag_reason, timeline, reports_url, evidence_url.
 - **Daily Work Reports** – `page`: reference, service, customer, job_url, handymen, reports (report_date, updated_at, handyman, details, percent, photos, url).
 - **Work Evidence** – `page`: reference, title, back_url, back_label, report_date, updated_at, handyman, status, photos (caption, filename, url), notes, notes_title, is_flagged, flag_reason, flag_url, next_url.
+
+- **Appointments list** – `page.appointments` (ref, type, customer, handyman, date, slot, status, url) and the type counts.
+- **Appointment Calendar** – `page.view` (`month`, `week` or `day`), the days with their `events`, and the previous / next links.
+- **Appointment Details** – `page`: the appointment, customer, handyman, `checks` (payment rows and `ready`), `conflict` and `history`.
+- **Schedule / Reschedule** – `page`: the request picker, `checks`, `handymen`, `busy` (confirmed slots per handyman, for the live availability check).
 
 Job `status` is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
 
@@ -100,17 +108,57 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 **Demo data:** see "Demo data" at the top (`python manage.py seed_demo`).
 
 **Still needed from the backend**
-1. **Note to handyman** on Revise (shown but not connected): allow an estimate revision after approval when the customer asks for changes.
+1. **Back to the handyman after a customer revision (FR-A-9 part A):** when the customer asks for changes, the admin should send them to the handyman, who updates the estimate; then the admin revises and re-issues the quotation. Now `LabourEstimate.request_revision` only works on a **submitted** estimate, so an approved one cannot be reopened. Details and the customer-response pop-up show a greyed-out **Ask Handyman to Update** button for this (marked `BACKEND`); **Revise** stays for the admin's part.
 2. **A single-estimate page** (`estimates/<id>/`) for a full Review Labour Estimate page; for now the review is a pop-up on the list.
 3. **Not stored yet:** line items (quantity, unit cost), the admin margin, estimate documents, a "response required by" date for revision requests, a note to customer, a decline reason and a "closed" status.
 4. **Activity log** (including when a quotation was sent). The activity steps are built from the dates that exist, so "sent" has no date.
 5. **Response prompts:** whether the admin has seen a customer's answer is kept in the browser (`localStorage`). Storing it would make it work per admin on any computer.
 6. **Type filter** in `quotation_list`, so material quotations get their own list.
-7. **Links and routes:** an appointment page for **Schedule Appointment**, and routes for `admin_dashboard`, `admin_record_payment` and `admin_issue_invoice`.
+7. **Links and routes:** **Schedule Appointment** now opens the Appointments schedule page. Still missing: routes for `admin_dashboard`, `admin_record_payment` and `admin_issue_invoice`.
 8. **Notifications** for estimates and customer answers (only complaints create notifications now), and `notify_admins` should include `role = 'admin'` users who are not staff.
 9. **Login redirect:** `LOGIN_URL = 'login'` is missing in settings.
-10. **Material process:** after the administrator approves a purchase request, the **customer approves the purchase** before the handyman buys, and the **material quotation is made from the actual costs on the receipts**. Now, forwarding a request creates a material quotation at the estimated cost straight away.
-11. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
+10. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
+
+## Material Quotations (connected to the backend)
+Built on the existing `payments` pages (same layout and pieces as Service Quotations). Needs an account with `role = 'admin'`.
+
+**Flow (FR-A-9 part B)**
+1. The handyman sends a material purchase request (materials and estimated cost).
+2. The administrator approves it and sends the **material quotation** to the customer (no margin), or rejects it.
+3. The customer approves it, rejects it or asks for changes.
+4. The handyman buys the materials and uploads the receipts.
+5. The administrator reviews the receipts.
+6. The service quotation and the material quotation are paid (Record payment on each quotation's page, part C).
+7. Once both are paid, **Schedule Appointment** opens the service schedule page.
+
+There are only two quotations per request: the service (labour) quotation and the material quotation. All steps work now.
+
+| Page | URL | Template |
+|---|---|---|
+| Purchase requests tab (Review and Receipts pop-ups) | `/payments/materials/` | `payments/admin_materials.html` |
+| Quotations tab (the material quotations sent to customers) | `/payments/materials/quotations/` | `payments/material_quotation_list.html` (new) |
+| Material Quotation Details | `/payments/quotations/<id>/` | `payments/quotation_admin_detail.html` (shared) |
+| Revise Material Quotation | `/payments/quotations/<id>/edit/` | `payments/quotation_edit.html` (shared) |
+
+- What the overview uses: `purchase_requests` (each with `request`, `handyman`, `quotation`, and from the view `receipt_list`, `receipts_waiting`, `approved_total`, `difference`).
+- Stages: **Admin review** (submitted), **With customer** or **Changes requested** (quotation sent), **Receipts uploaded** (approved, receipts waiting), **Approved** or **Paid**, **Declined**, **Rejected**.
+- **Review** pop-up: the materials and the estimated cost. **Approve and send to customer** posts `forward` with the total (it can be changed) to `payments:material_request_action`; **Reject** needs a reason.
+- **Receipts** pop-up (view only): each `MaterialReceipt` with its image, amount and status, then the approved receipts, the material quotation and the difference. Receipts are approved or rejected in the payments section, not here. Then **Schedule Appointment** once both quotations are paid (payments themselves are the payments team's section).
+- Details and revise pages: for a material quotation they say "Material Quotation", go back to Material Quotations and light up that sidebar item. Record payment works like the service quotation (once both quotations are accepted). When the customer approves, the prompt says the handyman can buy the materials, with **Review Receipts** (opens that request's receipts pop-up).
+- The customer can ask for changes on the material quotation (`request_revision`). Like service quotations, the changes should go to the handyman first (greyed-out **Ask Handyman to Update**), then the administrator revises the quotation and sends it again.
+
+**Changes outside the templates**
+- `payments/views.py` and `payments/urls.py`: new read-only view `material_quotation_list` (`payments:material_quotation_list`) for the Quotations tab, like the Service Quotations tabs.
+- `payments/views.py`: `admin_materials` also loads the receipts and works out `receipt_list`, `receipts_waiting`, `approved_total`, `difference` and `ready_to_schedule` (both quotations accepted and paid) for each purchase request. Nothing else changed.
+- `config/urls.py`: uploaded files (`/media/`, for example the receipt images) are served while `DEBUG` is on.
+- `templates/base_admin.html`: the sidebar **Material Quotations** link opens the overview.
+
+**Still needed from the backend (payments)**
+1. **Line items:** a purchase request has one text list and one estimated cost, so there is no quantity or unit cost per item.
+2. **Attached documents** on a purchase request, and a **message to the customer** when the quotation is sent.
+3. **Send a material request back to the handyman** when the customer asks for changes, so the handyman can update the materials and costs (like `LabourEstimate.resubmit`). Then the **Ask Handyman to Update** button can be enabled.
+4. **Notify the handyman** when the customer approves the material quotation, so they know they can buy the materials (the payments app sends no notifications yet).
+5. **Payment status page (payments team):** see "Payment status page" under Integration. Once it exists, add a **View Payment Status** button to the Receipts pop-up.
 
 ## Private Feedback (connected to the backend)
 Built on the existing `reviews` app: real views, URLs and the `Review` model. Needs an account with `role = 'admin'` **and staff status** (the reviews views check both).
@@ -222,13 +270,57 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 4. **Job history:** no page for one handyman's jobs, so the button links to `#`.
 5. **Service request page:** no admin page for one request, so the request ids on Customer Details are not links.
 
+## Appointments (connected to the backend, saving still needed)
+Built from the low-fi and high-fi, with the same pieces as Service Quotations. Only admins can open them.
+
+| Page | URL | Template |
+|---|---|---|
+| Appointments list | `/admin-portal/appointments/` | `bookings/admin_appointments.html` |
+| Appointment Calendar (month, week, day) | `/admin-portal/appointments/calendar/` | `bookings/admin_appointment_calendar.html` |
+| Appointment Details | `/admin-portal/appointments/<id>/` | `bookings/admin_appointment_detail.html` |
+| Schedule Inspection / Service | `/admin-portal/appointments/schedule/inspection/` and `.../service/` (`?request=<id>`) | `bookings/admin_appointment_schedule.html` |
+| Reschedule | `/admin-portal/appointments/<id>/reschedule/` | `bookings/admin_appointment_reschedule.html` |
+
+- The views in `accounts/admin_appointments.py` (URLs in `accounts/admin_urls.py`) only **read** `bookings.Appointment`, `ServiceRequest` and the quotations to show the pages.
+- **Nothing is saved yet**, because the bookings app has no views for it:
+  - **Schedule** and **Reschedule** check the form and the booking conflict, then show "Not saved yet".
+  - **Confirm** and **Cancel** pop-ups (`form[data-demo]`) close and show a demo message. Confirm also shows the "Appointment Confirmed" pop-up as a preview.
+- Which requests can be scheduled: requests with an accepted handyman assignment. For a **service**, the labour quotation must be accepted, and the page blocks scheduling (the "Full Offline Payment Required" pop-up) until the labour and material quotations are accepted and paid.
+- **Conflicts:** only **confirmed** appointments block a slot (the model's unique rule). The schedule and reschedule pages check the slot while you choose it and show the "Handyman Booking Conflict" pop-up. On Details, **Confirm** is greyed out while the slot clashes.
+- **No double booking:** a request that already has a pending or confirmed appointment of that type is left out of the request picker. Opened directly (for example from Service Quotation Details), the page says "Already scheduled", links to that appointment and disables the form.
+- **Date passed:** a Pending appointment whose date has passed shows "Date passed" in the list and a warning on Details (reschedule or cancel it).
+- **Cancel** asks for a reason (required in the pop-up).
+- Appointment ids are shown as `APT-1000 + id`. Slots are Morning (08:00 - 12:00) and Afternoon (13:00 - 17:00).
+- **Schedule Appointment** on Service Quotation Details opens the service schedule page for that request.
+- `templates/base_admin.html`: the sidebar **Appointments** link opens the list.
+
+**Still needed from the backend (bookings)**
+1. **Saving the actions** (the places are marked `BACKEND` in the view and templates):
+   - **Schedule:** create a **Pending** `Appointment` (request, handyman, type, date, slot, notes), then open its details page.
+   - **Confirm:** set it to Confirmed with `confirmed_by` and `confirmed_at`, refused if the handyman already has a confirmed appointment in that slot. Then set the Confirm form's `action`, remove `data-demo`, and open the "Appointment Confirmed" pop-up after it saves.
+   - **Reschedule:** save the new date and slot, and put it back to Pending.
+   - **Cancel:** set it to Cancelled and keep the reason (the pop-up sends `reason`; the model has no field for it yet). Then set the Cancel form's `action` and remove `data-demo`.
+   - **Request status:** set the service request to **Booked** once its appointment is confirmed.
+2. **Inspection fee:** not in the backend, so Details shows "Inspection fee: Not recorded in the system" and inspections can be scheduled without it.
+3. **Proposal and customer answer:** there is no stored proposal, and the customer cannot accept or refuse it, so the Customer Confirmation card only shows that it is waiting.
+4. **Handyman availability:** no working hours or days off, so availability only checks confirmed appointments.
+5. **Exact times:** only Morning and Afternoon slots exist.
+6. **Notifications** to the customer and handyman when an appointment is scheduled, confirmed, rescheduled or cancelled.
+7. **Status history:** no log, so the history is built from `created_at`, `confirmed_at` and the current status.
+8. **Payment status page (payments team):** the "Full Offline Payment Required" pop-up on Schedule Service has only Close for now. Once the payment status page exists, add a **View Payment Status** button to it (see Integration).
+9. **Inspection before service (team decision):** a service can be scheduled without a completed inspection. In our flow the quotation comes after the inspection, so this is left open. Add a check if the team wants it strict.
+
 ## Integration (not done yet)
 1. **Registration Verification:** once the backend has handyman verification, replace `APPLICANT` and `APPROVED_APPLICANT` with the real application, keeping the same names, and add the handyman id to the URLs.
 2. **Buttons:** turn these into forms that post to real views:
    - Suspend, Reactivate and Delete (`accounts/_user_modals.html`)
    - Approve and Reject (`admin_handyman_verify.html`)
    - Save on the Admin Profile (remove `data-demo` once it saves)
+   - Schedule, Reschedule, Confirm and Cancel on the Appointments pages (see Appointments)
 3. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
 4. **Navbar search bar:** the search box at the top of every admin page (in `templates/base_admin.html`) is not connected yet. To connect it:
    - Make a search view (for example `admin-portal/search/`) that reads the search text from `request.GET['q']` and shows the matching users, jobs and service requests.
    - In `base_admin.html`, set the form's `action` to that URL, add `name="q"` to the `<input>`, and remove `data-demo` from the `<form>`.
+5. **Payment status page (needed from the payments team):** a read-only page with its own URL that shows the payment status of a request: the service and material quotations, how much was paid, when and how, and what is still owed. The **Payments** link in the sidebar (`templates/base_admin.html`, now `/payments/admin-dashboard/`, which gives a 404) should open it too. It must be separate from **Record payment** (`payments:payment_record`), which is a form for entering a new payment, not for checking the status. Once it exists, add **View Payment Status** buttons that open it from:
+   - the Receipts pop-up on Material Quotations (`payments/admin_materials.html`)
+   - the "Full Offline Payment Required" pop-up on Schedule Service (`bookings/admin_appointment_schedule.html`)
