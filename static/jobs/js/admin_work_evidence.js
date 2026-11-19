@@ -46,7 +46,7 @@
 })();
 
 
-/* The Flag pop-up: open, close, check the reason, send. */
+/* The Flag pop-up: open, close, check the reason, then send it to jobs:flag. */
 (function () {
   var modal = document.getElementById('modal-flag');
   if (!modal) return;
@@ -54,7 +54,6 @@
   var form = modal.querySelector('[data-flag-form]');
   var reason = modal.querySelector('[data-reason]');
   var error = modal.querySelector('[data-error]');
-  var demo = document.querySelector('[data-demo]');
 
   function open() { modal.showModal(); if (reason) reason.focus(); }
 
@@ -87,15 +86,6 @@
       reason.setAttribute('aria-invalid', 'true');
       reason.focus();
       return;
-    }
-    // No real URL yet (sample data): show a demo message instead of sending
-    var action = form.getAttribute('action');
-    if (!action || action === '#') {
-      e.preventDefault();
-      modal.close();
-      demo.textContent = (reason ? 'Submission flagged' : 'Flag removed') +
-        ' (frontend demo only, nothing is saved yet).';
-      demo.hidden = false;
     }
   });
 })();

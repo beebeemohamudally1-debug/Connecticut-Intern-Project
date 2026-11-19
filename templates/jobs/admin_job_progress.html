@@ -23,12 +23,16 @@
     last_report     -> latest ProgressReport.updated_at
     timeline        -> list of events, oldest first: kind ('assigned',
                        'started', 'report', 'delay'), title, when, text.
-                       Built from job.created_at, the first TimeLog and
-                       each ProgressReport.
+                       Built from job.created_at, the first TimeLog, each
+                       ProgressReport, a missed due date, completed_at and
+                       the flag. Only the latest 4 are sent so it fits.
+    is_flagged, flag_reason -> job.is_flagged and job.flag_reason (the
+                       snapshot shows the reason; the button removes the flag)
     reports_url / evidence_url -> the Daily Work Reports and Work Evidence pages
+                       (evidence_url ends in ?from=job so its back link returns here)
   The Flag Report button opens the Work Evidence page with the Flag pop-up
   already open (the pop-up lives on that page and posts to jobs:flag).
-  BACKEND: replace the sample data with the real job.
+  Connected: accounts/admin_views.py job_progress (URL has the job id).
 {% endcomment %}
 
 {% block title %}Job Progress Details | HandyConnect{% endblock %}
@@ -49,7 +53,7 @@
   <div class="jd-actions">
     <a class="jd-btn jd-flag" href="{{ job.evidence_url|default:'#' }}#flag">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
-      Flag Report
+      {% if job.is_flagged %}Remove Flag{% else %}Flag Report{% endif %}
     </a>
     <a class="jd-btn jd-evidence" href="{{ job.evidence_url|default:'#' }}">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>
@@ -65,9 +69,9 @@
       <div><dt>Handyman</dt><dd>{{ job.handyman }}</dd></div>
       <div><dt>Customer</dt><dd>{{ job.customer }}</dd></div>
       <div><dt>Job Started</dt><dd>{% if job.started %}{{ job.started|date:"d M Y · H:i" }}{% else %}Not started yet{% endif %}</dd></div>
-      <div><dt>Expected Completion</dt><dd>{{ job.due|date:"d M Y" }}</dd></div>
+      <div><dt>Expected Completion</dt><dd>{{ job.due|date:"d M Y"|default:"Not set" }}</dd></div>
       <div class="jd-line"><dt>Service</dt><dd>{{ job.service }}</dd></div>
-      <div class="jd-line"><dt>Appointment</dt><dd>{{ job.request_ref|default:"-" }}{% if job.scheduled %} &middot; {{ job.scheduled|date:"d M Y" }}{% endif %}</dd></div>
+      <div class="jd-line"><dt>Appointment</dt><dd>{% if job.request_ref %}{{ job.request_ref }} &middot; {% endif %}{{ job.scheduled|date:"d M Y"|default:"Not scheduled" }}</dd></div>
     </dl>
   </section>
 
@@ -84,6 +88,14 @@
       <div>
         <p class="jd-delay-title">{{ job.overdue }}</p>
         <p class="jd-delay-text">{{ job.latest_note }}</p>
+      </div>
+    </div>
+    {% elif job.is_flagged %}
+    <div class="jd-delay">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+      <div>
+        <p class="jd-delay-title">Flagged for review</p>
+        <p class="jd-delay-text">{{ job.flag_reason }}</p>
       </div>
     </div>
     {% endif %}

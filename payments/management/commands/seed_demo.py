@@ -1,5 +1,5 @@
 """Fill the local database with demo data for the admin pages (Service Quotations, payments,
-materials and Private Feedback).
+materials, Private Feedback, Job Summary, Complaints, Work Progress and Manage Users).
 
 Run:      python manage.py seed_demo
 Start over: python manage.py seed_demo --reset
@@ -7,16 +7,19 @@ Start over: python manage.py seed_demo --reset
 Only for local testing. Every demo user starts with "demo_", so the data is easy to find
 and remove. It prints the links to open at the end.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from bookings.models import ServiceRequest, ServiceRequestAssignment
-from jobs.models import Job
+from bookings.models import HandymanProfileRequest, ServiceRequest, ServiceRequestAssignment
+from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
+from jobs.models import Job, ProgressReport, TimeLog, WorkEvidence
 from reviews.models import Review
 from payments.models import LabourEstimate, MaterialPurchaseRequest, Payment, Quotation
 
@@ -43,11 +46,12 @@ class Command(BaseCommand):
         self.print_links()
 
     # ------------------------------------------------------------------ helpers
-    def user(self, username, role, first, last):
+    def user(self, username, role, first, last, phone='', active=True):
         # The admin portal pages also need is_staff (dashboard.permissions.role_required)
         u, made = User.objects.get_or_create(
             username=username, defaults={'role': role, 'first_name': first, 'last_name': last,
-                                         'email': f'{username}@example.com', 'is_staff': role == 'admin'})
+                                         'email': f'{username}@example.com', 'is_staff': role == 'admin',
+                                         'phone': phone, 'is_active': active})
         if made:
             u.set_password('demo12345')
             u.save()
@@ -59,9 +63,15 @@ class Command(BaseCommand):
         MaterialPurchaseRequest.objects.filter(**demo).delete()
         Quotation.objects.filter(**demo).delete()
         LabourEstimate.objects.filter(**demo).delete()
+        demo_complaints = Complaint.objects.filter(submitted_by__username__startswith='demo_')
+        ComplaintLog.objects.filter(complaint__in=demo_complaints).delete()
+        ComplaintEvidence.objects.filter(complaint__in=demo_complaints).delete()
+        ComplaintMessage.objects.filter(complaint__in=demo_complaints).delete()
+        demo_complaints.delete()
         Review.objects.filter(customer__username__startswith='demo_').delete()
         Job.objects.filter(customer__username__startswith='demo_').delete()
         ServiceRequestAssignment.objects.filter(service_request__customer__username__startswith='demo_').delete()
+        HandymanProfileRequest.objects.filter(handyman__username__startswith='demo_').delete()
         ServiceRequest.objects.filter(customer__username__startswith='demo_').delete()
         User.objects.filter(username__startswith='demo_').delete()
         self.stdout.write('Old demo data deleted.')
@@ -69,12 +79,16 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------- create
     def create(self):
         admin = self.user('demo_admin', 'admin', 'Demo', 'Admin')
-        customers = [self.user('demo_aisha', 'customer', 'Aisha', 'Khan'),
-                     self.user('demo_priya', 'customer', 'Priya', 'Nair'),
-                     self.user('demo_david', 'customer', 'David', 'Park'),
-                     self.user('demo_sarah', 'customer', 'Sarah', 'Thompson')]
-        handymen = [self.user('demo_marcus', 'handyman', 'Marcus', 'Reed'),
-                    self.user('demo_alex', 'handyman', 'Alex', 'Smith')]
+        customers = [self.user('demo_aisha', 'customer', 'Aisha', 'Khan', '5 712 3344'),
+                     self.user('demo_priya', 'customer', 'Priya', 'Nair', '5 845 1209'),
+                     self.user('demo_david', 'customer', 'David', 'Park', '5 903 6672'),
+                     self.user('demo_sarah', 'customer', 'Sarah', 'Thompson', '5 987 6543')]
+        handymen = [self.user('demo_marcus', 'handyman', 'Marcus', 'Reed', '5 731 1145'),
+                    self.user('demo_alex', 'handyman', 'Alex', 'Smith', '5 644 2091')]
+        # Manage Users: suspended accounts (is_active = False) and approved skills / services
+        self.user('demo_daniel', 'customer', 'Daniel', 'Brooks', '5 412 7788', active=False)
+        self.user('demo_jean', 'handyman', 'Jean', 'Laval', '5 220 4810', active=False)
+        self.profile_requests(admin, handymen)
 
         # (key, service, customer, handyman, labour, breakdown, estimate status, quotation status)
         rows = [
@@ -150,6 +164,7 @@ class Command(BaseCommand):
             (2, 0, 'Light fitting', 5, 'approved', 'Quick and tidy. Would book again.', 25),
             (3, 0, 'Fence painting', 1, 'rejected', 'Terrible!!! call me now 5 999 9999', 40),
         ]
+        review_jobs = []
         for c, h, service, rating, status, comment, days_ago in reviews:
             when = timezone.now() - timedelta(days=days_ago)
             job = Job.objects.create(customer=customers[c], handyman=handymen[h], service_name=service,
@@ -157,6 +172,7 @@ class Command(BaseCommand):
                                      status=Job.COMPLETED, completed_at=when - timedelta(hours=3),
                                      scheduled_start=when - timedelta(days=1))
             Job.objects.filter(pk=job.pk).update(created_at=when - timedelta(days=5))
+            review_jobs.append(job)
             review = Review.objects.create(job=job, customer=customers[c], rating=rating, comment=comment)
             done = status != 'pending'
             Review.objects.filter(pk=review.pk).update(
@@ -166,6 +182,7 @@ class Command(BaseCommand):
         # Jobs for the Job Summary report (created after the review jobs, so they are listed first), linked to the requests above so the report shows
         # the accepted quotation amount and the payment status.
         now = timezone.now()
+        report_jobs = {}
         for key, status, h, days in [('paid', Job.COMPLETED, 1, 6), ('accepted', Job.ASSIGNED, 0, -3),
                                      ('accepted_waiting', Job.ASSIGNED, 0, -5),
                                      ('changes_requested', Job.IN_PROGRESS, 1, -1),
@@ -178,7 +195,183 @@ class Command(BaseCommand):
                 completed_at=now - timedelta(days=days - 1) if status == Job.COMPLETED else None)
             # created_at is set automatically; move it back so the report's date filter has a spread
             Job.objects.filter(pk=job.pk).update(created_at=now - timedelta(days=abs(days) + 4))
+            report_jobs[key] = job
 
+        self.complaints(admin, review_jobs)
+        self.work_progress(admin, customers, handymen, report_jobs)
+
+    def complaints(self, admin, jobs):
+        """Demo complaints in every status, with private messages, a photo and a status log."""
+        now = timezone.now()
+
+        def make(job, by_customer, subject, description, days_ago):
+            filer, other = (job.customer, job.handyman) if by_customer else (job.handyman, job.customer)
+            c = Complaint.objects.create(submitted_by=filer, against=other, job=job,
+                                         subject=subject, description=description)
+            when = now - timedelta(days=days_ago)
+            Complaint.objects.filter(pk=c.pk).update(created_at=when)
+            c.created_at = when   # keep it when the status is saved later
+            log = ComplaintLog.objects.create(complaint=c, actor=filer, to_status=Complaint.PENDING,
+                                              note='Complaint submitted')
+            ComplaintLog.objects.filter(pk=log.pk).update(created_at=when)
+            return c, when
+
+        def say(c, author, body, when, recipient=None):
+            kind = ComplaintMessage.ENQUIRY if recipient else ComplaintMessage.RESPONSE
+            m = ComplaintMessage.objects.create(complaint=c, author=author, recipient=recipient, kind=kind, body=body)
+            ComplaintMessage.objects.filter(pk=m.pk).update(created_at=when)
+
+        def move(c, to, when, note, outcome=''):
+            ComplaintLog.objects.filter(pk=ComplaintLog.objects.create(
+                complaint=c, actor=admin, from_status=c.status, to_status=to, note=note).pk).update(created_at=when)
+            c.status = to
+            if outcome:
+                c.outcome, c.resolved_by, c.resolved_at = outcome, admin, when
+            c.save()
+
+        # Pending: nobody has looked yet
+        make(jobs[2], True, 'Door still squeaks',
+             'The hinge was replaced but the door still squeaks when it closes. The handyman also arrived an hour late.', 2)
+        make(jobs[3], False, 'Customer was not home',
+             'I arrived at the agreed time but nobody was home, and the customer did not answer the phone.', 1)
+
+        # In progress: enquiries sent, one person replied, with a photo
+        c, when = make(jobs[0], True, 'Cabinet still damp',
+                       'The sink no longer leaks, but the cabinet floor still feels damp. Could someone check it is safe?', 6)
+        say(c, admin, 'Thanks for letting us know. Is there fresh water under the sink, or is the wood damp from before? A photo would help.',
+            when + timedelta(hours=2), recipient=c.submitted_by)
+        say(c, admin, 'We are looking into a moisture concern after the sink repair. Was the cabinet dry when you finished?',
+            when + timedelta(hours=2, minutes=5), recipient=c.against)
+        move(c, Complaint.IN_PROGRESS, when + timedelta(hours=2), 'Enquiry sent')
+        say(c, c.submitted_by, 'There is no fresh drip. The wood feels damp near the back. I have attached a photo.',
+            when + timedelta(hours=5))
+        ComplaintEvidence.objects.create(complaint=c, uploaded_by=c.submitted_by,
+                                         file=ContentFile(b'%PDF-1.4 demo photo', name='cabinet-moisture.pdf'))
+
+        # Resolved: both replied, outcome recorded
+        c, when = make(jobs[1], True, 'Paint marks on the floor',
+                       'There are paint marks on the wooden floor near the wall that was painted.', 12)
+        say(c, admin, 'Could you send a photo of the marks and tell us how large they are?', when + timedelta(hours=3),
+            recipient=c.submitted_by)
+        say(c, admin, 'The customer reports paint marks on the floor. Was the floor covered while you worked?',
+            when + timedelta(hours=3, minutes=10), recipient=c.against)
+        move(c, Complaint.IN_PROGRESS, when + timedelta(hours=3), 'Enquiry sent')
+        say(c, c.submitted_by, 'Three small marks near the skirting board, each about the size of a coin.', when + timedelta(hours=6))
+        say(c, c.against, 'The floor was covered, but one sheet moved. I can come back and clean it at no charge.',
+            when + timedelta(hours=8))
+        move(c, Complaint.RESOLVED, when + timedelta(days=2), 'Outcome recorded',
+             outcome='The handyman returned at no charge and removed the paint marks. The customer confirmed the floor is clean.')
+
+    def profile_requests(self, admin, handymen):
+        """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""
+        now = timezone.now()
+        H = HandymanProfileRequest
+        rows = [
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Pipe installation', H.STATUS_APPROVED, 30),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Water heater repair', H.STATUS_APPROVED, 29),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Bathroom plumbing', H.STATUS_APPROVED, 28),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Pipe leak repair', H.STATUS_APPROVED, 28),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Tap replacement', H.STATUS_APPROVED, 27),
+            (0, H.TYPE_SERVICE, H.ACTION_MODIFY, 'Tap replacement', 'Tap and mixer replacement', H.STATUS_APPROVED, 10),
+            (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gate repair', H.STATUS_APPROVED, 8),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Roof repair', H.STATUS_PENDING, 2),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Electrical repair', H.STATUS_APPROVED, 25),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Painting', H.STATUS_APPROVED, 24),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Light fitting', H.STATUS_APPROVED, 24),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Wall painting', H.STATUS_APPROVED, 23),
+            (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gas fitting', H.STATUS_REJECTED, 12),
+        ]
+        for h, kind, action, current, requested, status, days in rows:
+            done = status != H.STATUS_PENDING
+            H.objects.create(handyman=handymen[h], request_type=kind, action=action, current_value=current,
+                             requested_value=requested, status=status,
+                             reviewed_by=admin if done else None,
+                             reviewed_at=now - timedelta(days=days - 1) if done else None)
+
+    def work_progress(self, admin, customers, handymen, report_jobs):
+        """Arrival times, daily reports and photos for Monitor Work Progress,
+        with one delayed job and one flagged job."""
+        today = timezone.localdate()
+
+        def at(days_ago, hour, minute=0):
+            return timezone.make_aware(datetime.combine(today - timedelta(days=days_ago), time(hour, minute)))
+
+        def arrive(job, days_ago, out=True):
+            TimeLog.objects.create(job=job, arrived_at=at(days_ago, 9),
+                                   clocked_out_at=at(days_ago, 16) if out else None)
+
+        def report(job, days_ago, percent, details, photos=()):
+            r = ProgressReport.objects.create(job=job, author=job.handyman, report_date=today - timedelta(days=days_ago),
+                                              details=details, percent_complete=percent)
+            ProgressReport.objects.filter(pk=r.pk).update(updated_at=at(days_ago, 16, 30))
+            for i, caption in enumerate(photos, 1):
+                ev = WorkEvidence.objects.create(job=job, uploaded_by=job.handyman, caption=caption,
+                                                 image=self.photo(f'{job.reference.lower()}_{days_ago}_{i}.png', i))
+                WorkEvidence.objects.filter(pk=ev.pk).update(uploaded_at=at(days_ago, 16, 10 + i))
+
+        # Delayed: due 2 days ago and still in progress (waiting for a part)
+        late = Job.objects.create(customer=customers[0], handyman=handymen[0], service_name='Plumbing',
+                                  description='Kitchen pipe repair and replacement', address='12 Royal Road, Port Louis',
+                                  status=Job.IN_PROGRESS, scheduled_start=at(6, 9), due_date=today - timedelta(days=2))
+        Job.objects.filter(pk=late.pk).update(created_at=at(8, 10, 30))
+        arrive(late, 6)
+        report(late, 6, 10, 'Met the customer on site, confirmed the work and photographed the damaged pipe.',
+               ['Damaged pipe before work'])
+        report(late, 5, 35, 'Turned off the water and removed the damaged pipe section. Site ready for the new pipes.',
+               ['Old pipe removed', 'Water supply isolated'])
+        report(late, 4, 65, 'New supply pipes fitted and joints tightened. First leak check passed.',
+               ['Pipework overview', 'New supply connection', 'Under-sink joint', 'Leak check'])
+        report(late, 2, 65, 'Waiting for a replacement elbow fitting before the final pressure test.',
+               ['Missing fitting'])
+
+        # Flagged: on time, but the latest photo does not match the report
+        flagged = Job.objects.create(customer=customers[1], handyman=handymen[1], service_name='Electrical',
+                                     description='Living room rewiring', address='5 Rue Pope Hennessy, Curepipe',
+                                     status=Job.IN_PROGRESS, scheduled_start=at(3, 9), due_date=today + timedelta(days=2),
+                                     is_flagged=True, flagged_by=admin, flagged_at=at(0, 9, 15),
+                                     flag_reason='The photo uploaded yesterday shows a different room from the one in the report.')
+        Job.objects.filter(pk=flagged.pk).update(created_at=at(5, 11))
+        arrive(flagged, 3)
+        report(flagged, 3, 30, 'Old wiring traced and the circuit switched off. Started removing old sockets.',
+               ['Old socket removed'])
+        report(flagged, 1, 50, 'New cables run along the living room wall. Sockets fitted on one side.',
+               ['New sockets fitted'])
+
+        # On time and in progress (Wall painting)
+        job = report_jobs['changes_requested']
+        Job.objects.filter(pk=job.pk).update(due_date=today + timedelta(days=3))
+        arrive(job, 1)
+        report(job, 1, 40, 'Walls washed, cracks filled and sanded. Masking done around the windows.',
+               ['Walls prepared', 'Cracks filled'])
+        arrive(job, 0, out=False)
+        report(job, 0, 55, 'First coat applied to two walls.', ['First coat'])
+
+        # Completed (Water heater service)
+        job = report_jobs['paid']
+        Job.objects.filter(pk=job.pk).update(due_date=today - timedelta(days=5),
+                                             completion_notes='Old element replaced and thermostat set to 60°C. '
+                                                              'The tank was refilled and tested; no leaks.')
+        arrive(job, 6)
+        report(job, 6, 50, 'Drained the tank and removed the old heating element.', ['Tank drained'])
+        report(job, 5, 100, 'New element and thermostat fitted. Tank refilled and tested.',
+               ['New element fitted', 'Thermostat set'])
+
+        # Assigned, not started yet
+        for key, days in [('accepted', 4), ('accepted_waiting', 6)]:
+            Job.objects.filter(pk=report_jobs[key].pk).update(due_date=today + timedelta(days=days))
+
+    def photo(self, name, n):
+        """A small plain image to stand in for a site photograph."""
+        from PIL import Image, ImageDraw
+        colours = [(203, 221, 240), (226, 214, 196), (210, 228, 214), (232, 215, 222)]
+        img = Image.new('RGB', (480, 320), colours[(n - 1) % len(colours)])
+        d = ImageDraw.Draw(img)
+        d.rectangle([60, 70, 420, 250], outline=(70, 90, 120), width=6)
+        d.line([60, 250, 200, 140, 300, 210, 360, 160, 420, 250], fill=(70, 90, 120), width=6)
+        d.ellipse([320, 95, 370, 145], fill=(240, 170, 80))
+        buf = BytesIO()
+        img.save(buf, 'PNG')
+        return ContentFile(buf.getvalue(), name=name)
 
     def material(self, admin, handyman, key, items, cost, paid):
         mat = MaterialPurchaseRequest.objects.create(
@@ -210,6 +403,8 @@ class Command(BaseCommand):
         out(f'  Quotations:        {BASE}/payments/quotations/')
         out(f'  Materials:         {BASE}/payments/materials/')
         out(f'  Private feedback:  {BASE}/reviews/admin/')
+        out(f'  Work progress:     {BASE}/admin-portal/work-progress/')
+        out(f'  Manage users:      {BASE}/admin-portal/users/')
         if 'needs_quote' in ids:
             i = ids['needs_quote']
             out('\nCreate quotation (from an approved estimate)')
@@ -227,4 +422,11 @@ class Command(BaseCommand):
         if 'accepted' in ids and ids['accepted']['quotation']:
             out('\nRecord payment (both quotations accepted)')
             out(f'  {BASE}/payments/quotations/{ids["accepted"]["quotation"]}/pay/')
+        late = Job.objects.filter(customer__username__startswith='demo_', is_flagged=False,
+                                  description='Kitchen pipe repair and replacement').first()
+        if late:
+            out('\nWork progress (delayed job)')
+            out(f'  Job progress:      {BASE}/admin-portal/work-progress/{late.pk}/')
+            out(f'  Daily reports:     {BASE}/admin-portal/work-progress/{late.pk}/reports/')
+            out(f'  Evidence:          {BASE}/admin-portal/work-progress/{late.pk}/evidence/')
         out('')

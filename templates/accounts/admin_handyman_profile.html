@@ -2,9 +2,18 @@
 {% load static %}
 {% comment %}
   Handyman Profile (section 3, screen 03).
-  Data comes from the view as `handyman`: name, initials, id, kind, email,
-  phone, areas, availability, status, verified, registered, completed,
-  assigned, skills (list of names) and services (list of names).
+  Data comes from the view as `handyman` (accounts/admin_views.py handyman_profile):
+    name, initials, email, phone -> accounts.User
+    id                           -> USR-<user id>
+    status                       -> 'Active' or 'Suspended' (user.is_active)
+    registered                   -> user.date_joined
+    completed, assigned          -> counts of the handyman's jobs (completed / open)
+    skills, services             -> from the handyman's approved
+                                    bookings.HandymanProfileRequest changes
+    reports_url                  -> Daily Work Reports of the latest job ('' if none)
+  Not in the backend yet: verified (None, so no badge), service areas and
+  availability ("Not recorded"), registration documents, and the Suspend /
+  Reactivate / Delete views (still demo only).
   The three pop-ups live in _user_modals.html (screens 05, 06, 07).
 {% endcomment %}
 
@@ -13,7 +22,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=2">
 {% url 'accounts_admin:users' as users_url %}
 
 <a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
@@ -21,11 +30,10 @@
 <div class="bar">
   <div>
     <h1>Handyman Profile</h1>
-    <p class="sub">{{ handyman.id }} &bull; {% if handyman.verified %}Verified handyman{% else %}Unverified handyman{% endif %}</p>
+    <p class="sub">{{ handyman.id }}{% if handyman.verified %} &bull; Verified handyman{% elif handyman.verified is False %} &bull; Unverified handyman{% endif %}</p>
   </div>
   <div class="actions" data-actions>
-    {# BACKEND: link to this handyman's daily work report #}
-    <a class="btn soft-green s" href="#">View Daily Work Report</a>
+    {% if handyman.reports_url %}<a class="btn soft-green s" href="{{ handyman.reports_url }}">View Daily Work Report</a>{% endif %}
     <button class="btn soft-red s" type="button" data-open="delete">Delete Account</button>
     {% if handyman.status == 'Suspended' %}
       <button class="btn soft-green s" type="button" data-open="reactivate">Reactivate Account</button>
@@ -45,7 +53,7 @@
       <span class="avatar big" aria-hidden="true">{{ handyman.initials }}</span>
       <div>
         <h2>{{ handyman.name }}</h2>
-        {% if handyman.verified %}<span class="b gr">Verified</span>{% else %}<span class="b ye">Not verified</span>{% endif %}
+        {% if handyman.verified %}<span class="b gr">Verified</span>{% elif handyman.verified is False %}<span class="b ye">Not verified</span>{% endif %}
       </div>
     </div>
     <dl class="hp-facts">
@@ -67,7 +75,7 @@
   <section class="card cd-card hp-skills">
     <div class="card-head">
       <h2>Approved Skills</h2>
-      <span class="b">{{ handyman.skills|length }} skills</span>
+      <span class="b">{{ handyman.skills|length }} skill{{ handyman.skills|length|pluralize }}</span>
     </div>
     <ul class="list">
       {% for s in handyman.skills %}
@@ -75,6 +83,8 @@
         <span class="skill"><svg class="dia" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/><path d="M12 8l4 4-4 4-4-4z"/></svg>{{ s }}</span>
         <span class="b gr">Approved</span>
       </li>
+      {% empty %}
+      <li class="mut">No approved skills yet.</li>
       {% endfor %}
     </ul>
   </section>
@@ -84,6 +94,8 @@
     <ul class="list">
       {% for s in handyman.services %}
       <li><span>{{ s }}</span><strong class="state ok">Active</strong></li>
+      {% empty %}
+      <li class="mut">No approved services yet.</li>
       {% endfor %}
     </ul>
   </section>
