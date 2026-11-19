@@ -1,0 +1,63 @@
+/* Material Quotations - Overview (admin).
+   On top of admin_labour_quotations.css and admin_quotation_lists.css (same cards, table and pop-ups
+   as Service Quotations). Adds the list title, the date filter column and the receipt pop-up. */
+
+.mq-title { margin: 0 0 8px; font-size: 18px; line-height: 1.3; color: var(--navy); }
+.lq-tools { grid-template-columns: minmax(200px, 1fr) 200px 200px auto; }
+
+.btn.soft-blue { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
+.btn.soft-blue:hover { box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+
+/* Purchase request pop-up */
+.mq-items { margin: 0 0 8px; padding-left: 18px; }
+.mq-items li { margin: 2px 0; }
+.mq-est { padding-top: 8px; border-top: 1px dashed var(--line); color: var(--muted); }
+.mq-est strong { color: var(--navy); }
+.mq-total { display: flex; flex-direction: column; gap: 4px; }
+.mq-total .in { max-width: 220px; }
+.mq-total .mut { margin: 0; font-size: 12px; }
+
+/* Receipt pop-up: wider, a list of receipts and the reconciliation */
+.ql-modal.mq-wide { width: min(680px, calc(100% - 32px)); }
+.mq-body { display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 80px); padding: 24px 28px; overflow-y: auto; }
+.mq-receipts { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mq-receipt {
+  display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 14px;
+  padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.mq-receipt:hover { border-color: #C9D8EC; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12); }
+.mq-thumb { display: block; width: 56px; height: 72px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: var(--grey-bg); }
+.mq-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mq-thumb:hover { border-color: var(--blue); }
+.mq-rinfo p { margin: 0; }
+.mq-rname { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--navy); }
+.mq-ramt { margin-top: 2px !important; font-size: 16px; font-weight: 700; color: var(--navy); }
+.mq-rinfo .mut { font-size: 12px; }
+.mq-rname .b { padding: 2px 8px; font-size: 11px; font-weight: 600; border-radius: 100px; }
+.mq-rname .b::before { display: none; }
+.b.mq-submitted { color: #A66A16; background: #FFF4DF; }
+.b.mq-approved { color: #11836D; background: #E6F6EF; }
+.b.mq-rejected { color: #C84C55; background: #FDEBEC; }
+
+.mq-rform { display: flex; flex-direction: column; gap: 6px; width: 220px; }
+.mq-rform textarea.in { min-height: 36px; padding: 6px 10px; font-size: 13px; }
+.mq-rbtns { display: flex; justify-content: flex-end; gap: 8px; }
+.mq-rbtns .btn { font: inherit; font-size: 13px; cursor: pointer; }
+
+.mq-recon { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; padding: 12px 14px; background: var(--grey-bg); border-radius: 10px; }
+.mq-recon dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.mq-recon dd { margin: 2px 0 0; font-size: 15px; font-weight: 700; color: var(--navy); }
+.mq-recon .over dd { color: #C84C55; }
+.mq-note { margin: 0 !important; font-size: 12px; }
+.mq-final { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px dashed #C9D8EC; border-radius: 10px; }
+.mq-final p { margin: 0; }
+.mq-final .mut { font-size: 12px; }
+.mq-final .btn { flex-shrink: 0; font: inherit; font-size: 14px; }
+.mq-final .btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+
+@media (max-width: 767px) {
+  .mq-receipt { grid-template-columns: 56px 1fr; }
+  .mq-rform { grid-column: 1 / -1; width: auto; }
+  .mq-recon { grid-template-columns: 1fr; }
+}
