@@ -6,8 +6,16 @@
   The sidebar and navbar come from base_admin.html, so this file only holds the
   page itself: the heading and the "Profile Information" card.
 
-  Data comes from the view as `admin` (name, initials, email, role, status).
-  BACKEND: replace the sample values with the logged-in administrator.
+  Data comes from the view as `admin`, from the logged-in user (accounts.User):
+    name      -> user.get_full_name() (or the username)
+    initials  -> from the name
+    email     -> user.email
+    role      -> 'Administrator'
+    status    -> 'Active' if user.is_active
+  Connected: accounts/admin_views.py profile (admin only).
+  Saving is NOT connected yet: there is no profile update view. When one
+  exists, set the form's action to it, remove data-demo, and read
+  `full_name` and `email` from the POST.
 {% endcomment %}
 
 {% block title %}Admin Profile | HandyConnect{% endblock %}
@@ -24,7 +32,7 @@
   </div>
 </div>
 
-{# BACKEND: remove data-demo when the profile update view exists. #}
+{# BACKEND: remove data-demo when the profile update view exists (see the comment at the top). #}
 <form class="card profile" method="post" action="" novalidate data-profile-form
       data-demo="Profile changes are not saved yet (frontend demo only).">
   {% csrf_token %}

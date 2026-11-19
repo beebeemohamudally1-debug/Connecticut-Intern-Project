@@ -5,26 +5,31 @@
 
   Data comes from the view as `page`:
     reference, title -> jobs.Job reference and description (short)
-    reports_url      -> the Daily Work Reports page (back link)
-    report_date      -> the report's report_date (a date)
+    back_url, back_label -> the page the admin came from: Job Progress Details
+                        (opened with ?from=job) or Daily Work Reports
+    report_date      -> the report's report_date (a date; empty if the job
+                        has no report yet)
     updated_at       -> the report's updated_at (gives the time)
-    handyman         -> handyman full name
+    handyman         -> the report's author (or the job's handyman)
     status, status_label -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
                             ('delayed' = job.is_delayed)
-    photos           -> one per jobs.WorkEvidence:
+    photos           -> the jobs.WorkEvidence uploaded on the report's day
+                        (every photo if there is no report yet):
         caption      -> evidence.caption
         filename     -> file name of evidence.image
-        url          -> jobs:evidence_file for that photo (empty = placeholder)
-    notes            -> job.completion_notes
+        url          -> jobs:evidence_file for that photo
+    notes            -> job.completion_notes, or the report's details while
+                        the job is not completed yet
+    notes_title      -> 'Completion notes' or 'Report notes'
     is_flagged, flag_reason -> job.is_flagged and job.flag_reason
   The Flag pop-up is at the bottom of this page. It posts to jobs:flag:
-    flag_url -> the jobs:flag URL for this job (the form needs it as its
-                action; the csrf token is already in the form)
-  The form sends one field, `reason` (required). If the job is already
-  flagged, jobs:flag removes the flag instead, so the pop-up then asks to
-  remove it (no reason needed).
-  BACKEND: replace the sample data with the real job. Photos are shown 3 per
-  page with page buttons in the browser; send them all.
+    flag_url -> the jobs:flag URL for this job
+    next_url -> this page, sent as `next` so jobs:flag comes back here
+  The form sends `reason` (required). If the job is already flagged,
+  jobs:flag removes the flag instead, so the pop-up then asks to remove it
+  (no reason needed).
+  Connected: accounts/admin_views.py work_evidence. Photos are shown 3 per
+  page with page buttons in the browser.
 {% endcomment %}
 
 {% block title %}Work Evidence | HandyConnect{% endblock %}
@@ -32,9 +37,9 @@
 {% block crumb %}Work Progress{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'jobs/css/admin_work_evidence.css' %}">
+<link rel="stylesheet" href="{% static 'jobs/css/admin_work_evidence.css' %}?v=2">
 
-<a class="we-back" href="{{ page.reports_url|default:'#' }}">&larr; Daily Work Reports</a>
+<a class="we-back" href="{{ page.back_url }}">&larr; {{ page.back_label }}</a>
 
 <div class="bar">
   <div>
@@ -47,11 +52,13 @@
   </button>
 </div>
 
-<p class="we-demo" role="status" data-demo hidden></p>
+{% if messages %}
+<div class="we-flash" role="status">{% for m in messages %}<p class="{{ m.tags }}">{{ m }}</p>{% endfor %}</div>
+{% endif %}
 
 <section class="we-strip" aria-label="Submission details">
   <div><span>Job ID</span><strong>{{ page.reference }}</strong></div>
-  <div><span>Report Date</span><strong>{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}</strong></div>
+  <div><span>Report Date</span><strong>{% if page.report_date %}{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}{% else %}No report yet{% endif %}</strong></div>
   <div><span>Handyman</span><strong>{{ page.handyman }}</strong></div>
   <span class="b wp-{{ page.status }}">{{ page.status_label }}</span>
 </section>
@@ -77,6 +84,8 @@
         <span class="mut">{{ p.filename }}</span>
       </figcaption>
     </figure>
+    {% empty %}
+    <p class="mut we-none">No photographs were uploaded {% if page.report_date %}on this day{% else %}for this job yet{% endif %}.</p>
     {% endfor %}
   </div>
 
@@ -87,7 +96,7 @@
 </section>
 
 <section class="card we-card" aria-label="Completion notes">
-  <h2>Completion notes</h2>
+  <h2>{{ page.notes_title|default:"Completion notes" }}</h2>
   <div class="we-notes">
     <p class="we-by">SUBMITTED BY {{ page.handyman|upper }}</p>
     <p>{{ page.notes|default:"No completion notes have been submitted yet." }}</p>
@@ -111,6 +120,7 @@
 <dialog class="fl-modal" id="modal-flag" aria-labelledby="fl-title">
   <form method="post" action="{{ page.flag_url }}" data-flag-form novalidate>
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ page.next_url }}">
     <div class="fl-head">
       <span class="fl-icon" aria-hidden="true">
         <svg class="ico" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
@@ -125,7 +135,7 @@
 
     <dl class="fl-ids">
       <div><dt>Job ID</dt><dd>{{ page.reference }}</dd></div>
-      <div><dt>Report Date</dt><dd>{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}</dd></div>
+      <div><dt>Report Date</dt><dd>{% if page.report_date %}{{ page.report_date|date:"d M Y" }} &middot; {{ page.updated_at|date:"H:i" }}{% else %}No report yet{% endif %}</dd></div>
     </dl>
 
     {% if page.is_flagged %}
@@ -160,5 +170,5 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'jobs/js/admin_work_evidence.js' %}"></script>
+<script src="{% static 'jobs/js/admin_work_evidence.js' %}?v=2"></script>
 {% endblock %}

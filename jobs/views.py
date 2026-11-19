@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from .forms import CompletionForm, EvidenceForm, FlagForm, ProgressReportForm
@@ -193,6 +194,14 @@ def payout_stage(request, pk, stage):
     return redirect('jobs:detail', pk=pk)
 
 
+def _back(request, pk):
+    """Go back to the page the form came from (`next`), if it is on this site; else the job page."""
+    nxt = request.POST.get('next', '')
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(nxt)
+    return redirect('jobs:detail', pk=pk)
+
+
 @require_POST
 @role_required('admin')
 def flag_job(request, pk):
@@ -206,13 +215,13 @@ def flag_job(request, pk):
         form = FlagForm(request.POST)
         if not form.is_valid():
             messages.error(request, 'Give a reason to flag this job.')
-            return redirect('jobs:detail', pk=pk)
+            return _back(request, pk)
         job.is_flagged = True
         job.flag_reason = form.cleaned_data['reason']
         job.flagged_by, job.flagged_at = request.user, timezone.now()
         messages.success(request, 'Job flagged.')
     job.save()
-    return redirect('jobs:detail', pk=pk)
+    return _back(request, pk)
 
 
 @role_required(*ALL_ROLES)

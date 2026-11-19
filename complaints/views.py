@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from jobs.permissions import base_template_for, get_role, role_required
@@ -22,6 +23,14 @@ def complaints_for(user):
     if get_role(user) == 'admin':
         return qs
     return qs.filter(Q(submitted_by=user) | Q(against=user))
+
+
+def _back(request, pk):
+    """After an admin action, go back to the page the form came from (`next`), if it is on this site."""
+    nxt = request.POST.get('next', '')
+    if nxt and url_has_allowed_host_and_scheme(nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(nxt)
+    return redirect('complaints:detail', pk=pk)
 
 
 def _errors(form):
@@ -133,11 +142,11 @@ def complaint_enquiry(request, pk):
     complaint = get_object_or_404(Complaint, pk=pk)
     if complaint.is_resolved:
         messages.error(request, 'This complaint is resolved and can no longer be changed.')
-        return redirect('complaints:detail', pk=pk)
+        return _back(request, pk)
     form = EnquiryForm(request.POST, complaint=complaint)
     if not form.is_valid():
         messages.error(request, _errors(form))
-        return redirect('complaints:detail', pk=pk)
+        return _back(request, pk)
     with transaction.atomic():
         msg = ComplaintMessage.objects.create(
             complaint=complaint, author=request.user, recipient=form.cleaned_data['recipient'],
@@ -150,7 +159,7 @@ def complaint_enquiry(request, pk):
                 to_status=Complaint.IN_PROGRESS, note='Enquiry sent')
     complaint_enquiry_sent.send(sender=Complaint, complaint=complaint, message=msg)
     messages.success(request, 'Enquiry sent.')
-    return redirect('complaints:detail', pk=pk)
+    return _back(request, pk)
 
 
 @require_POST
@@ -159,11 +168,11 @@ def complaint_resolution(request, pk):
     complaint = get_object_or_404(Complaint, pk=pk)
     if complaint.is_resolved:
         messages.error(request, 'This complaint is resolved and can no longer be changed.')
-        return redirect('complaints:detail', pk=pk)
+        return _back(request, pk)
     form = ResolutionForm(request.POST)
     if not form.is_valid():
         messages.error(request, _errors(form))
-        return redirect('complaints:detail', pk=pk)
+        return _back(request, pk)
     old = complaint.status
     new = form.cleaned_data['status']
     outcome = form.cleaned_data['outcome'].strip()
@@ -180,7 +189,7 @@ def complaint_resolution(request, pk):
     if new != old:
         complaint_status_changed.send(sender=Complaint, complaint=complaint)
     messages.success(request, 'Complaint updated.')
-    return redirect('complaints:detail', pk=pk)
+    return _back(request, pk)
 
 
 @role_required(*ALL_ROLES)
