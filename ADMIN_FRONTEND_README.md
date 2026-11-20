@@ -46,6 +46,7 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 | `users/handyman/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | `APPLICANT` |
 | `users/handyman/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | `APPROVED_APPLICANT` |
 | `notifications/` | `notifications` | `notifications/admin_notifications.html` | none: real notifications for the logged-in admin |
+| `search/?q=` | `search` | `accounts/admin_search.html` | none: real users, jobs and service requests (navbar search) |
 
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
@@ -310,6 +311,14 @@ Built from the low-fi and high-fi, with the same pieces as Service Quotations. O
 8. **Payment status page (payments team):** the "Full Offline Payment Required" pop-up on Schedule Service has only Close for now. Once the payment status page exists, add a **View Payment Status** button to it (see Integration).
 9. **Inspection before service (team decision):** a service can be scheduled without a completed inspection. In our flow the quotation comes after the inspection, so this is left open. Add a check if the team wants it strict.
 
+## Navbar search (connected to the backend)
+- The search box at the top of every admin page (`templates/base_admin.html`) opens `/admin-portal/search/?q=` (`accounts_admin:search`, view `search` in `accounts/admin_views.py`, template `accounts/admin_search.html`). Read only, admins only.
+- It looks for every word of the search text in:
+  - **Users** (customers and handymen): name, username, email, phone. Opens Customer Details or Handyman Profile.
+  - **Jobs:** reference, service, address, customer or handyman name. Opens the job in Work Progress.
+  - **Service requests:** reference, category, address, customer or contact name. Not links yet: point them to the Service Request details page once it is built.
+- Up to 6 results per group are shown; the rest is counted ("try a longer search").
+
 ## Integration (not done yet)
 1. **Registration Verification:** once the backend has handyman verification, replace `APPLICANT` and `APPROVED_APPLICANT` with the real application, keeping the same names, and add the handyman id to the URLs.
 2. **Buttons:** turn these into forms that post to real views:
@@ -318,9 +327,6 @@ Built from the low-fi and high-fi, with the same pieces as Service Quotations. O
    - Save on the Admin Profile (remove `data-demo` once it saves)
    - Schedule, Reschedule, Confirm and Cancel on the Appointments pages (see Appointments)
 3. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
-4. **Navbar search bar:** the search box at the top of every admin page (in `templates/base_admin.html`) is not connected yet. To connect it:
-   - Make a search view (for example `admin-portal/search/`) that reads the search text from `request.GET['q']` and shows the matching users, jobs and service requests.
-   - In `base_admin.html`, set the form's `action` to that URL, add `name="q"` to the `<input>`, and remove `data-demo` from the `<form>`.
-5. **Payment status page (needed from the payments team):** a read-only page with its own URL that shows the payment status of a request: the service and material quotations, how much was paid, when and how, and what is still owed. The **Payments** link in the sidebar (`templates/base_admin.html`, now `/payments/admin-dashboard/`, which gives a 404) should open it too. It must be separate from **Record payment** (`payments:payment_record`), which is a form for entering a new payment, not for checking the status. Once it exists, add **View Payment Status** buttons that open it from:
+4. **Payment status page (needed from the payments team):** a read-only page with its own URL that shows the payment status of a request: the service and material quotations, how much was paid, when and how, and what is still owed. The **Payments** link in the sidebar (`templates/base_admin.html`, now `/payments/admin-dashboard/`, which gives a 404) should open it too. It must be separate from **Record payment** (`payments:payment_record`), which is a form for entering a new payment, not for checking the status. Once it exists, add **View Payment Status** buttons that open it from:
    - the Receipts pop-up on Material Quotations (`payments/admin_materials.html`)
    - the "Full Offline Payment Required" pop-up on Schedule Service (`bookings/admin_appointment_schedule.html`)

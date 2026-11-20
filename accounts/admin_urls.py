@@ -7,6 +7,7 @@ app_name = 'accounts_admin'
 urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('users/', views.users, name='users'),
+    path('search/', views.search, name='search'),
     path('users/customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('users/handyman/<int:pk>/', views.handyman_profile, name='handyman_profile'),
     path('users/handyman/documents/', views.handyman_documents, name='handyman_documents'),
