@@ -1,0 +1,60 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Navbar search results (admin). View: accounts/admin_views.py search (?q=).
+
+  Data comes from the view as `page`:
+    page.q       -> the search text
+    page.total   -> number of matches in all groups
+    page.limit   -> results shown per group (the rest is only counted)
+    page.groups  -> key (users, jobs, requests), title, count,
+                    rows: title, sub, tag, tone (ok, bad, info), url
+  Users search name, username, email and phone; jobs search reference, service,
+  address and the customer or handyman name; service requests search reference,
+  category, address and the customer or contact name.
+  Service requests have no admin page yet, so they are not links (see README).
+{% endcomment %}
+
+{% block title %}Search | HandyConnect{% endblock %}
+{% block page %}search{% endblock %}
+{% block crumb %}Search{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/admin_search.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Search</h1>
+    <p class="sub">{% if page.q %}{{ page.total }} result{{ page.total|pluralize }} for “{{ page.q }}”{% else %}Search users, jobs and service requests by name, email, phone or reference.{% endif %}</p>
+  </div>
+</div>
+
+{% if page.q %}
+<section class="sr-grid" aria-label="Search results">
+  {% for g in page.groups %}
+  <div class="card sr-group">
+    <h2>{{ g.title }} <span class="sr-count">{{ g.count }}</span></h2>
+    {% if g.rows %}
+    <ul class="sr-list">
+      {% for r in g.rows %}
+      <li>
+        {% if r.url %}<a class="sr-item" href="{{ r.url }}">{% else %}<div class="sr-item">{% endif %}
+          <span class="sr-text"><strong>{{ r.title }}</strong><span>{{ r.sub }}</span></span>
+          <span class="sr-tag is-{{ r.tone }}">{{ r.tag }}</span>
+        {% if r.url %}</a>{% else %}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if g.count > page.limit %}<p class="sr-more">{{ g.count }} found. Showing the first {{ page.limit }}: try a longer search.</p>{% endif %}
+    {% else %}
+    <p class="sr-empty">No {{ g.title|lower }} match.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% else %}
+<div class="card sr-start">
+  <p>Type in the search box at the top, then press Enter.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Appointments - Propose Alternative Appointment (admin). View: accounts/admin_appointments.py
+  appointment_reschedule (URL: appointments/<id>/reschedule/)
+  Context `page`: the appointment row plus when (current date and slot), preferred, customer_email,
+  customer_phone, form (date, slot, notes), conflict, busy (the handyman's confirmed bookings),
+  handyman_pk, slots, today, detail_url.
+  Send Proposal posts date, slot and notes. The view checks them and the booking conflict, but
+  saves nothing yet. BACKEND: save the new time in the view (marked there).
+  Not in the backend yet: sending the proposal to the customer and storing their answer.
+{% endcomment %}
+
+{% block title %}Reschedule {{ page.ref }} | HandyConnect{% endblock %}
+{% block page %}appointments{% endblock %}
+{% block crumb %}Appointments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+
+<a class="back" href="{{ page.detail_url }}">&larr; Back to Appointment</a>
+<div class="bar ap-bar">
+  <div>
+    <h1>Propose Alternative Appointment</h1>
+    <p class="sub">{{ page.ref }} &bull; Suggest another time slot to the customer.</p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<div class="ap-grid ap-grid-top">
+  <section class="card ap-box">
+    <h2>Appointment Proposal</h2>
+    <dl class="ap-dl">
+      <div><dt>Related request</dt><dd>{{ page.request_ref }} &middot; {{ page.service }}</dd></div>
+      <div><dt>Handyman</dt><dd>{{ page.handyman }}</dd></div>
+      <div><dt>Current slot</dt><dd>{{ page.when }}</dd></div>
+      <div><dt>Customer preferred</dt><dd>{{ page.preferred }}</dd></div>
+    </dl>
+  </section>
+  <section class="card ap-box">
+    <h2>Customer Confirmation</h2>
+    <dl class="ap-dl">
+      <div><dt>Customer</dt><dd>{{ page.customer }}</dd></div>
+      <div><dt>Response</dt><dd>Pending until confirmed</dd></div>
+      <div><dt>Email</dt><dd>{{ page.customer_email }}</dd></div>
+      <div><dt>Phone</dt><dd>{{ page.customer_phone }}</dd></div>
+    </dl>
+  </section>
+</div>
+
+<form class="card ap-box ap-slot" method="post" data-slot-form data-handyman="{{ page.handyman_pk }}">
+  {% csrf_token %}
+  <h2>Suggest Another Time Slot</h2>
+  <div class="ap-fields">
+    <label>Proposed date
+      <input class="in" type="date" name="date" min="{{ page.today }}" value="{{ page.form.date }}" required>
+    </label>
+    <label>Proposed slot
+      <select class="in" name="slot" required>
+        {% for k, label in page.slots %}<option value="{{ k }}"{% if page.form.slot == k %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="ap-wide">Message to the customer
+      <input class="in" type="text" name="notes" maxlength="250" value="{{ page.form.notes }}">
+    </label>
+  </div>
+  <div class="ap-slot-foot">
+    <p class="ap-avail" data-availability aria-live="polite"></p>
+    <button class="btn o ap-main" type="submit">Send Proposal</button>
+  </div>
+</form>
+{{ page.busy|json_script:"busy-data" }}
+
+{% if page.conflict %}
+<dialog class="ql-modal" id="modal-conflict" aria-labelledby="cx-title" data-auto-open>
+  <div class="ap-body">
+    <span class="ap-icon is-red" aria-hidden="true">!</span>
+    <h2 id="cx-title" class="ap-center">Handyman Booking Conflict</h2>
+    <dl class="ap-sum">
+      <div><dt>Handyman</dt><dd>{{ page.conflict.handyman }}</dd></div>
+      <div><dt>Requested slot</dt><dd>{{ page.conflict.requested }}</dd></div>
+      <div><dt>Existing appointment</dt><dd>{{ page.conflict.ref }} &middot; {{ page.conflict.request_ref }}</dd></div>
+      <div><dt>Already booked</dt><dd>{{ page.conflict.booked }}</dd></div>
+    </dl>
+    <p class="mut ap-center">Choose another available date or time.</p>
+    <div class="ql-btns">
+      <a class="btn o" href="{{ page.detail_url }}">Cancel</a>
+      <button class="btn soft-blue" type="button" data-close>Change Slot</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
+<script>(function () { var d = document.querySelector('[data-auto-open]'); if (d) d.showModal(); })();</script>
+{% endblock %}

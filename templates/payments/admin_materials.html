@@ -1,69 +1,244 @@
 {% extends "base_admin.html" %}
-{% block title %}Materials | HandyConnect{% endblock %}
-{% block page %}materials{% endblock %}
+{% load static %}
+{% comment %}
+  Material Quotations - Overview (admin). View: payments.views.admin_materials
+  Context:
+    purchase_requests -> MaterialPurchaseRequest list (newest first), each with
+                         request, handyman, quotation (the material quotation, once
+                         forwarded) and, from the view: receipt_list,
+                         receipts_waiting, approved_total, difference, ready_to_schedule
+                         (both quotations accepted and paid)
+    receipts          -> every MaterialReceipt (not used on this page)
+  Flow (FR-A-9 part B): the admin approves the purchase request and sends the material quotation to
+  the customer (forward()); the customer approves it; the handyman buys and uploads receipts; the
+  admin reviews them. The material quotation is then paid with the service quotation (part C), and
+  once both are paid the Receipts pop-up offers Schedule Appointment.
+  Stage of each purchase request (data-status):
+    admin     -> submitted, waiting for the admin (Review pop-up)
+    customer  -> forwarded; the quotation is with the customer
+    receipts  -> quotation approved, receipts waiting for review (Receipts pop-up)
+    accepted  -> quotation approved, no receipt waiting
+    declined  -> the customer declined, or the quotation was cancelled
+    rejected  -> the admin rejected the purchase request
+  Forward / Reject post to payments:material_request_action (action forward |
+  reject, total, note). Receipts are only shown here (view only): they are reviewed in the payments section, not on this page. (payments:receipt_action, action approve |
+  reject, note). The note is needed to reject.
+  The number cards, search, filters and pages work in the browser on the rows sent.
+{% endcomment %}
+
+{% block title %}Material Quotations | HandyConnect{% endblock %}
+{% block page %}material-quotes{% endblock %}
+{% block crumb %}Material Quotations{% endblock %}
+
 {% block content %}
-<div class="lab">Admin · Materials</div>
-<h1>Materials</h1>
-<p class="sub">Review purchase requests and receipts from handymen.</p>
-{% include "payments/_messages.html" %}
-<div class="card" style="margin-bottom:24px">
-  <h2>Purchase requests</h2>
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Handyman</th><th>Materials</th><th>Estimate (MUR)</th><th>Status</th><th>Review</th></tr></thead>
-    <tbody>
-    {% for p in purchase_requests %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_materials.css' %}?v=3">
+
+<div class="bar">
+  <div>
+    <h1>Material Quotations</h1>
+    <p class="sub">The customer approves the material cost before the materials are bought. It is paid with the service quotation, with no margin.</p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<section class="lq-stats" aria-label="Material totals">
+  <div class="card lq-stat lq-s-review">
+    <div class="lq-stat-top"><p class="lq-stat-label">Admin review</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="admin">00</p>
+    <p class="lq-stat-hint">Purchase requests to check</p>
+  </div>
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">With customer</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="customer">00</p>
+    <p class="lq-stat-hint">Waiting for the customer to approve</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Receipts uploaded</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="receipts">00</p>
+    <p class="lq-stat-hint">Receipts uploaded by handymen</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Approved</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num" data-stat="accepted">00</p>
+    <p class="lq-stat-hint">Materials can be bought</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-materials data-page-size="5">
+  <nav class="lq-tabs" aria-label="Material Quotations">
+    <a href="{% url 'payments:admin_materials' %}" aria-current="page">Purchase requests</a>
+    <a href="{% url 'payments:material_quotation_list' %}">Quotations</a>
+  </nav>
+
+  <div class="lq-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by request, customer or handyman</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search customer, reference or handyman..." data-search>
+    </label>
+    <label><span class="sr-only">Stage</span>
+      <select class="in" data-status>
+        <option value="">All stages</option>
+        <option value="admin">Admin review</option>
+        <option value="customer">With customer</option>
+        <option value="receipts">Receipts uploaded</option>
+        <option value="accepted">Approved</option>
+        <option value="declined">Declined</option>
+        <option value="rejected">Rejected</option>
+      </select>
+    </label>
+    <label><span class="sr-only">Date</span>
+      <select class="in" data-date>
+        <option value="">All dates</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 3 months</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table">
+    <thead>
       <tr>
-        <td>{{ p.request.reference }}</td>
-        <td>{{ p.handyman }}</td>
-        <td>{{ p.items|truncatechars:60 }}</td>
-        <td>{{ p.estimated_cost }}</td>
-        <td><span class="b {% if p.status == 'forwarded' %}gr{% elif p.status == 'rejected' %}re{% else %}ye{% endif %}">{{ p.get_status_display }}</span></td>
-        <td>
-          {% if p.status == 'submitted' %}
-          <form method="post" action="{% url 'payments:material_request_action' p.pk %}" style="display:flex;gap:8px;flex-wrap:wrap">
-            {% csrf_token %}
-            <input class="in" name="total" placeholder="Quote total (MUR)" value="{{ p.estimated_cost }}" style="width:130px">
-            <input class="in" name="note" placeholder="Reason (to reject)" style="width:170px">
-            <button class="btn s" name="action" value="forward">Forward to customer</button>
-            <button class="btn o s" name="action" value="reject">Reject</button>
-          </form>
-          {% elif p.quotation %}<a href="{% url 'payments:quotation_detail_admin' p.quotation.pk %}">Quotation details</a>
-          {% else %}<span class="mut">{{ p.admin_note|default:"-" }}</span>{% endif %}
+        <th scope="col">Ref</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Stage</th>
+        <th scope="col">Amount</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in purchase_requests %}
+      {% with q=p.quotation customer=p.request.customer %}
+      {% if p.status == 'submitted' %}{% firstof 'admin' as st %}{% elif p.status == 'rejected' %}{% firstof 'rejected' as st %}{% elif not q or q.status == 'declined' or q.status == 'cancelled' %}{% firstof 'declined' as st %}{% elif q.status != 'accepted' %}{% firstof 'customer' as st %}{% elif p.receipts_waiting %}{% firstof 'receipts' as st %}{% else %}{% firstof 'accepted' as st %}{% endif %}
+      <tr data-row data-status="{{ st }}"
+          data-date="{% firstof q.responded_at|date:'Y-m-d' p.reviewed_at|date:'Y-m-d' p.created_at|date:'Y-m-d' %}"
+          data-text="{{ p.request.reference }} mr-{{ p.pk }} {% if q %}q-{{ q.pk }} {% endif %}{% firstof customer.get_full_name customer.username %} {% firstof p.handyman.get_full_name p.handyman.username %} {{ p.request.service_category }}">
+        <td data-label="Ref"><span class="lq-id">MR-{{ p.pk }}</span><span class="lq-sub">{{ p.request.reference }} &middot; {{ p.request.service_category }}</span></td>
+        <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
+        <td data-label="Handyman">{% firstof p.handyman.get_full_name p.handyman.username %}</td>
+        <td data-label="Stage">
+          <span class="b lq-{% if st == 'admin' %}review{% elif st == 'customer' %}pending{% elif st == 'receipts' %}revision{% elif st == 'declined' %}cancelled{% else %}{{ st }}{% endif %}">{% if st == 'admin' %}Admin review{% elif st == 'customer' %}{% if q.status == 'revision_requested' %}Changes requested{% else %}With customer{% endif %}{% elif st == 'receipts' %}Receipts uploaded{% elif st == 'accepted' %}{% if q.is_paid %}Paid{% else %}Approved{% endif %}{% elif st == 'declined' %}{% if q.status == 'cancelled' %}Cancelled{% else %}Declined{% endif %}{% else %}Rejected{% endif %}</span>
+        </td>
+        <td data-label="Amount"><span class="lq-amt">MUR {% if q %}{{ q.total_amount|floatformat:"2g" }}{% else %}{{ p.estimated_cost|floatformat:"2g" }}{% endif %}</span><span class="lq-sub">{% if q %}Quotation Q-{{ q.pk }}{% else %}Handyman estimate{% endif %}</span></td>
+        <td data-label="Updated">{% firstof q.responded_at|date:"d M Y" p.reviewed_at|date:"d M Y" p.created_at|date:"d M Y" %}</td>
+        <td data-label="">
+          {% if st == 'admin' %}<button class="btn o s" type="button" data-open="mr-{{ p.pk }}">Review</button>
+          {% elif st == 'receipts' %}<button class="btn o s" type="button" data-open="rc-{{ p.pk }}">Receipts</button>
+          {% elif st == 'accepted' and p.receipt_list %}<button class="btn o s" type="button" data-open="rc-{{ p.pk }}">View</button>
+          {% elif q %}<a class="btn o s" href="{% url 'payments:quotation_detail_admin' q.pk %}">View</a>
+          {% else %}<button class="btn o s" type="button" data-open="mr-{{ p.pk }}">View</button>{% endif %}
         </td>
       </tr>
-    {% empty %}
-      <tr><td colspan="6" class="mut">No purchase requests yet.</td></tr>
-    {% endfor %}
+      {% endwith %}
+      {% endfor %}
     </tbody>
   </table>
-</div>
-<div class="card">
-  <h2>Receipts</h2>
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Handyman</th><th>Amount spent (MUR)</th><th>Receipt</th><th>Status</th><th>Review</th></tr></thead>
-    <tbody>
-    {% for r in receipts %}
-      <tr>
-        <td>{{ r.purchase_request.request.reference }}</td>
-        <td>{{ r.uploaded_by }}</td>
-        <td>{{ r.amount_spent }}</td>
-        <td><a href="{{ r.image.url }}" target="_blank">View</a></td>
-        <td><span class="b {% if r.status == 'approved' %}gr{% elif r.status == 'rejected' %}re{% else %}ye{% endif %}">{{ r.get_status_display }}</span></td>
-        <td>
-          {% if r.status == 'submitted' %}
-          <form method="post" action="{% url 'payments:receipt_action' r.pk %}" style="display:flex;gap:8px;flex-wrap:wrap">
-            {% csrf_token %}
-            <input class="in" name="note" placeholder="Reason (to reject)" style="width:170px">
-            <button class="btn s" name="action" value="approve">Approve</button>
-            <button class="btn o s" name="action" value="reject">Reject</button>
-          </form>
-          {% else %}<span class="mut">{{ r.admin_note|default:"-" }}</span>{% endif %}
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="6" class="mut">No receipts yet.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</div>
+
+  <p class="lq-empty" data-empty hidden>{% if purchase_requests %}Nothing matches that search. Try clearing the filters.{% else %}No material purchase requests yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+
+{# ---------- Purchase request pop-ups: review (submitted) or read only (rejected) ---------- #}
+{% for p in purchase_requests %}
+{% if p.status != 'forwarded' %}
+<dialog class="ql-modal" id="mr-{{ p.pk }}" aria-labelledby="mr-{{ p.pk }}-title">
+  <form method="post" action="{% url 'payments:material_request_action' p.pk %}" data-review>
+    {% csrf_token %}
+    <h2 id="mr-{{ p.pk }}-title">{% if p.status == 'submitted' %}Review material purchase request{% else %}Material purchase request{% endif %}</h2>
+    <dl class="ql-ctx">
+      <div><dt>Request</dt><dd>{{ p.request.reference }}</dd></div>
+      <div><dt>Customer</dt><dd>{% firstof p.request.customer.get_full_name p.request.customer.username %}</dd></div>
+      <div><dt>Handyman</dt><dd>{% firstof p.handyman.get_full_name p.handyman.username %}</dd></div>
+    </dl>
+    <div class="ql-break">
+      <p class="ql-label">Materials to buy</p>
+      <ul class="mq-items">{% for line in p.items.splitlines %}{% if line.strip %}<li>{{ line }}</li>{% endif %}{% endfor %}</ul>
+      <p class="mq-est">Estimated cost <strong>MUR {{ p.estimated_cost|floatformat:"2g" }}</strong></p>
+    </div>
+    {% if p.status == 'submitted' %}
+    <div class="mq-total">
+      <label class="ql-label" for="total-{{ p.pk }}">Material cost sent to the customer (MUR)</label>
+      <input class="in" id="total-{{ p.pk }}" name="total" type="number" min="0.01" step="0.01" value="{{ p.estimated_cost|stringformat:'s' }}">
+      <p class="mut">The customer approves this quotation before the materials are bought. No margin is added.</p>
+    </div>
+    <label class="ql-label" for="mr-note-{{ p.pk }}">Reason <span class="mut">(needed to reject)</span></label>
+    <textarea class="in" id="mr-note-{{ p.pk }}" name="note" rows="2" placeholder="Why the purchase is rejected."></textarea>
+    <p class="ql-error" data-error hidden>Please add a reason first.</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Close</button>
+      <button class="btn soft-red" name="action" value="reject">Reject</button>
+      <button class="btn soft-green" name="action" value="forward">Approve and send to customer</button>
+    </div>
+    {% else %}
+    <div class="ql-break">
+      <p class="ql-label">Reason for rejecting</p>
+      <p>{{ p.admin_note|default:"-"|linebreaksbr }}</p>
+    </div>
+    <div class="ql-btns"><button class="btn o" type="button" data-close>Close</button></div>
+    {% endif %}
+  </form>
+</dialog>
+{% endif %}
+{% endfor %}
+
+{# ---------- Receipt pop-ups: one per accepted material quotation with receipts ---------- #}
+{% for p in purchase_requests %}
+{% if p.quotation and p.receipt_list %}
+<dialog class="ql-modal mq-wide" id="rc-{{ p.pk }}" aria-labelledby="rc-{{ p.pk }}-title">
+  <div class="mq-body">
+    <h2 id="rc-{{ p.pk }}-title">Material receipts</h2>
+    <dl class="ql-ctx">
+      <div><dt>Request</dt><dd>{{ p.request.reference }} &middot; MR-{{ p.pk }}</dd></div>
+      <div><dt>Handyman</dt><dd>{% firstof p.handyman.get_full_name p.handyman.username %}</dd></div>
+      <div><dt>Material quotation</dt><dd>Q-{{ p.quotation.pk }}{% if p.quotation.is_paid %} &middot; Paid{% endif %}</dd></div>
+    </dl>
+
+    <ul class="mq-receipts">
+      {% for r in p.receipt_list %}
+      <li class="mq-receipt">
+        <a class="mq-thumb" href="{{ r.image.url }}" target="_blank" rel="noopener"><img src="{{ r.image.url }}" alt="Receipt {{ forloop.counter }}" width="56" height="72"></a>
+        <div class="mq-rinfo">
+          <p class="mq-rname">Receipt {{ forloop.counter }} <span class="b mq-{{ r.status }}">{{ r.get_status_display }}</span></p>
+          <p class="mq-ramt">MUR {{ r.amount_spent|floatformat:"2g" }}</p>
+          <p class="mut">Uploaded {{ r.created_at|date:"d M Y" }}{% if r.admin_note %} &middot; {{ r.admin_note }}{% endif %}</p>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <dl class="mq-recon">
+      <div><dt>Approved receipts</dt><dd>MUR {{ p.approved_total|floatformat:"2g" }}</dd></div>
+      <div><dt>Material quotation</dt><dd>MUR {{ p.quotation.total_amount|floatformat:"2g" }}</dd></div>
+      <div class="{% if p.difference < 0 %}over{% endif %}"><dt>Difference</dt><dd>MUR {{ p.difference|floatformat:"2g" }}</dd></div>
+    </dl>
+    {% if p.receipts_waiting %}<p class="mut mq-note">{{ p.receipts_waiting }} receipt{{ p.receipts_waiting|pluralize }} still to be checked in Payments. A negative difference means more was spent than quoted.</p>{% endif %}
+
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Close</button>
+      {# Payments are the payments team's section. Once both quotations are paid, schedule the service #}
+      {% if p.ready_to_schedule %}<a class="btn soft-blue" href="{% url 'accounts_admin:appointment_schedule' 'service' %}?request={{ p.request.pk }}">Schedule Appointment</a>{% endif %}
+    </div>
+  </div>
+</dialog>
+{% endif %}
+{% endfor %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'payments/js/admin_materials.js' %}"></script>
 {% endblock %}
