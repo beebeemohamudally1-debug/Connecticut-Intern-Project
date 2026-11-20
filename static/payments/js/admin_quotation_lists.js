@@ -41,6 +41,13 @@
     d.addEventListener('click', function (e) { if (e.target === d) d.close(); });
   });
 
+  // A link ending in #est-<id> (e.g. from Service Request Details) opens that estimate's pop-up
+  var linked = location.hash && document.getElementById(location.hash.slice(1));
+  if (linked && linked.classList.contains('ql-modal')) {
+    linked.showModal();
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
   // Review: a note is needed to reject or ask for a revision
   document.querySelectorAll('[data-review]').forEach(function (form) {
     var note = form.querySelector('textarea[name="note"]');

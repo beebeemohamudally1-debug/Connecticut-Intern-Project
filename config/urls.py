@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('notifications/', include('notifications.urls')),
     path('payments/', include('payments.urls')),
+    path('bookings/', include('bookings.urls')),
     path('jobs/', include('jobs.urls')),
     path('complaints/', include('complaints.urls')),
     path('admin-portal/', include('accounts.admin_urls')),
