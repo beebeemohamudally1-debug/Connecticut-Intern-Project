@@ -67,7 +67,9 @@
   if (!hasEstimate) totalInput.addEventListener('input', function () { totalError.hidden = true; totalInput.removeAttribute('aria-invalid'); });
 
   // Save Draft: check first
-  form.querySelector('[data-submit]').addEventListener('click', function (e) { if (!check()) e.preventDefault(); });
+  // (Save Draft is not there while a revision waits for the handyman)
+  var submitBtn = form.querySelector('[data-submit]');
+  if (submitBtn) submitBtn.addEventListener('click', function (e) { if (!check()) e.preventDefault(); });
 
   function wire(modal) {
     modal.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', function () { modal.close(); }); });

@@ -136,6 +136,11 @@ def quotation_edit(request, pk):
         messages.error(request, 'This quotation can no longer be edited.')
         return redirect('payments:quotation_detail_admin', pk=pk)
     form = QuotationForm(request.POST or None, instance=Quotation.objects.get(pk=pk))
+    if request.method == 'POST' and quotation.status == Quotation.REVISION_REQUESTED:
+        # FR-A-9: the customer's changes go to the handyman first. Until the handyman can send an
+        # updated estimate (not in the backend yet), the admin cannot revise or re-send on their own.
+        messages.error(request, 'Send the changes to the handyman first. Revising is locked until the handyman sends an updated estimate.')
+        return redirect('payments:quotation_edit', pk=pk)
     if request.method == 'POST' and form.is_valid():
         total, text = form.cleaned_data['total_amount'], form.cleaned_data['work_description']
         revising = quotation.status == Quotation.REVISION_REQUESTED

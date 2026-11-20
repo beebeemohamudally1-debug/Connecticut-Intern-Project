@@ -116,12 +116,18 @@
   <section class="card re-next">
     <div>
       <h2>{% if q.status == 'revision_requested' %}2. After the handyman replies{% else %}Next Action{% endif %}</h2>
-      <p class="mut">{% if q.status == 'revision_requested' %}Update the total from the handyman's answer, then save a draft or send the quotation to the customer.{% else %}Check the total, then save a draft or send the quotation to the customer.{% endif %}</p>
+      <p class="mut">{% if q.status == 'revision_requested' %}Available once the handyman sends the updated estimate (not in the backend yet).{% else %}Check the total, then save a draft or send the quotation to the customer.{% endif %}</p>
     </div>
     <div class="re-actions">
       <button class="btn soft-blue" type="button" data-open="preview">Preview</button>
+      {% if q.status == 'revision_requested' %}
+      {# BACKEND: unlock once the handyman's updated estimate exists (the view refuses it too) #}
+      <button class="btn soft-warn" type="button" disabled>Save Draft</button>
+      <button class="btn soft-green" type="button" disabled>Send to Customer</button>
+      {% else %}
       <button class="btn soft-warn" type="submit" name="draft" value="1" data-submit>Save Draft</button>
       <button class="btn soft-green" type="button" data-send>Send to Customer</button>
+      {% endif %}
     </div>
   </section>
 </form>
@@ -158,5 +164,5 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/quotation_form.js' %}"></script>
+<script src="{% static 'payments/js/quotation_form.js' %}?v=2"></script>
 {% endblock %}

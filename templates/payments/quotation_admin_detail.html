@@ -27,7 +27,9 @@
   - Revision (FR-A-9): when the customer asks for changes, the admin sends them to the handyman, the
     handyman updates the estimate, then the admin revises and re-issues. BACKEND: there is no way to send
     an approved estimate (or a forwarded material request) back to the handyman yet, so
-    "Ask Handyman to Update" is greyed out; Revise stays for the admin's part.
+    "Ask Handyman to Update" is greyed out, and Revise is locked while the customer's changes wait
+    for the handyman (so the handyman step cannot be skipped). Draft and revised quotations can
+    still be edited.
 {% endcomment %}
 
 {% block title %}{% if quotation.quotation_type == 'material' %}Material Quotation{% else %}Service Quotation{% endif %} Details | HandyConnect{% endblock %}
@@ -52,7 +54,8 @@
   <div class="qd-top-actions">
     {% if q.status != 'cancelled' and q.status != 'declined' and not q.is_paid %}<button class="btn o" type="button" data-open="modal-cancel">Cancel</button>{% endif %}
     {% if q.status == 'revision_requested' %}<button class="btn o" type="button" disabled title="Not in the backend yet">Ask Handyman to Update</button>{% endif %}
-    {% if q.status == 'draft' or q.status == 'revised' or q.status == 'revision_requested' %}<a class="btn o" href="{% url 'payments:quotation_edit' q.pk %}">Revise Quotation</a>{% endif %}
+    {% if q.status == 'revision_requested' %}<button class="btn o" type="button" disabled title="Locked until the handyman sends the updated estimate (not in the backend yet)">Revise Quotation</button>
+    {% elif q.status == 'draft' or q.status == 'revised' %}<a class="btn o" href="{% url 'payments:quotation_edit' q.pk %}">Revise Quotation</a>{% endif %}
     {% if q.status == 'draft' or q.status == 'revised' %}<button class="btn soft-green" type="button" data-open="modal-send">{% if q.status == 'revised' %}Re-issue to Customer{% else %}Send to Customer{% endif %}</button>{% endif %}
   </div>
 </div>
@@ -183,9 +186,9 @@
           {% else %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}" data-seen>Go to Material Quotations</a>{% endif %}
           {% if q.ready_for_payment and other.status == 'accepted' %}<a class="btn soft-green" href="{% url 'payments:payment_record' q.pk %}" data-seen>Check Payment Status</a>{% endif %}
         {% else %}
-          {# BACKEND: enable once the estimate can be sent back to the handyman #}
+          {# BACKEND: enable both once the estimate can be sent back to the handyman and comes back updated #}
           <button class="btn o" type="button" disabled title="Not in the backend yet">Ask Handyman to Update</button>
-          <a class="btn soft-warn" href="{% url 'payments:quotation_edit' q.pk %}" data-seen>Revise Quotation</a>
+          <button class="btn soft-warn" type="button" disabled title="Locked until the handyman sends the updated estimate (not in the backend yet)">Revise Quotation</button>
         {% endif %}
       {% endif %}
     </div>
