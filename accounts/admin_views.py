@@ -90,10 +90,10 @@ def search(request):
                 'tag': _job_state(j)[1], 'tone': 'info',
                 'url': reverse('accounts_admin:work_progress_job', args=[j.pk]),
             } for j in jobs[:SEARCH_LIMIT]]},
-            # BACKEND/next: link each request to the Service Request details page once it is built
             {'key': 'requests', 'title': 'Service requests', 'count': requests_.count(), 'rows': [{
                 'title': f'{r.reference} · {r.service_category or "Service request"}',
-                'sub': _person_name(r.customer), 'tag': r.get_status_display(), 'tone': 'info', 'url': '',
+                'sub': _person_name(r.customer), 'tag': r.get_status_display(), 'tone': 'info',
+                'url': reverse('bookings:admin_request_detail', args=[r.pk]),
             } for r in requests_[:SEARCH_LIMIT]]},
         ]
     page = {'q': q, 'groups': groups, 'total': sum(g['count'] for g in groups), 'limit': SEARCH_LIMIT}

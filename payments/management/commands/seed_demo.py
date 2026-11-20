@@ -218,6 +218,32 @@ class Command(BaseCommand):
         self.complaints(admin, review_jobs)
         self.work_progress(admin, customers, handymen, report_jobs)
         self.appointments(admin, handymen)
+        self.service_requests(admin, customers, handymen)
+
+    def service_requests(self, admin, customers, handymen):
+        """Manage Service Requests: requests in every stage (new, forwarded, rejected, cancelled)."""
+        rows = [
+            # (service, customer, handyman or None, request status, answer, handyman's note, date, slot, address, problem)
+            ('Bathroom plumbing', 3, None, 'submitted', None, '', 27, 'morning', 'Quatre Bornes',
+             'Leaking tap and damaged pipe connection beneath the bathroom sink.'),
+            ('Tap replacement', 0, None, 'reviewing', None, '', 28, 'afternoon', 'Rose Hill',
+             'Kitchen mixer tap is loose and drips constantly.'),
+            ('Electrical repair', 1, 0, 'assigned', 'sent', '', 29, 'morning', 'Curepipe',
+             'Two sockets in the living room stopped working.'),
+            ('Carpentry', 2, 1, 'assigned', 'rejected', 'Unavailable on the requested date.', 26, 'afternoon', 'Vacoas',
+             'Wardrobe door hinge is broken and the door does not close.'),
+            ('Curtain rail fitting', 1, None, 'cancelled', None, '', 24, 'morning', 'Moka',
+             'Fit two curtain rails in the bedroom.'),
+        ]
+        for service, c, h, status, answer, note, day, slot, town, problem in rows:
+            req = ServiceRequest.objects.create(
+                customer=customers[c], service_category=service, problem_description=problem,
+                service_address=f'{town}, Mauritius', contact_name=customers[c].get_full_name(),
+                contact_phone=customers[c].phone, preferred_date=date(2026, 11, day), preferred_slot=slot, status=status)
+            if h is not None:
+                ServiceRequestAssignment.objects.create(
+                    service_request=req, handyman=handymen[h], status=answer, sent_by=admin, response_note=note,
+                    responded_at=timezone.now() if answer != 'sent' else None)
 
     def complaints(self, admin, jobs):
         """Demo complaints in every status, with private messages, a photo and a status log."""
@@ -471,6 +497,7 @@ class Command(BaseCommand):
         out(f'  Work progress:     {BASE}/admin-portal/work-progress/')
         out(f'  Manage users:      {BASE}/admin-portal/users/')
         out(f'  Appointments:      {BASE}/admin-portal/appointments/')
+        out(f'  Service requests:  {BASE}/bookings/admin/requests/')
         if 'needs_quote' in ids:
             i = ids['needs_quote']
             out('\nCreate quotation (from an approved estimate)')
