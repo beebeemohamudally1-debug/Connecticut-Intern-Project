@@ -1,287 +1,163 @@
-{% load static %}
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Notifications | HandyConnect</title>
-    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_in_progress.css' %}">
     <link rel="stylesheet" href="{% static 'dashboard/css/handyman_notifs.css' %}">
 </head>
-<body>
-
-<!-- Icon set -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-        <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-        <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.7 7.1L3 21l1.9-6.3A8 8 0 1 1 21 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-        <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-        <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-        <symbol id="i-brief" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
-        <symbol id="i-tick" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-    </defs>
-</svg>
-
+<body data-page="notifications" data-uid="{{ hc_uid|default:'guest' }}">
 <div class="layout">
 
     <aside class="sidebar">
         <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
-            <span class="brand-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-            </span>
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
             HandyConnect
         </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
 
-        <div class="workspace">
-            <span class="workspace-label">Workspace</span>
-            <strong>Handyman portal</strong>
-        </div>
-
-        <nav class="nav">
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}">Dashboard</a>
             <a href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
-            <a href="{% url 'dashboard:job_tracking' %}">Appointments</a>
-            <a href="{% url 'dashboard:report_customer' %}">Report Customer</a>
-            <a href="{% url 'dashboard:report_customer' %}#history">Complaints</a>
-            <a href="{% url 'dashboard:notifications' %}" class="active" aria-current="page">Notifications</a>
-            <a href="#">Profile &amp; services</a>
-            <a href="{% url 'dashboard:job_completed' %}">Job history</a>
+            <a href="{% url 'dashboard:job_requests' %}">Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress'%}"
+            <a href="{% url 'dashboard:job_completed' %}">Job Completion</a>
         </nav>
 
-        <div class="sidebar-foot">
-            <p>Need a hand?</p>
-            <a href="#">Help &amp; support</a>
-            <p class="copyright">HandyConnect &copy; 2026</p>
-        </div>
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
     </aside>
 
     <div class="main">
         <header class="topbar">
-            <div class="crumbs">
-                <a href="{% url 'dashboard:handyman_dashboard' %}">Handyman workspace</a> / Notifications
-            </div>
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Notifications</div>
             <div class="topbar-right">
-                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications, 4 unread">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-                    <span class="badge" id="bell-count">4</span>
+                    <span class="badge" id="bell-count" hidden>0</span>
                 </a>
-                <div class="user">
-                    <span class="avatar">MR</span>
-                    <span>{{ request.user.get_full_name|default:"Marcus Reed" }}</span>
-                </div>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
             </div>
         </header>
 
-        <main class="content wide">
-
-            <h1 class="page-title" id="page-title">You&rsquo;re up to date. Almost.</h1>
-            <p class="page-sub"><span id="unread-count">4</span> unread notifications &middot; Important updates, all in one place.</p>
-
-            <div class="toolbar">
-                <div class="tabs" role="tablist" aria-label="Filter notifications">
-                    <button type="button" role="tab" class="tab active" aria-selected="true" data-filter="all">All notifications</button>
-                    <button type="button" role="tab" class="tab" aria-selected="false" data-filter="unread">Unread</button>
-                    <button type="button" role="tab" class="tab" aria-selected="false" data-filter="appointment">Appointments</button>
-                    <button type="button" role="tab" class="tab" aria-selected="false" data-filter="complaint">Complaints</button>
-                </div>
-                <button type="button" class="outline-btn" id="mark-all">Mark all as read</button>
-            </div>
-
-            <div class="notif-grid">
-
-                <section class="card">
-                    <h2>Recent activity</h2>
-                    <p class="muted small sub">Newest first &middot; Times shown in Mauritius Time</p>
-
-                    <ul class="notes" id="notes">
-
-                        <li class="note unread" data-type="complaint">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-shield"/></svg></span>
-                            <div class="note-text">
-                                <strong>Case C-0147 has been resolved</strong>
-                                <p>No-charge follow-up completed. View the administrator&rsquo;s outcome.</p>
-                                <span class="when">Oct 27 &middot; 3:30 PM &middot; <span class="state">Unread</span></span>
-                            </div>
-                            <button type="button" class="dot" aria-label="Mark as read"></button>
-                        </li>
-
-                        <li class="note unread" data-type="appointment">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-calendar"/></svg></span>
-                            <div class="note-text">
-                                <strong>Follow-up appointment confirmed</strong>
-                                <p>AP-3128 &middot; Emma Wilson &middot; Oct 27 morning &middot; No-charge follow-up.</p>
-                                <span class="when">Oct 26 &middot; 4:15 PM &middot; <span class="state">Unread</span></span>
-                            </div>
-                            <button type="button" class="dot" aria-label="Mark as read"></button>
-                        </li>
-
-                        <li class="note unread" data-type="complaint">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-shield"/></svg></span>
-                            <div class="note-text">
-                                <strong>Your customer report was received</strong>
-                                <p>C-0152 &middot; Access concern &middot; Pending administrator review.</p>
-                                <span class="when">Oct 26 &middot; 1:45 PM &middot; <span class="state">Unread</span></span>
-                            </div>
-                            <button type="button" class="dot" aria-label="Mark as read"></button>
-                        </li>
-
-                        <li class="note unread" data-type="complaint">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-chat"/></svg></span>
-                            <div class="note-text">
-                                <strong>Private enquiry from Olivia Chen</strong>
-                                <p>C-0147 &middot; Confirm your availability for the follow-up inspection.</p>
-                                <span class="when">Oct 26 &middot; 11:20 AM &middot; <span class="state">Unread</span></span>
-                            </div>
-                            <button type="button" class="dot" aria-label="Mark as read"></button>
-                        </li>
-
-                        <li class="note" data-type="complaint">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-chat"/></svg></span>
-                            <div class="note-text">
-                                <strong>Administrator requested job details</strong>
-                                <p>C-0147 &middot; Share your leak test and handover notes privately.</p>
-                                <span class="when">Oct 25 &middot; 10:20 AM &middot; <span class="state">Read</span></span>
-                            </div>
-                            <svg class="read-tick" width="14" height="14" aria-hidden="true"><use href="#i-tick"/></svg>
-                        </li>
-
-                        <li class="note" data-type="job">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-star"/></svg></span>
-                            <div class="note-text">
-                                <strong>Job progress shared</strong>
-                                <p>REQ-1042 &middot; Emma was notified that work is complete.</p>
-                                <span class="when">Oct 24 &middot; 11:06 AM &middot; <span class="state">Read</span></span>
-                            </div>
-                            <svg class="read-tick" width="14" height="14" aria-hidden="true"><use href="#i-tick"/></svg>
-                        </li>
-
-                        <li class="note" data-type="job">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-check"/></svg></span>
-                            <div class="note-text">
-                                <strong>Job completion recorded</strong>
-                                <p>REQ-1042 &middot; Completed at 10:42 AM &middot; Summary saved.</p>
-                                <span class="when">Oct 24 &middot; 10:42 AM &middot; <span class="state">Read</span></span>
-                            </div>
-                            <svg class="read-tick" width="14" height="14" aria-hidden="true"><use href="#i-tick"/></svg>
-                        </li>
-
-                        <li class="note" data-type="job">
-                            <span class="ico"><svg width="18" height="18"><use href="#i-brief"/></svg></span>
-                            <div class="note-text">
-                                <strong>New job assigned to you</strong>
-                                <p>REQ-1042 &middot; Kitchen sink leak repair &middot; Oct 24 morning &middot; Paid.</p>
-                                <span class="when">Oct 23 &middot; 11:16 AM &middot; <span class="state">Read</span></span>
-                            </div>
-                            <svg class="read-tick" width="14" height="14" aria-hidden="true"><use href="#i-tick"/></svg>
-                        </li>
-                    </ul>
-
-                    <p class="empty" id="empty" hidden>Nothing to show here.</p>
-                </section>
-
-                <div class="stack">
-                    <section class="card">
-                        <h2>Stay in the loop</h2>
-                        <p class="muted small loop-text">Critical appointment and complaint updates always appear here.</p>
-                        <dl class="kv prefs">
-                            <div><dt>Email notifications</dt><dd>On</dd></div>
-                            <div><dt>SMS reminders</dt><dd>On</dd></div>
-                            <div><dt>Product news</dt><dd>Off</dd></div>
-                        </dl>
-                        <a class="outline-btn block" href="#">Manage preferences</a>
-                    </section>
-                    <p class="muted small privacy-note">Private messages are visible only to you and the administrator assigned to the case.</p>
-                </div>
-            </div>
-
-            <footer class="page-foot">
-                <span>Secure workspace &middot; Your information stays private</span>
-                <span><a href="#">Help center</a> &middot; <a href="#">Privacy policy</a></span>
-            </footer>
-        </main>
+        <main class="content">
+<h1 class="page-title" id="title"></h1><p class="page-sub" id="sub"></p>
+<div class="tabs" role="group" aria-label="Filter">
+    <button class="tab active" data-f="all">All</button><button class="tab" data-f="unread">Unread</button>
+    <button class="tab" data-f="appointment">Appointments</button><button class="tab" data-f="job">Job tracking</button><button class="tab" data-f="complaint">Complaints</button>
+    <button class="btn-o" id="all" style="margin-left:auto">Mark all as read</button>
+</div>
+<section class="card"><ul style="padding:0;margin:0" id="list"></ul><p class="empty" id="none" hidden>Nothing to show here.</p></section>
+</main>
     </div>
 </div>
 
 <script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
 (function () {
-    var notes = document.querySelectorAll('.note');
-    var tabs = document.querySelectorAll('.tab');
-    var countEl = document.getElementById('unread-count');
-    var bellCount = document.getElementById('bell-count');
-    var bell = document.getElementById('bell');
-    var title = document.getElementById('page-title');
-    var empty = document.getElementById('empty');
-    var filter = 'all';
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
 
-    function unreadTotal() { return document.querySelectorAll('.note.unread').length; }
-
-    function applyFilter() {
-        var shown = 0;
-        Array.prototype.forEach.call(notes, function (n) {
-            var show = filter === 'all' ||
-                       (filter === 'unread' && n.classList.contains('unread')) ||
-                       n.getAttribute('data-type') === filter;
-            n.hidden = !show;
-            if (show) shown++;
-        });
-        empty.hidden = shown !== 0;
-    }
-
-    function updateCounts() {
-        var n = unreadTotal();
-        countEl.textContent = n;
-        bellCount.textContent = n;
-        bellCount.hidden = n === 0;
-        bell.setAttribute('aria-label', 'Notifications, ' + n + ' unread');
-        title.innerHTML = n === 0 ? 'You&rsquo;re all caught up.' : 'You&rsquo;re up to date. Almost.';
-    }
-
-    function markRead(li) {
-        if (!li.classList.contains('unread')) return;
-        li.classList.remove('unread');
-        li.querySelector('.state').textContent = 'Read';
-        var dot = li.querySelector('.dot');
-        if (dot) {
-            var tick = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            tick.setAttribute('class', 'read-tick');
-            tick.setAttribute('width', '14');
-            tick.setAttribute('height', '14');
-            tick.setAttribute('aria-hidden', 'true');
-            tick.innerHTML = '<use href="#i-tick"/>';
-            li.replaceChild(tick, dot);
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
         }
-    }
+    };
 
-    document.getElementById('notes').addEventListener('click', function (e) {
-        var dot = e.target.closest('.dot');
-        if (!dot) return;
-        markRead(dot.closest('.note'));
-        updateCounts();
-        applyFilter();
-    });
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
 
-    document.getElementById('mark-all').addEventListener('click', function () {
-        Array.prototype.forEach.call(document.querySelectorAll('.note.unread'), markRead);
-        updateCounts();
-        applyFilter();
-    });
+    HC.badge();
+})();
 
-    Array.prototype.forEach.call(tabs, function (t) {
-        t.addEventListener('click', function () {
-            Array.prototype.forEach.call(tabs, function (x) {
-                x.classList.remove('active');
-                x.setAttribute('aria-selected', 'false');
-            });
-            t.classList.add('active');
-            t.setAttribute('aria-selected', 'true');
-            filter = t.getAttribute('data-filter');
-            applyFilter();
+</script>
+<script>
+(function () {
+    var f = 'all';
+    function render() {
+        var all = HC.get('notifications'), n = all.filter(function (x) { return !x.read; }).length;
+        document.getElementById('title').textContent = n ? 'You\u2019re up to date. Almost.' : 'You\u2019re all caught up.';
+        document.getElementById('sub').textContent = n + ' unread \u00b7 Times shown in Mauritius Time';
+        var ul = document.getElementById('list'); ul.innerHTML = '';
+        var shown = all.filter(function (x) { return f === 'all' || (f === 'unread' ? !x.read : x.type === f); });
+        shown.forEach(function (x) {
+            var li = HC.el('li', 'note' + (x.read ? '' : ' unread')), d = document.createElement('div');
+            d.appendChild(HC.el('strong', '', x.title)); d.appendChild(HC.el('p', '', x.text)); d.appendChild(HC.el('small', '', x.time + ' \u00b7 ' + (x.read ? 'Read' : 'Unread')));
+            li.appendChild(d);
+            if (!x.read) {
+                var b = HC.el('button', 'btn-o', 'Mark read'); b.type = 'button';
+                b.onclick = function () { x.read = true; HC.set('notifications', all); HC.badge(); render(); };
+                li.appendChild(b);
+            }
+            ul.appendChild(li);
         });
+        document.getElementById('none').hidden = shown.length > 0; HC.badge();
+    }
+    document.getElementById('all').onclick = function () {
+        var all = HC.get('notifications'); all.forEach(function (x) { x.read = true; }); HC.set('notifications', all); render();
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+        t.onclick = function () { document.querySelector('.tab.active').classList.remove('active'); t.classList.add('active'); f = t.dataset.f; render(); };
     });
-
-    updateCounts();
-    applyFilter();
+    render();
 })();
 </script>
+
 </body>
 </html>

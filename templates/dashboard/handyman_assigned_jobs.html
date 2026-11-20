@@ -1,338 +1,166 @@
-{% load static %}
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Assigned Jobs | HandyConnect</title>
-    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_in_progress.css' %}">
     <link rel="stylesheet" href="{% static 'dashboard/css/handyman_assigned_jobs.css' %}">
 </head>
-<body>
+<body data-page="assigned" data-uid="{{ hc_uid|default:'guest' }}">
 <div class="layout">
 
     <aside class="sidebar">
         <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
-            <span class="brand-icon">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-            </span>
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
             HandyConnect
         </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
 
-        <div class="workspace">
-            <span class="workspace-label">Workspace</span>
-            <strong>Handyman Dashboard</strong>
-        </div>
-
-        <nav class="nav">
-            <a href="{% url 'dashboard:assigned_jobs' %}" class="active" aria-current="page">Assigned Jobs</a>
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}">Dashboard</a>
+            <a class="active" aria-current="page" href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
             <a href="{% url 'dashboard:job_requests' %}">Job Requests</a>
-            <a href="{% url 'dashboard:job_tracking' %}">Job Tracking</a>
+            <a href="{% url 'dashboard:job_in_progress' %}">Job Tracking</a>
             <a href="{% url 'dashboard:job_completed' %}">Job Completion</a>
-            <a href="{% url 'dashboard:report_customer' %}">Complaints</a>
         </nav>
 
-        <div class="sidebar-foot">
-            <p><strong>Need a hand?</strong></p>
-            <p class="help-text">We&rsquo;re here to help you keep every job on track.</p>
-            <a href="#"><strong>Help &amp; support &rarr;</strong></a>
-        </div>
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
     </aside>
 
     <div class="main">
         <header class="topbar">
-            <div class="crumbs">Handyman workspace</div>
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Assigned Jobs</div>
             <div class="topbar-right">
-                <a class="bell" href="{% url 'dashboard:notifications' %}" aria-label="Notifications">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
                 </a>
-                <div class="user">
-                    <span class="avatar">MJ</span>
-                    <span>{{ request.user.get_full_name|default:"Marcus Johnson" }}</span>
-                </div>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
             </div>
         </header>
 
-        <main class="content wide">
-
-            <h1 class="page-title">Good morning, {{ request.user.first_name|default:"Marcus" }}.</h1>
-            <p class="page-sub">Saturday, October 24 | Here&rsquo;s what&rsquo;s on your schedule.</p>
-
-            <!-- Stats -->
-            <div class="stats">
-                <section class="stat">
-                    <div class="stat-top"><span>Assigned jobs</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>
-                    </div>
-                    <strong class="stat-num">6</strong>
-                    <p class="stat-note">2 jobs scheduled today</p>
-                </section>
-                <section class="stat">
-                    <div class="stat-top"><span>This week&rsquo;s completed jobs</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>
-                    </div>
-                    <strong class="stat-num">12</strong>
-                    <p class="stat-note">3 more than last week</p>
-                </section>
-                <section class="stat">
-                    <div class="stat-top"><span>This month&rsquo;s earnings</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                    </div>
-                    <strong class="stat-num">MUR 42800</strong>
-                    <p class="stat-note">+MUR 6,000 from last month</p>
-                </section>
-                <section class="stat">
-                    <div class="stat-top"><span>Listing status</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z"/></svg>
-                    </div>
-                    <strong class="stat-num">Active</strong>
-                    <p class="stat-note">Your profile is visible &middot; Top rated</p>
-                </section>
-            </div>
-
-            <div class="aj-grid">
-
-                <!-- Left column -->
-                <div class="col-stack">
-
-                    <div class="atabs" role="tablist" aria-label="Job groups">
-                        <button type="button" role="tab" class="atab active" aria-selected="true" data-panel="p-today">Today &middot; 2</button>
-                        <button type="button" role="tab" class="atab" aria-selected="false" data-panel="p-upcoming">Upcoming &middot; 4</button>
-                        <button type="button" role="tab" class="atab" aria-selected="false" data-panel="p-completed">Completed</button>
-                        <button type="button" role="tab" class="atab" aria-selected="false" data-panel="p-history">Work history</button>
-                    </div>
-
-                    <!-- Today -->
-                    <section class="panel card" id="p-today">
-                        <div class="job-top">
-                            <span class="chip">Up next &middot; Morning</span>
-                            <span class="job-id">MJO-1042</span>
-                        </div>
-                        <h2 class="job-name">Kitchen sink leak repair</h2>
-
-                        <div class="cust">
-                            <span class="avatar big">EW</span>
-                            <div>
-                                <strong>Emma Wilson</strong>
-                                <span class="muted small">123 Maple Street, Port Louis, Mauritius</span>
-                            </div>
-                        </div>
-
-                        <dl class="facts">
-                            <div><dt>Service slot</dt><dd>Morning &middot; 09:00&ndash;12:00</dd></div>
-                            <div><dt>Work duration</dt><dd>1.5 hours</dd></div>
-                            <div><dt>Amount payable</dt><dd>MUR 1850</dd></div>
-                        </dl>
-
-                        <div class="btns">
-                            <a class="btn-solid" href="{% url 'dashboard:job_in_progress' %}">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>
-                                View job details
-                            </a>
-                            <a class="btn-outline" target="_blank" rel="noopener"
-                               href="https://www.google.com/maps/search/?api=1&query=123+Maple+Street+Port+Louis+Mauritius">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                View directions
-                            </a>
-                        </div>
-                    </section>
-
-                    <!-- Upcoming -->
-                    <section class="panel card" id="p-upcoming" hidden>
-                        <h2 class="panel-title">Upcoming jobs</h2>
-                        <ul class="mini">
-                            <li><strong>MJO-1043 &middot; Noah Martin</strong><span>Drain cleaning &middot; Oct 24 &middot; Afternoon</span></li>
-                            <li><strong>MJO-1045 &middot; David Brown</strong><span>Faucet replacement &middot; Oct 25 &middot; Morning</span></li>
-                        </ul>
-                    </section>
-
-                    <!-- Completed -->
-                    <section class="panel card" id="p-completed" hidden>
-                        <h2 class="panel-title">Completed jobs</h2>
-                        <ul class="mini">
-                            <li><strong>MJO-1037 &middot; Alexander Lee</strong><span>Water heater repair &middot; Oct 23 &middot; Morning</span></li>
-                        </ul>
-                    </section>
-
-                    <!-- History -->
-                    <section class="panel card" id="p-history" hidden>
-                        <h2 class="panel-title">Work history</h2>
-                        <p class="muted small">See every finished job, work summary and photo in one place.</p>
-                        <a class="btn-outline" href="{% url 'dashboard:job_completed' %}">Open job completion</a>
-                    </section>
-
-                    <!-- Assigned work table -->
-                    <section class="card">
-                        <h2>Your assigned work</h2>
-                        <div class="table-wrap">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th scope="col">Job / customer</th>
-                                        <th scope="col">Service</th>
-                                        <th scope="col">Appointment</th>
-                                        <th scope="col">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <th scope="row">MJO-1042 &middot; Emma Wilson</th>
-                                        <td>Sink leak repair</td>
-                                        <td>Oct 24 &middot; Morning</td>
-                                        <td><span class="status scheduled">Scheduled</span></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">MJO-1043 &middot; Noah Martin</th>
-                                        <td>Drain cleaning</td>
-                                        <td>Oct 24 &middot; Afternoon</td>
-                                        <td><span class="status scheduled">Scheduled</span></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">MJO-1045 &middot; David Brown</th>
-                                        <td>Faucet replacement</td>
-                                        <td>Oct 25 &middot; Morning</td>
-                                        <td><span class="status scheduled">Scheduled</span></td>
-                                    </tr>
-                                    <tr>
-                                        <th scope="row">MJO-1037 &middot; Alexander Lee</th>
-                                        <td>Water heater repair</td>
-                                        <td>Oct 23 &middot; Morning</td>
-                                        <td><span class="status completed">Completed</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- Right column -->
-                <div class="col-stack">
-
-                    <section class="card cal">
-                        <div class="cal-head">
-                            <div>
-                                <h2 id="cal-month">October 2026</h2>
-                                <p class="muted small">Appointment calendar &middot; Mauritius Time</p>
-                            </div>
-                            <div class="cal-nav">
-                                <button type="button" id="cal-prev" aria-label="Previous week">&lsaquo;</button>
-                                <button type="button" id="cal-next" aria-label="Next week">&rsaquo;</button>
-                            </div>
-                        </div>
-
-                        <div class="week" id="week" role="group" aria-label="Week"></div>
-
-                        <h3 class="day-title" id="day-title">Saturday, October 24</h3>
-                        <div id="day-list"></div>
-
-                        <a class="btn-outline block" href="{% url 'dashboard:job_tracking' %}">View all appointments</a>
-                    </section>
-
-                    <section class="card ready">
-                        <h2>Ready for the day?</h2>
-                        <p class="muted small">Bring the right tools and let customers know if you&rsquo;re running late. A little preparation goes a long way.</p>
-                    </section>
-                </div>
-            </div>
-        </main>
+        <main class="content">
+<h1 class="page-title">Assigned jobs</h1>
+<p class="page-sub">Start a job when you arrive. Finished jobs move to Job Completion.</p>
+<div class="tabs" role="group" aria-label="Filter">
+    <button class="tab active" data-f="all">All</button><button class="tab" data-f="scheduled">Scheduled</button><button class="tab" data-f="in_progress">In progress</button>
+</div>
+<section class="card"><div class="tw"><table>
+    <thead><tr><th>Job / customer</th><th>Service</th><th>Appointment</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody id="rows" data-url="{% url 'dashboard:job_in_progress' %}"></tbody>
+</table></div><p class="empty" id="none" hidden>No jobs here.</p></section>
+</main>
     </div>
 </div>
 
 <script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
 (function () {
-    /* ---------- Tabs ---------- */
-    var tabs = document.querySelectorAll('.atab');
-    Array.prototype.forEach.call(tabs, function (t) {
-        t.addEventListener('click', function () {
-            Array.prototype.forEach.call(tabs, function (x) {
-                x.classList.remove('active');
-                x.setAttribute('aria-selected', 'false');
-                document.getElementById(x.getAttribute('data-panel')).hidden = true;
-            });
-            t.classList.add('active');
-            t.setAttribute('aria-selected', 'true');
-            document.getElementById(t.getAttribute('data-panel')).hidden = false;
-        });
-    });
-
-    /* ---------- Calendar (placeholder data; backend should supply real appointments) ---------- */
-    var DAY = 86400000;
-    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    var LETTERS = ['M','T','W','T','F','S','S'];
-
-    var APPTS = {
-        '2026-10-23': [{ when: 'Morning \u00b7 09:00\u201312:00', title: 'Water heater repair', who: 'Alexander Lee \u00b7 Port Louis', morning: true }],
-        '2026-10-24': [
-            { when: 'Morning \u00b7 09:00\u201312:00', title: 'Kitchen sink leak repair', who: 'Emma Wilson \u00b7 Port Louis', morning: true },
-            { when: 'Afternoon \u00b7 13:00\u201317:00', title: 'Bathroom drain cleaning', who: 'Noah Martin \u00b7 La Louise', morning: false }
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
         ],
-        '2026-10-25': [{ when: 'Morning \u00b7 08:00\u201311:00', title: 'Faucet replacement', who: 'David Brown \u00b7 Curepipe', morning: true }]
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
     };
 
-    var weekStart = Date.UTC(2026, 9, 19);   /* Monday */
-    var selected = Date.UTC(2026, 9, 24);
-    var weekEl = document.getElementById('week');
-    var listEl = document.getElementById('day-list');
-
-    function key(ms) { return new Date(ms).toISOString().slice(0, 10); }
-
-    function renderList() {
-        var d = new Date(selected);
-        document.getElementById('day-title').textContent =
-            DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate();
-        var items = APPTS[key(selected)] || [];
-        listEl.innerHTML = '';
-        if (!items.length) {
-            var p = document.createElement('p');
-            p.className = 'muted small no-appt';
-            p.textContent = 'No appointments on this day.';
-            listEl.appendChild(p);
-            return;
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
         }
-        items.forEach(function (a) {
-            var box = document.createElement('div');
-            box.className = 'slot ' + (a.morning ? 'morning' : 'afternoon');
-            var w = document.createElement('span'); w.className = 'slot-when'; w.textContent = a.when;
-            var t = document.createElement('strong'); t.textContent = a.title;
-            var s = document.createElement('span'); s.className = 'slot-who'; s.textContent = a.who;
-            box.appendChild(w); box.appendChild(t); box.appendChild(s);
-            listEl.appendChild(box);
+    };
+
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+})();
+
+</script>
+<script>
+(function () {
+    var body = document.getElementById('rows'), f = 'all', url = body.dataset.url;
+    function cell(tr, t, tag) { var c = HC.el(tag || 'td', '', t); tr.appendChild(c); return c; }
+    function render() {
+        var jobs = HC.get('jobs').filter(function (j) { return j.status !== 'completed' && (f === 'all' || j.status === f); });
+        body.innerHTML = ''; document.getElementById('none').hidden = jobs.length > 0;
+        jobs.forEach(function (j) {
+            var tr = document.createElement('tr');
+            cell(tr, j.id + ' \u00b7 ' + j.customer, 'th'); cell(tr, j.service); cell(tr, j.slot); cell(tr, 'MUR ' + j.amount);
+            var s = cell(tr, ''); s.appendChild(HC.el('span', 'pill ' + j.status, j.status === 'scheduled' ? 'Scheduled' : 'In progress'));
+            var a = cell(tr, '');
+            if (j.status === 'scheduled') {
+                var b = HC.el('button', 'btn', 'Start job'); b.type = 'button';
+                b.onclick = function () {
+                    var all = HC.get('jobs'); all.forEach(function (x) { if (x.id === j.id) x.status = 'in_progress'; });
+                    HC.set('jobs', all); HC.notify('job', 'Job started', j.id + ' \u00b7 ' + j.service);
+                    location.href = url + '?job=' + j.id;
+                };
+                a.appendChild(b);
+            } else { var l = HC.el('a', 'btn-o', 'Continue'); l.href = url + '?job=' + j.id; a.appendChild(l); }
+            body.appendChild(tr);
         });
     }
-
-    function renderWeek() {
-        weekEl.innerHTML = '';
-        var d0 = new Date(selected);
-        document.getElementById('cal-month').textContent = MONTHS[d0.getUTCMonth()] + ' ' + d0.getUTCFullYear();
-        for (var i = 0; i < 7; i++) {
-            (function (i) {
-                var ms = weekStart + i * DAY;
-                var d = new Date(ms);
-                var b = document.createElement('button');
-                b.type = 'button';
-                b.className = 'dayb' + (ms === selected ? ' on' : '');
-                b.setAttribute('aria-pressed', ms === selected ? 'true' : 'false');
-                b.setAttribute('aria-label', DAYS[d.getUTCDay()] + ' ' + d.getUTCDate());
-                b.innerHTML = '<small>' + LETTERS[i] + '</small><span>' + d.getUTCDate() + '</span>';
-                b.addEventListener('click', function () { selected = ms; renderWeek(); renderList(); });
-                weekEl.appendChild(b);
-            })(i);
-        }
-    }
-
-    function shift(days) {
-        weekStart += days * DAY;
-        selected += days * DAY;
-        renderWeek();
-        renderList();
-    }
-    document.getElementById('cal-prev').addEventListener('click', function () { shift(-7); });
-    document.getElementById('cal-next').addEventListener('click', function () { shift(7); });
-
-    renderWeek();
-    renderList();
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+        t.onclick = function () {
+            document.querySelector('.tab.active').classList.remove('active'); t.classList.add('active'); f = t.dataset.f; render();
+        };
+    });
+    render();
 })();
 </script>
+
 </body>
 </html>
