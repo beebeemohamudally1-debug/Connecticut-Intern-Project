@@ -5,6 +5,10 @@ from . import views
 app_name = 'notifications'
 
 urlpatterns = [
+    path('mine/', views.my_notification_list, name='my_notification_list'),
+    path('mine/unread-count/', views.my_unread_count, name='my_unread_count'),
+    path('mine/<int:notification_id>/read/', views.mark_my_notification_read, name='mark_my_notification_read'),
+    path('mine/read-all/', views.mark_my_notifications_read, name='mark_my_notifications_read'),
     path(
         '',
         views.notification_list,

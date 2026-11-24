@@ -90,3 +90,40 @@ def mark_all_as_read(request):
         'updated': updated
     })
 
+
+@require_GET
+@login_required
+def my_notification_list(request):
+    """Return only notifications addressed to the signed-in user."""
+    notifications = Notification.objects.filter(recipient=request.user)
+    return JsonResponse({'notifications': [
+        {'id': n.pk, 'title': n.title, 'message': n.message, 'url': n.url,
+         'type': n.notification_type, 'is_read': n.is_read,
+         'created_at': n.created_at.isoformat()}
+        for n in notifications
+    ]})
+
+
+@require_GET
+@login_required
+def my_unread_count(request):
+    return JsonResponse({'unread_count': Notification.objects.filter(
+        recipient=request.user, is_read=False,
+    ).count()})
+
+
+@require_POST
+@login_required
+def mark_my_notification_read(request, notification_id):
+    notification = get_object_or_404(Notification, pk=notification_id, recipient=request.user)
+    notification.is_read = True
+    notification.save(update_fields=['is_read'])
+    return JsonResponse({'success': True})
+
+
+@require_POST
+@login_required
+def mark_my_notifications_read(request):
+    updated = Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'success': True, 'updated': updated})
+

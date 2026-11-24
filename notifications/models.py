@@ -7,6 +7,7 @@ class Notification(models.Model):
 
     NOTIFICATION_TYPES = [
         ('service_request', 'New Service Request'),
+        ('appointment', 'Appointment Update'),
         ('quotation', 'Quotation Update'),
         ('job', 'Job Update'),
         ('complaint', 'Complaint'),
