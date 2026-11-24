@@ -1,21 +1,21 @@
-"""Admin portal - Appointments (section 8): real data from bookings.Appointment.
-
-These views only READ the database to show the pages (admin only).
-BACKEND (bookings): there are no views yet that create, confirm, reschedule or cancel an
-appointment, so those buttons save nothing and show a demo message. The places to connect
-are marked "BACKEND" below and in the templates; see ADMIN_FRONTEND_README.md.
-"""
+"""Admin appointment pages and actions backed by bookings.Appointment."""
 import calendar
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
-from bookings.models import Appointment, ServiceRequest, ServiceRequestAssignment
+from bookings.models import Appointment, AppointmentEvent, ServiceRequest, ServiceRequestAssignment
+from bookings.services import (
+    cancel_appointment, confirm_appointment, create_appointment_proposal,
+    propose_reschedule, service_payment_readiness,
+)
 from dashboard.permissions import role_required
-from payments.models import Quotation, request_payment_state
+from payments.models import Quotation
 
 from .admin_views import _initials, _person_name
 
@@ -69,7 +69,7 @@ def _payment_checks(sr):
         ('Labour payment', *paid(labour, True)),
         ('Material payment', *paid(material, False)),
     ]
-    ready = all(ok for _, _, ok in rows) and request_payment_state(sr) == 'paid'
+    ready = service_payment_readiness(sr)['ready']
     rows.append(('Full payment', 'Received' if ready else 'Not received', ready))
     return {'rows': [{'label': l, 'value': v, 'ok': ok} for l, v, ok in rows], 'ready': ready,
             'labour': labour, 'material': material}
@@ -162,13 +162,21 @@ def appointment_calendar(request):
 
 
 def _history(a):
+    events = list(a.events.select_related('actor'))
+    if events:
+        labels = dict(AppointmentEvent.EVENT_CHOICES)
+        return [{'label': labels[event.event_type] + (f' by {_person_name(event.actor)}' if event.actor else ''),
+                 'when': event.created_at, 'done': True,
+                 'stop': event.event_type == AppointmentEvent.CANCELLED,
+                 'detail': event.detail} for event in events]
     steps = [{'label': 'Appointment created', 'when': a.created_at, 'done': True}]
-    if a.status == Appointment.STATUS_PENDING:
-        steps.append({'label': 'Waiting for the customer to agree, then confirm', 'when': None, 'done': False})
     if a.confirmed_at:
         steps.append({'label': f'Confirmed by {_person_name(a.confirmed_by)}', 'when': a.confirmed_at, 'done': True})
+    elif a.status == Appointment.STATUS_PENDING:
+        steps.append({'label': 'Waiting for the customer to agree, then confirm', 'when': None, 'done': False})
     if a.status == Appointment.STATUS_CANCELLED:
-        steps.append({'label': 'Cancelled', 'when': a.updated_at, 'done': True, 'stop': True})
+        steps.append({'label': 'Cancelled', 'when': a.updated_at, 'done': True, 'stop': True,
+                      'detail': a.cancellation_reason})
     if a.status == Appointment.STATUS_COMPLETED:
         steps.append({'label': 'Completed', 'when': a.updated_at, 'done': True})
     return steps
@@ -190,10 +198,19 @@ def appointment_detail(request, pk):
         'preferred': f'{sr.preferred_date:%d %b %Y} · {sr.get_preferred_slot_display()}' if sr.preferred_date else '-',
         'when': _when(a), 'slot_time': SLOT_TIMES.get(a.time_slot, ''),
         'checks': checks,
+        'customer_response': a.customer_response,
+        'customer_response_label': a.get_customer_response_display(),
+        'cancellation_reason': a.cancellation_reason,
         'quotation_url': reverse('payments:quotation_detail_admin', args=[checks['labour'].pk]) if checks and checks['labour'] else '',
         'history': _history(a),
         'conflict': {'ref': _ref(conflict), 'request_ref': conflict.service_request.reference} if conflict else None,
         'can_change': a.status in (Appointment.STATUS_PENDING, Appointment.STATUS_CONFIRMED),
+        'can_confirm': (a.status == Appointment.STATUS_PENDING
+                        and a.customer_response == Appointment.CUSTOMER_ACCEPTED
+                        and not conflict and (not checks or checks['ready'])),
+        'show_confirmed': request.GET.get('confirmed') == '1' and a.status == Appointment.STATUS_CONFIRMED,
+        'confirm_url': reverse('accounts_admin:appointment_confirm', args=[a.pk]),
+        'cancel_url': reverse('accounts_admin:appointment_cancel', args=[a.pk]),
         'reschedule_url': reverse('accounts_admin:appointment_reschedule', args=[a.pk]),
         'list_url': reverse('accounts_admin:appointments'),
     }
@@ -271,9 +288,16 @@ def appointment_schedule(request, kind):
                 conflict = {'handyman': _person_name(handyman), 'requested': f'{day:%d %b %Y} · {form["slot"].title()}',
                             'ref': _ref(clash), 'booked': _when(clash), 'request_ref': clash.service_request.reference}
             else:
-                # BACKEND: create the Pending appointment here (service_request, handyman, appointment_type,
-                # appointment_date, time_slot, notes), then redirect to its Appointment Details page.
-                messages.info(request, 'The slot is free. Not saved yet: scheduling is not in the backend (frontend demo only).')
+                try:
+                    appointment = create_appointment_proposal(
+                        service_request=sr, handyman=handyman, appointment_type=kind,
+                        day=day, slot=form['slot'], notes=form['notes'], actor=request.user,
+                    )
+                except ValidationError as error:
+                    messages.error(request, ' '.join(error.messages))
+                else:
+                    messages.success(request, 'Appointment proposal sent to the customer and handyman.')
+                    return redirect('accounts_admin:appointment_detail', pk=appointment.pk)
 
     page = {
         'kind': kind, 'kind_label': TYPE_LABEL[kind],
@@ -325,9 +349,13 @@ def appointment_reschedule(request, pk):
                 conflict = {'handyman': _person_name(a.handyman), 'requested': f'{day:%d %b %Y} · {form["slot"].title()}',
                             'ref': _ref(clash), 'booked': _when(clash), 'request_ref': clash.service_request.reference}
             else:
-                # BACKEND: save the proposed date and slot (and the customer's answer once it exists),
-                # then redirect to Appointment Details.
-                messages.info(request, 'The slot is free. Not saved yet: rescheduling is not in the backend (frontend demo only).')
+                try:
+                    propose_reschedule(a, day=day, slot=form['slot'], notes=form['notes'], actor=request.user)
+                except ValidationError as error:
+                    messages.error(request, ' '.join(error.messages))
+                else:
+                    messages.success(request, 'The alternative appointment time was sent to the customer and handyman.')
+                    return redirect('accounts_admin:appointment_detail', pk=a.pk)
     page = {
         **_row(a), 'when': _when(a), 'form': form, 'conflict': conflict,
         'preferred': f'{sr.preferred_date:%d %b %Y} · {sr.get_preferred_slot_display()}' if sr.preferred_date else '-',
@@ -339,3 +367,28 @@ def appointment_reschedule(request, pk):
         'detail_url': reverse('accounts_admin:appointment_detail', args=[a.pk]),
     }
     return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})
+
+
+@role_required('admin')
+@require_POST
+def appointment_confirm(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    try:
+        confirm_appointment(appointment, request.user)
+        messages.success(request, 'Appointment confirmed.')
+    except ValidationError as error:
+        messages.error(request, ' '.join(error.messages))
+        return redirect('accounts_admin:appointment_detail', pk=pk)
+    return redirect(reverse('accounts_admin:appointment_detail', args=[pk]) + '?confirmed=1')
+
+
+@role_required('admin')
+@require_POST
+def appointment_cancel(request, pk):
+    appointment = get_object_or_404(Appointment, pk=pk)
+    try:
+        cancel_appointment(appointment, request.user, request.POST.get('reason', ''))
+        messages.success(request, 'Appointment cancelled.')
+    except ValidationError as error:
+        messages.error(request, ' '.join(error.messages))
+    return redirect('accounts_admin:appointment_detail', pk=pk)

@@ -28,4 +28,6 @@ urlpatterns = [
     path('appointments/schedule/<str:kind>/', appointments.appointment_schedule, name='appointment_schedule'),
     path('appointments/<int:pk>/', appointments.appointment_detail, name='appointment_detail'),
     path('appointments/<int:pk>/reschedule/', appointments.appointment_reschedule, name='appointment_reschedule'),
+    path('appointments/<int:pk>/confirm/', appointments.appointment_confirm, name='appointment_confirm'),
+    path('appointments/<int:pk>/cancel/', appointments.appointment_cancel, name='appointment_cancel'),
 ]
