@@ -29,13 +29,14 @@ It creates:
 - inspection and service appointments in every status (pending, confirmed, completed, cancelled), with one pending appointment that clashes with a confirmed one
 - service requests in every stage: not forwarded yet (with a sample chosen handyman), forwarded (no answer), rejected by the handyman (with a reason) and cancelled, next to the accepted ones
 - phone numbers, two suspended accounts, and approved / pending / rejected skill and service changes for the handymen
+- once the services app is there: 15 skills (3 inactive), handyman profiles with skills and areas, and skill requests to add, change and remove (`--reset` also deletes the demo skills, including the names used by the older version)
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
 python manage.py seed_demo --reset
 ```
 Notes:
-- Log in as `demo_admin` (or give your own account `role = 'admin'` and staff status) to open the pages.
+- Log in on the login page (`/login`) as `demo_admin@example.com` with the password `demo12345` (or give your own account `role = 'admin'` and staff status) to open the pages.
 - The ids change after `--reset`, so use the printed links or open the pages from the lists.
 - Only for local testing. Every demo user starts with `demo_`, and nothing else in the database is changed. The command is in `payments/management/commands/seed_demo.py`.
 
@@ -61,9 +62,9 @@ The full list of names is in the comment at the top of each template. The connec
 **Pages connected to the backend**
 
 - **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`. A notification with a `url` has its title as a link, so the admin can open the page it is about (it is marked as read on the way).
-- **Logout** (profile menu in `base_admin.html`) posts to `accounts:logout`, like the other pages. That view is still a stub that only goes to the login page; the session is cleared once the auth backend is in.
+- **Logout** (profile menu in `base_admin.html`) posts to `accounts:logout`, which logs the admin out and opens the login page.
 - **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is the user's Customer Details or Handyman Profile page.
-- **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status, state).
+- **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status, state, url).
 - **Handyman Profile** – `handyman`: name, initials, id, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services, reports_url.
 - **Admin Profile** – `admin`: name, initials, email, role, status, from the logged-in user. Saving is not connected yet (no update view).
 - **Labour estimates tab** – `estimates` (`LabourEstimate` list). The Review pop-up posts to the payments approve and revision views.
@@ -120,8 +121,7 @@ CSS and JS are in `static/payments/`. The sidebar link **Service Quotations** po
 6. **Type filter** in `quotation_list`, so material quotations get their own list.
 7. **Links and routes:** **Schedule Appointment** now opens the Appointments schedule page. Still missing: routes for `admin_dashboard`, `admin_record_payment` and `admin_issue_invoice`.
 8. **Notifications** for estimates and customer answers (only complaints create notifications now), and `notify_admins` should include `role = 'admin'` users who are not staff.
-9. **Login redirect:** `LOGIN_URL = 'login'` is missing in settings.
-10. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
+9. **Payment for both quotations:** `ready_for_payment` and `payment_record` allow paying the labour quotation alone, and an appointment can be confirmed with only one paid quotation. Both should need the labour **and** material quotations accepted (and paid, for the appointment). The pages already follow this, but the backend still allows it through the URLs.
 
 ## Material Quotations (connected to the backend)
 Built on the existing `payments` pages (same layout and pieces as Service Quotations). Needs an account with `role = 'admin'`.
@@ -263,16 +263,16 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 | Handyman Profile | `/admin-portal/users/handyman/<id>/` | `accounts/admin_handyman_profile.html` |
 
 - The views in `accounts/admin_views.py` read `accounts.User` (every customer and handyman, newest first). Only admins can open them.
-- Status is `Active` or `Suspended`, from `is_active`. The suspended sample pages were removed: the same templates show both.
-- Customer Details: the counts and recent requests come from `bookings.ServiceRequest`; completed jobs from `jobs.Job`. The user has no address field, so the address is the one on the latest service request.
-- Handyman Profile: completed and assigned jobs come from `jobs.Job`. Skills and services are worked out from the handyman's **approved** `bookings.HandymanProfileRequest` changes (add, modify, remove, oldest first). **View Daily Work Report** opens the reports of the handyman's latest job.
+- Status: `Suspended` (`is_suspended` or not `is_active`), else for a handyman `Pending` or `Rejected` from `HandymanProfile.status`, else `Active`. **Pending Approval** counts the handymen waiting for approval.
+- Customer Details: the address is `user.address` (or the latest service request's address when it is empty). The counts and recent requests come from `bookings.ServiceRequest` (each request id opens Service Request Details); completed jobs from `jobs.Job`.
+- Handyman Profile: skills, services and service areas come from `accounts.HandymanProfile` (areas fall back to `user.region`); **Verified** when the profile is approved. A handyman without a profile falls back to the approved `bookings.HandymanProfileRequest` changes. Completed and assigned jobs come from `jobs.Job`; **View Daily Work Report** opens the reports of the latest job.
 
 **Still needed from the backend**
 1. **Suspend, Reactivate and Delete** (`accounts/_user_modals.html`): no views yet, so the buttons only show a demo message.
-2. **Handyman registration verification:** no model for the documents, the verified state or approve / reject. So **Pending Approval** shows 0, no user is `Pending`, the profile shows no Verified badge, and **View documents** still opens the sample verification page.
-3. **Service areas and availability:** no fields, so the profile shows "Not recorded".
+2. **Registration documents and approve / reject:** the registration is still a stub, so no documents are stored and there is no view that approves or rejects a `HandymanProfile`. **Review registration** (pending handymen) and **View documents** still open the sample verification pages.
+3. **Availability:** no field, so the profile shows "Not recorded".
 4. **Job history:** no page for one handyman's jobs, so the button links to `#`.
-5. **Service request page:** no admin page for one request, so the request ids on Customer Details are not links.
+5. **Approved skill and service requests:** approving a `HandymanProfileRequest` should also update `HandymanProfile.skills` / `.services`, so the profile shows the change.
 
 ## Appointments (connected to the backend, saving still needed)
 Built from the low-fi and high-fi, with the same pieces as Service Quotations. Only admins can open them.
@@ -344,6 +344,31 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
 4. **Exact preferred time:** only a date and Morning / Afternoon exist, so the page shows "26 Nov 2026 · Afternoon".
 5. **Attachments:** no photos or files on a request, so the page shows "No attachments".
 6. **Services link:** the service is plain text (`service_category`), not linked to the Services app, so the Service filter lists the names found in the requests.
+
+## Manage Skills (connected to the backend, saving still needed)
+Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/admin_skills.py` (read only, admins only), URLs in `accounts/admin_urls.py`, templates in `templates/services/`. Category is the trade a skill belongs to (`Skill.category`, e.g. Plumbing).
+
+| Page | URL |
+|---|---|
+| Manage Skills | `/admin-portal/skills/` |
+| Skill Details (Deactivate / Reactivate pop-up) | `/admin-portal/skills/<id>/` |
+| Add Skill / Edit Skill | `/admin-portal/skills/add/`, `/admin-portal/skills/<id>/edit/` |
+| Handyman Skill Requests | `/admin-portal/skills/requests/` |
+| Review Skill Request | `/admin-portal/skills/requests/<id>/` |
+
+**Still needed from the backend (services)**
+1. **Add / Edit a skill:** a view that saves the name, category and availability. Then set the form's `action` and remove `data-demo` (`services/admin_skill_form.html`).
+2. **Deactivate / Reactivate:** a view that sets `Skill.is_active`. Then set the pop-up form's `action` and remove `data-demo` (`services/admin_skill_detail.html`).
+3. **Approve / Reject a skill request:** a view that sets `status`, `admin_note`, `reviewed_at` and `reviewed_by`, and on approval adds, changes or removes the skill in the handyman's `HandymanProfile.skills`. Then set the form's `action` and remove `data-demo` (`services/admin_skill_request_detail.html`).
+4. **Description and dates:** `Skill` has no description, created or updated date. The description is left out of the pages, and the list's **Updated** column shows "—" (marked `BACKEND`).
+5. **Requested skill is text:** `HandymanProfileRequest.requested_value` is not linked to `Skill`, so the Review page links to the skill only when the name matches one in the catalogue.
+6. **Keep a handyman's skills in one place:** Manage Skills and the Handyman Profile both read `HandymanProfile.skills`, so approving a request must update it (see item 3).
+
+## Back links
+`static/js/admin_back.js` (loaded by `base_admin.html`) makes the "← Back" link of every admin page go back to the admin page the admin came from, with its name ("Back to Skill Details", "Back to search results"). The pages and labels are the `PAGES` list at the top of the file: add a new admin page there.
+- Where the admin came from is kept per page in `sessionStorage` (this tab only), so it stays after a refresh, a save that reloads the page, or the browser's Back button. Pressing a back link does not loop.
+- Form pages (add, edit, schedule, reschedule, resolve) and the same page are never used as the place to go back to.
+- Opened in a new tab, from a bookmark or from outside the admin pages, the link stays as written in the template.
 
 ## Navbar search (connected to the backend)
 - The search box at the top of every admin page (`templates/base_admin.html`) opens `/admin-portal/search/?q=` (`accounts_admin:search`, view `search` in `accounts/admin_views.py`, template `accounts/admin_search.html`). Read only, admins only.

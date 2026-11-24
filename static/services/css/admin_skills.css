@@ -1,0 +1,127 @@
+/* Manage Skills (admin): Skills list, Skill details, Add / Edit Skill, Skill Requests and
+   Review Skill Request.
+   The two lists also use payments/css/admin_labour_quotations.css (number cards, tools, table,
+   pages); the other pages use payments/css/admin_quotation_lists.css (pop-ups, demo message). */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+[hidden] { display: none !important; }
+
+.back { display: inline-block; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #2A69B5; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+.bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.bar h1 { font-size: 26px; }
+.bar .sub { margin-bottom: 0; }
+
+/* Buttons: main action orange outline, soft tints for the others */
+.btn.sk-main { color: var(--orange); background: #fff; border-color: var(--orange); }
+.btn.sk-main:hover { background: #FFF5EE; filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+.btn.soft-blue { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
+.btn.soft-green { color: #11836D; background: #E6F6EF; border-color: #E5EAF0; }
+.btn.soft-red { color: #B74555; background: #FEEDF0; border-color: #E5EAF0; }
+.btn.soft-blue:hover, .btn.soft-green:hover, .btn.soft-red:hover, .btn.o:hover { filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+.sk-head-btns { display: flex; flex: none; align-self: flex-start; gap: 8px; }
+.sk-head-btns .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; font-size: 14px; font-weight: 600; text-decoration: none; }
+.sk-head-btns .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sk-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; font-size: 12px; font-weight: 600; color: #fff; background: #2866B1; border-radius: 100px; }
+.sk-count.is-wait { height: 22px; padding: 0 10px; vertical-align: 3px; color: #A66A16; background: #FFF4DF; }
+
+/* Inactive number card (grey) */
+.sk-s-off .lq-chip { color: #718199; background: #F4F7FA; }
+
+/* ---------- Lists ---------- */
+.sk-title { margin: 4px 0 10px; font-size: 18px; color: var(--navy); }
+.lq-tools.sk-tools { grid-template-columns: minmax(220px, 1fr) 200px 170px auto; }
+.sk-table td strong { color: var(--navy); }
+.sk-acts { white-space: nowrap; }
+.sk-acts .btn { margin-right: 6px; }
+.btn.sk-edit { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
+.btn.sk-edit:hover { filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+
+/* Status badges and tags */
+.sk-st { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 100px; white-space: nowrap; }
+.sk-st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.sk-st.is-on, .sk-st.is-approved { color: #11836D; background: #E6F6EF; }
+.sk-st.is-off { color: #718199; background: #F4F7FA; }
+.sk-st.is-wait, .sk-st.is-pending { color: #A66A16; background: #FFF4DF; }
+.sk-st.is-bad, .sk-st.is-rejected { color: #B74555; background: #FEEDF0; }
+.sk-tag { display: inline-block; padding: 2px 9px; font-size: 12px; font-weight: 600; border-radius: 100px; }
+.sk-tag.is-on { color: #11836D; background: #E6F6EF; }
+.sk-tag.is-wait { color: #A66A16; background: #FFF4DF; }
+.sk-tag.is-bad { color: #B74555; background: #FEEDF0; }
+.sk-chg { display: inline-block; padding: 2px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; }
+.sk-chg.is-add { color: #2866B1; background: #ECF3FA; }
+.sk-chg.is-modify { color: #8A4FC6; background: #F3ECFC; }
+.sk-chg.is-remove { color: #B74555; background: #FEEDF0; }
+
+/* ---------- Details and Review cards ---------- */
+.sk-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-bottom: 14px; }
+.sk-box { margin: 0; padding: 18px 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.15s ease; }
+.sk-box:hover { box-shadow: var(--card-hover); }
+.sk-box h2 { margin: 0 0 12px; font-size: 18px; color: var(--navy); }
+.sk-box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sk-box-head .sk-name { margin: 0; font-size: 22px; }
+.sk-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin: 0; }
+.sk-dl.sk-one { grid-template-columns: 1fr; margin-top: 14px; }
+.sk-dl .sk-wide { grid-column: 1 / -1; }
+.sk-dl dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.sk-dl dd { margin: 3px 0 0; font-size: 14px; font-weight: 600; color: var(--navy); }
+.sk-dl dd a { color: #2866B1; text-decoration: none; }
+.sk-dl dd a:hover { text-decoration: underline; }
+.sk-dl dd .mut, .sk-text { font-weight: 400; }
+.sk-text { line-height: 1.5; }
+
+/* Handymen with this skill */
+.sk-people { margin: 0; padding: 0; list-style: none; }
+.sk-people li { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.sk-people li:last-child { border-bottom: 0; }
+.sk-who { display: flex; flex-direction: column; min-width: 0; }
+.sk-who strong { font-size: 14px; color: var(--navy); }
+.sk-who .mut { overflow: hidden; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.sk-av { display: grid; place-items: center; width: 34px; height: 34px; font-size: 12px; font-weight: 700; color: #315C7F; background: #E3EFF6; border-radius: 50%; }
+.sk-av.is-big { width: 46px; height: 46px; font-size: 15px; }
+.sk-more { margin: 8px 0 0; font-size: 13px; }
+.sk-person { display: flex; align-items: center; gap: 12px; }
+.sk-person strong { display: block; margin-bottom: 4px; font-size: 16px; color: var(--navy); }
+.sk-profile { margin-top: 16px; }
+
+/* Bottom action card */
+.sk-next { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 24px; box-shadow: var(--card-shadow); }
+.sk-next h2 { margin: 0 0 4px; font-size: 16px; color: var(--navy); }
+.sk-next p { margin: 0; }
+.sk-actions { display: flex; flex: none; gap: 10px; }
+.sk-actions .btn, .ql-modal .btn, .sk-form-foot .btn { font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.sk-decide form { display: flex; align-items: flex-end; gap: 20px; width: 100%; }
+.sk-decide .sk-field { flex: 1; }
+
+/* Pop-up */
+.sk-center { text-align: center; }
+.sk-icon { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto; font-size: 24px; font-weight: 700; border-radius: 50%; }
+.sk-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.sk-icon.is-red { color: #B74555; background: #FEEDF0; }
+.sk-icon.is-green { color: #11836D; background: #E6F6EF; }
+
+/* ---------- Add / Edit form ---------- */
+.sk-form { padding: 22px 26px; box-shadow: var(--card-shadow); }
+.sk-form h2 { margin: 0 0 4px; font-size: 18px; color: var(--navy); }
+.sk-form > .mut { margin: 0 0 18px; }
+.sk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+.sk-field { display: flex; flex-direction: column; gap: 6px; }
+.sk-field .in { width: 100%; max-width: none; }
+.sk-field textarea.in { height: auto; resize: vertical; font: inherit; font-size: 14px; }
+.sk-label { font-size: 13px; font-weight: 600; color: #26344A; }
+.sk-label .mut { font-weight: 400; }
+.sk-req { color: #B74555; }
+.sk-hint { font-size: 12px; }
+.sk-err { font-size: 12px; font-weight: 600; color: #B74555; }
+.in[aria-invalid="true"] { border-color: #BA4947; }
+.sk-form-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+@media (max-width: 1100px) {
+  .bar { flex-direction: column; align-items: flex-start; }
+  .lq-tools.sk-tools { grid-template-columns: 1fr 1fr; }
+  .sk-grid, .sk-dl, .sk-fields { grid-template-columns: 1fr; }
+  .sk-next, .sk-decide form { flex-direction: column; align-items: stretch; }
+}
