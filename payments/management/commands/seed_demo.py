@@ -239,7 +239,10 @@ class Command(BaseCommand):
             req = ServiceRequest.objects.create(
                 customer=customers[c], service_category=service, problem_description=problem,
                 service_address=f'{town}, Mauritius', contact_name=customers[c].get_full_name(),
-                contact_phone=customers[c].phone, preferred_date=date(2026, 11, day), preferred_slot=slot, status=status)
+                contact_phone=customers[c].phone, preferred_date=date(2026, 11, day), preferred_slot=slot,
+                status=status,
+                chosen_handyman=(handymen[h] if h is not None else
+                                 handymen[0] if status in ('submitted', 'reviewing') else None))
             if h is not None:
                 ServiceRequestAssignment.objects.create(
                     service_request=req, handyman=handymen[h], status=answer, sent_by=admin, response_note=note,
@@ -328,6 +331,7 @@ class Command(BaseCommand):
             done = status in (A.STATUS_CONFIRMED, A.STATUS_COMPLETED)
             A.objects.create(service_request_id=self.ids[key]['request'], handyman=handymen[h], appointment_type=kind,
                              appointment_date=today + timedelta(days=days), time_slot=slot, status=status, notes=note,
+                             customer_response=A.CUSTOMER_ACCEPTED if done else A.CUSTOMER_PENDING,
                              confirmed_by=admin if done else None, confirmed_at=timezone.now() if done else None)
 
     def profile_requests(self, admin, handymen):

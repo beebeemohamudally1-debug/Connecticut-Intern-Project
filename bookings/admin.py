@@ -21,6 +21,7 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     list_display = (
         'reference',
         'customer',
+        'chosen_handyman',
         'service_category',
         'preferred_date',
         'preferred_slot',
@@ -30,6 +31,7 @@ class ServiceRequestAdmin(admin.ModelAdmin):
     search_fields = (
         'reference',
         'customer__username',
+        'chosen_handyman__username',
         'customer__email',
         'service_category',
         'problem_description',
