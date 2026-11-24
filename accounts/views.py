@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
+from django.core.mail import send_mail
 from services.models import ServiceArea, ServiceCategory
 
 from . import auth_messages as M
@@ -421,3 +421,129 @@ def register_provider_done(request):
     return render(request, 'accounts/register_provider_done.html', {
         'step': 5, 'role': 'provider', 'role_label': M.ROLE_PROVIDER,
         'name': name, 'email': request.session.get('reg_email', '')})
+    
+# ===================================================================== password reset
+RESET_SECONDS = 30 * 60   # a reset session expires after 30 minutes
+RESET_KEYS = ('reset_email', 'reset_verified', 'reset_ts')
+RESET_COPY = {'wrong': M.CODE_WRONG, 'expired': M.CODE_EXPIRED,
+              'locked': M.CODE_LOCKED, 'hourly': M.CODE_HOURLY}
+
+
+def _reset_touch(request):
+    request.session['reset_ts'] = time.time()
+
+
+def _reset_stale(request):
+    ts = request.session.get('reset_ts')
+    return ts is None or time.time() - ts > RESET_SECONDS
+
+
+def _reset_clear(request):
+    for key in RESET_KEYS:
+        request.session.pop(key, None)
+
+
+def _eligible_user(email):
+    """The account that may reset: it exists, is active and is not suspended."""
+    return User.objects.filter(email__iexact=email, is_active=True, is_suspended=False).first()
+
+
+def _issue_reset_code(email):
+    """Always create a code, but email it only if an account exists, so the page
+    behaves the same for every address. Returns '' or the limit reason."""
+    try:
+        code = verification.issue(email, 'reset')
+    except verification.VerificationLimit as limit:
+        return limit.reason
+    if _eligible_user(email):
+        verification.send_code(email, code)
+    return ''
+
+
+def _notify_password_changed(user):
+    try:
+        send_mail('Your HandyConnect password was changed',
+                  'Your password was changed. If this was not you, contact an administrator.',
+                  None, [user.email])
+    except Exception:
+        pass
+
+
+# Step 1: ask for the email. The answer is the same whether or not the account exists.
+def forgot_password(request):
+    ctx = {'errors': {}, 'email': '', 'panel': 'story'}
+    if request.method == 'POST':
+        email = verification.normalise(request.POST.get('email'))
+        ctx['email'] = email
+        if not email:
+            ctx['errors'] = {'email': M.EMAIL_REQUIRED}
+        elif not EMAIL_RE.fullmatch(email):
+            ctx['errors'] = {'email': M.REG_EMAIL_INVALID}
+        else:
+            _reset_clear(request)
+            _issue_reset_code(email)
+            request.session['reset_email'] = email
+            _reset_touch(request)
+            ctx.update(submitted=True, notice=M.FORGOT_GENERIC)
+    return render(request, 'accounts/forgot.html', ctx)
+
+
+# Step 2: enter the 6-digit code.
+def reset_verify(request):
+    email = request.session.get('reset_email')
+    if not email or _reset_stale(request):
+        return redirect('accounts:forgot_password')
+    state = alert = notice = ''
+    if request.method == 'POST':
+        if request.POST.get('action') == 'resend':
+            reason = _issue_reset_code(email)
+            if reason == 'hourly':
+                state, alert = 'hourly', RESET_COPY['hourly']
+            elif not reason:
+                notice = M.REG_CODE_SENT
+            # cooldown: the page already shows the countdown
+        else:
+            result = verification.verify(email, 'reset', request.POST.get('code', '').strip())
+            if result == 'ok':
+                request.session['reset_verified'] = True
+                _reset_touch(request)
+                return redirect('accounts:reset_new')
+            state = {'wrong': 'wrong', 'expired': 'expired', 'none': 'expired', 'locked': 'locked'}[result]
+            alert = RESET_COPY[state]
+    numbers = verification.status(email, 'reset')
+    if not state and numbers['hourly'] and numbers['expires_in'] == 0:
+        state, alert = 'hourly', RESET_COPY['hourly']
+    return render(request, 'accounts/reset_verify.html', {
+        'panel': 'story', 'email': email, 'state': state, 'alert': alert, 'notice': notice,
+        'attempts_left': numbers['attempts_left'], 'expires_in': numbers['expires_in'],
+        'cooldown': numbers['cooldown']})
+
+
+# Step 3: choose the new password.
+def reset_new(request):
+    email = request.session.get('reset_email')
+    if not request.session.get('reset_verified') or not email or _reset_stale(request):
+        return redirect('accounts:forgot_password')
+    ctx = {'errors': {}, 'panel': 'story', 'rules': [(k, label, False) for k, label in M.PW_RULES]}
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        confirm = request.POST.get('confirm', '')
+        rules = validators.password_rules(password)
+        ctx['rules'] = rules
+        if not all(met for _, _, met in rules):
+            ctx['errors'] = {'password': M.RESET_RULES_UNMET}
+        elif password != confirm:
+            ctx['errors'] = {'confirm': M.RESET_MISMATCH}
+        else:
+            user = _eligible_user(email)
+            if user is None:                      # the account changed in the meantime
+                _reset_clear(request)
+                return redirect('accounts:forgot_password')
+            user.set_password(password)           # other sessions stop working: Django ties them to the old hash
+            user.must_change_password = False
+            user.save(update_fields=['password', 'must_change_password'])
+            cache.delete(_fail_key(email))        # clear the login lock for this email
+            _notify_password_changed(user)
+            _reset_clear(request)
+            return redirect('accounts:reset_done')
+    return render(request, 'accounts/reset_new.html', ctx)
