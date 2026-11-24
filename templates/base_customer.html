@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block body %}
 <div class="app c">
-<header class="top"><div class="logo"><i></i>HandyConnect</div><nav><a href="#" data-nav="bookings">My bookings</a><a href="#" data-nav="invoices">Invoices</a><a href="#" data-nav="history">Payment history</a><a href="#" data-nav="penalties">Penalties</a><a href="#" data-nav="complaints">Complaints</a><a href="#" data-nav="profile">Profile</a></nav></header>
+<header class="top"><div class="logo"><i></i>HandyConnect</div><nav><a href="{% url 'bookings:my_requests' %}" data-nav="bookings">My requests</a><a href="{% url 'bookings:my_appointments' %}">Appointments</a><a href="#" data-nav="invoices">Invoices</a><a href="#" data-nav="history">Payment history</a><a href="#" data-nav="penalties">Penalties</a><a href="{% url 'complaints:list' %}" data-nav="complaints">Complaints</a><a href="#" data-nav="profile">Profile</a></nav></header>
 <main class="main narrow">
 {% block content %}{% endblock %}
 </main>

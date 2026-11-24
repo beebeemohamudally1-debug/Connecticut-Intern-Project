@@ -1,0 +1,23 @@
+{% extends "jobs/base_user.html" %}
+{% block content %}
+<section class="card" style="max-width:900px;margin:28px auto;padding:24px">
+  <p class="mut">HandyConnect · Handyman</p><h1>Service requests</h1>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  {% for assignment in assignments %}
+    <article style="padding:18px 0;border-top:1px solid #ddd">
+      <h2>{{ assignment.service_request.reference }} · {{ assignment.service_request.service_category|default:"Service request" }}</h2>
+      <p>Customer: {{ assignment.service_request.contact_name|default:assignment.service_request.customer.get_full_name }} · {{ assignment.service_request.contact_phone }}</p>
+      <p>{{ assignment.service_request.problem_description }}</p>
+      <p>{{ assignment.service_request.service_address }} · Preferred: {{ assignment.service_request.preferred_date|date:"d M Y"|default:"Not specified" }}{% if assignment.service_request.preferred_slot %} / {{ assignment.service_request.get_preferred_slot_display }}{% endif %}</p>
+      <p>Status: {{ assignment.get_status_display }}{% if assignment.response_note %} · {{ assignment.response_note }}{% endif %}</p>
+      {% if assignment.status == 'sent' %}
+        <form method="post" action="{% url 'bookings:handyman_respond' assignment.pk %}">
+          {% csrf_token %}<label>Note (optional) <input type="text" name="note" maxlength="500"></label>
+          <button type="submit" name="action" value="accept">Accept request</button>
+          <button type="submit" name="action" value="reject">Decline request</button>
+        </form>
+      {% endif %}
+    </article>
+  {% empty %}<p>No service requests have been sent to you.</p>{% endfor %}
+</section>
+{% endblock %}

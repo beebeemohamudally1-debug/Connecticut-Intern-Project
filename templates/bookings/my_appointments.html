@@ -1,0 +1,23 @@
+{% extends "base_customer.html" %}
+{% block content %}
+<section class="card" style="max-width:900px;margin:28px auto;padding:24px">
+  <p class="mut">HandyConnect · Customer</p><h1>My appointments</h1>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  {% for appointment in appointments %}
+    <article style="padding:18px 0;border-top:1px solid #ddd">
+      <h2>{{ appointment.service_request.reference }} · {{ appointment.get_appointment_type_display }}</h2>
+      <p>{{ appointment.appointment_date|date:"l, d M Y" }} · {{ appointment.get_time_slot_display }}</p>
+      <p>Handyman: {{ appointment.handyman.get_full_name|default:appointment.handyman.username }} · Status: {{ appointment.get_status_display }}</p>
+      {% if appointment.notes %}<p>{{ appointment.notes }}</p>{% endif %}
+      {% if appointment.status == 'pending' and appointment.customer_response == 'pending' %}
+        <form method="post" action="{% url 'bookings:appointment_respond' appointment.pk %}">
+          {% csrf_token %}
+          <button type="submit" name="action" value="accept">Accept proposed time</button>
+          <button type="submit" name="action" value="reject">Decline proposed time</button>
+        </form>
+      {% elif appointment.status == 'pending' %}<p>Your response: {{ appointment.get_customer_response_display }}. The administrator will confirm or propose another time.</p>
+      {% endif %}
+    </article>
+  {% empty %}<p>You have no appointment proposals yet.</p>{% endfor %}
+</section>
+{% endblock %}
