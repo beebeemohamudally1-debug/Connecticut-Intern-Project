@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'services',
     'bookings',
     'payments',
     'dashboard',
@@ -47,7 +48,11 @@ INSTALLED_APPS = [
     'notifications',
     'reports',
     'reviews',
+]
 
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailBackend',          # created in Stage 5
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

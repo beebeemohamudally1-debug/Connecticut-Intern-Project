@@ -173,18 +173,18 @@ class EstimateViewTests(FeatureViewBase):
 
 
 class RevisionViewTests(FeatureViewBase):
-    def test_customer_revision_admin_revise_and_reissue(self):
+    def test_customer_revision_waits_for_the_handyman(self):
+        # FR-A-9: the customer's changes go to the handyman first, so the admin cannot revise
+        # (or re-send) on their own until the handyman can send an updated estimate.
         self.login(self.customer)
         self.client.post(reverse('payments:quotation_detail', args=[self.q.pk]), {'revision': '1', 'note': 'Cheaper please'})
         self.q.refresh_from_db()
         self.assertEqual(self.q.status, 'revision_requested')
+        total = self.q.total_amount
         self.login(self.admin)
-        self.client.post(reverse('payments:quotation_edit', args=[self.q.pk]), {'work_description': 'Smaller job', 'total_amount': '10000.00'})
+        self.client.post(reverse('payments:quotation_edit', args=[self.q.pk]), {'work_description': 'Smaller job', 'total_amount': '10000.00', 'send': '1'})
         self.q.refresh_from_db()
-        self.assertEqual((self.q.status, self.q.total_amount), ('revised', Decimal('10000.00')))
-        self.client.post(reverse('payments:quotation_send', args=[self.q.pk]))
-        self.q.refresh_from_db()
-        self.assertEqual((self.q.status, self.q.revision_number), ('sent', 2))
+        self.assertEqual((self.q.status, self.q.total_amount, self.q.revision_number), ('revision_requested', total, 1))
 
     def test_revision_without_note_changes_nothing(self):
         self.login(self.customer)

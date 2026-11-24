@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import wraps
 
 from django.contrib import messages
@@ -91,8 +92,14 @@ def quotation_detail_admin(request, pk):
     other_type = Quotation.MATERIAL if quotation.quotation_type == Quotation.LABOUR else Quotation.LABOUR
     other = (quotation.request.quotations.filter(quotation_type=other_type)
              .exclude(status__in=[Quotation.CANCELLED, Quotation.DECLINED]).order_by('-created_at').first())
+    # Material quotation: its receipts are shown on the page too
+    purchase = getattr(quotation, 'purchase_request', None) if quotation.quotation_type == Quotation.MATERIAL else None
+    receipts = list(purchase.receipts.all()) if purchase else []
+    approved = sum((r.amount_spent for r in receipts if r.status == MaterialReceipt.APPROVED), Decimal('0'))
     return render(request, 'payments/quotation_admin_detail.html', {
         'quotation': quotation, 'other': other, 'request_payment': request_payment_state(quotation.request),
+        'receipts': receipts, 'receipts_approved': approved,
+        'receipts_difference': quotation.total_amount - approved if receipts else None,
     })
 
 
@@ -129,6 +136,11 @@ def quotation_edit(request, pk):
         messages.error(request, 'This quotation can no longer be edited.')
         return redirect('payments:quotation_detail_admin', pk=pk)
     form = QuotationForm(request.POST or None, instance=Quotation.objects.get(pk=pk))
+    if request.method == 'POST' and quotation.status == Quotation.REVISION_REQUESTED:
+        # FR-A-9: the customer's changes go to the handyman first. Until the handyman can send an
+        # updated estimate (not in the backend yet), the admin cannot revise or re-send on their own.
+        messages.error(request, 'Send the changes to the handyman first. Revising is locked until the handyman sends an updated estimate.')
+        return redirect('payments:quotation_edit', pk=pk)
     if request.method == 'POST' and form.is_valid():
         total, text = form.cleaned_data['total_amount'], form.cleaned_data['work_description']
         revising = quotation.status == Quotation.REVISION_REQUESTED
@@ -185,9 +197,32 @@ def payment_record(request, quotation_id):
 # ============================================================== admin: materials
 @role_required('admin')
 def admin_materials(request):
-    purchase_requests = MaterialPurchaseRequest.objects.select_related('request', 'handyman', 'quotation')
+    purchase_requests = (MaterialPurchaseRequest.objects
+                         .select_related('request', 'request__customer', 'handyman', 'quotation', 'quotation__payment')
+                         .prefetch_related('receipts'))
     receipts = MaterialReceipt.objects.select_related('purchase_request', 'purchase_request__request', 'uploaded_by')
+    # Receipt totals for the Material Quotations page (reconciliation against the quotation)
+    for p in purchase_requests:
+        p.receipt_list = list(p.receipts.all())
+        p.receipts_waiting = sum(1 for r in p.receipt_list if r.status == MaterialReceipt.SUBMITTED)
+        p.approved_total = sum((r.amount_spent for r in p.receipt_list if r.status == MaterialReceipt.APPROVED), Decimal('0'))
+        p.difference = (p.quotation.total_amount - p.approved_total) if p.quotation else None
+        # Both quotations accepted and paid -> the service can be scheduled (FR-A-9 part C)
+        labour = (p.request.quotations.filter(quotation_type=Quotation.LABOUR)
+                  .exclude(status=Quotation.CANCELLED).order_by('-created_at').first())
+        p.ready_to_schedule = bool(p.quotation and labour and p.quotation.status == Quotation.ACCEPTED
+                                   and labour.status == Quotation.ACCEPTED
+                                   and request_payment_state(p.request) == 'paid')
     return render(request, 'payments/admin_materials.html', {'purchase_requests': purchase_requests, 'receipts': receipts})
+
+
+@role_required('admin')
+def material_quotation_list(request):
+    """Material Quotations - Quotations tab: the material quotations sent to customers (read only)."""
+    quotations = (Quotation.objects.filter(quotation_type=Quotation.MATERIAL)
+                  .select_related('request', 'request__customer', 'purchase_request__handyman', 'payment')
+                  .order_by('-created_at'))
+    return render(request, 'payments/material_quotation_list.html', {'quotations': quotations})
 
 
 @role_required('admin')

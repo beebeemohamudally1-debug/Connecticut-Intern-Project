@@ -1,0 +1,76 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Appointments - Appointment Calendar (admin). View: accounts/admin_appointments.py appointment_calendar
+  URL: appointments/calendar/?view=month|week|day&date=YYYY-MM-DD
+  Context `page`: view, title, focus, grid (weeks of days: date, in_month, today, items = appointment
+  rows), prev_url / next_url / today_url, view_urls (month, week, day), list_url, slots.
+  Cancelled appointments are not shown. Each appointment links to its details page.
+{% endcomment %}
+
+{% block title %}Appointment Calendar | HandyConnect{% endblock %}
+{% block page %}appointments{% endblock %}
+{% block crumb %}Appointments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+
+<div class="bar ap-bar">
+  <div>
+    <h1>Appointment Calendar</h1>
+    <p class="sub">Inspections and services by day. Cancelled appointments are hidden.</p>
+  </div>
+  <div class="ap-actions">
+    <a class="btn soft-blue" href="{{ page.list_url }}">List View</a>
+  </div>
+</div>
+
+<section class="card ap-cal is-{{ page.view }}">
+  <div class="ap-cal-head">
+    <div class="ap-cal-nav">
+      <a class="ap-arrowbtn" href="{{ page.prev_url }}" aria-label="Previous">&lsaquo;</a>
+      <h2>{{ page.title }}</h2>
+      <a class="ap-arrowbtn" href="{{ page.next_url }}" aria-label="Next">&rsaquo;</a>
+      <a class="btn o s" href="{{ page.today_url }}">Today</a>
+    </div>
+    <div class="ap-legend"><span class="ap-type is-inspection">Inspection</span><span class="ap-type is-service">Service</span></div>
+    <nav class="lq-tabs ap-views" aria-label="Calendar view">
+      <a href="{{ page.view_urls.month }}"{% if page.view == 'month' %} aria-current="page"{% endif %}>Month</a>
+      <a href="{{ page.view_urls.week }}"{% if page.view == 'week' %} aria-current="page"{% endif %}>Week</a>
+      <a href="{{ page.view_urls.day }}"{% if page.view == 'day' %} aria-current="page"{% endif %}>Day</a>
+    </nav>
+  </div>
+
+  {% if page.view == 'day' %}
+  {% with day=page.grid.0.0 %}
+  <div class="ap-day">
+    {% for key, label in page.slots %}
+    <div class="ap-day-slot">
+      <p class="ap-day-label">{{ label }}</p>
+      <div class="ap-day-items">
+        {% for r in day.items %}{% if r.slot_key == key %}
+        <a class="ap-ev is-{{ r.type }} st-{{ r.status }}" href="{{ r.url }}"><strong>{{ r.ref }} &middot; {{ r.type_label }}</strong><span>{{ r.customer }} &middot; {{ r.handyman }} &middot; {{ r.status_label }}</span></a>
+        {% endif %}{% empty %}{% endfor %}
+        {% if not day.items %}<p class="mut">No appointments.</p>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endwith %}
+  {% else %}
+  <div class="ap-cal-grid">
+    <div class="ap-dow">Mon</div><div class="ap-dow">Tue</div><div class="ap-dow">Wed</div><div class="ap-dow">Thu</div><div class="ap-dow">Fri</div><div class="ap-dow">Sat</div><div class="ap-dow">Sun</div>
+    {% for week in page.grid %}{% for d in week %}
+    <div class="ap-cell{% if not d.in_month %} out{% endif %}{% if d.today %} today{% endif %}">
+      <a class="ap-num" href="?view=day&date={{ d.date|date:'Y-m-d' }}">{{ d.date|date:"j" }}</a>
+      {% for r in d.items|slice:":3" %}
+      <a class="ap-ev is-{{ r.type }} st-{{ r.status }}" href="{{ r.url }}" title="{{ r.ref }} · {{ r.customer }} · {{ r.handyman }} · {{ r.slot }} · {{ r.status_label }}">{% if page.view == 'week' %}<strong>{{ r.slot }}</strong> {% endif %}{{ r.request_ref }} {{ r.type }}</a>
+      {% endfor %}
+      {% if d.items|length > 3 %}<a class="ap-more" href="?view=day&date={{ d.date|date:'Y-m-d' }}">+{{ d.items|length|add:"-3" }} more</a>{% endif %}
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

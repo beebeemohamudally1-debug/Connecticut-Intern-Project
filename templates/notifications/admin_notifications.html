@@ -71,7 +71,7 @@
         </span>
 
         <div class="nt-body">
-          <p class="nt-title">{{ n.title }}</p>
+          <p class="nt-title">{% if n.url %}<a class="nt-link" href="{{ n.url }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</p>
           <p class="mut nt-text">{{ n.message }}</p>
           <p class="mut nt-time"><span>{{ n.created_at|date:"M j · g:i A" }}</span> · <span data-state>{% if n.is_read %}Read{% else %}Unread{% endif %}</span></p>
         </div>
