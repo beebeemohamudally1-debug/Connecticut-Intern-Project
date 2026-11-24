@@ -1,5 +1,6 @@
 import re
 import time
+import uuid
 
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.hashers import make_password
@@ -10,11 +11,11 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from services.models import ServiceArea
+from services.models import ServiceArea, ServiceCategory
 
 from . import auth_messages as M
 from . import validators, verification
-from .models import HandymanProfile
+from .models import HandymanProfile, ProviderDocument
 from .permissions import get_role
 
 User = get_user_model()
@@ -305,3 +306,118 @@ def username_check(request):
         return JsonResponse({'code': 'USERNAME_TAKEN', 'message': M.USERNAME_TAKEN,
                              'field': 'username'}, status=409)
     return JsonResponse({'available': True})
+
+# ===================================================================== provider registration
+PROVIDER_FIELDS = ('first_name', 'surname', 'additional_names', 'username', 'phone', 'address')
+FILE_RULES = {'types': ','.join(M.DOC_TYPES), 'max_mb': M.DOC_MAX_MB,
+              'type_error': M.FILE_TYPE_ERROR, 'size_error': M.FILE_SIZE_ERROR}
+
+
+def _provider_flow(request, step, **extra):
+    return {**_flow(request, step, **extra), 'role': 'provider', 'role_label': M.ROLE_PROVIDER}
+
+
+def _categories():
+    return [(c.name, c.name) for c in ServiceCategory.objects.filter(is_active=True)]
+
+
+def _provider_ready(request):
+    session = request.session
+    return bool(session.get('reg_role') == 'provider' and session.get('reg_verified')
+                and session.get('reg_pwhash') and not _stale(request))
+
+
+def _discard(documents):
+    # Delete files written before a failure, so no orphan IDs stay on disk.
+    for document in documents:
+        try:
+            document.file.delete(save=False)
+        except OSError:
+            pass
+
+
+# S10: provider details. Nothing is created here; the answers wait in the session.
+def register_provider(request):
+    if not _provider_ready(request):
+        return redirect('accounts:register_expired')
+    saved = request.session.get('reg_provider', {})
+    ctx = _provider_flow(
+        request, 4, part='Part 1 of 2', errors={},
+        values={k: saved.get(k, '') for k in PROVIDER_FIELDS},
+        regions=_regions(), categories=_categories(),
+        selected_regions=saved.get('regions', []), selected_categories=saved.get('categories', []))
+    if request.method == 'POST':
+        values = {k: request.POST.get(k, '').strip() for k in PROVIDER_FIELDS}
+        regions = request.POST.getlist('regions')
+        categories = request.POST.getlist('categories')
+        errors = validators.validate_provider(values, regions, categories)
+        ctx.update(values=values, errors=errors, selected_regions=regions, selected_categories=categories)
+        if not errors:
+            request.session['reg_provider'] = {**values, 'regions': regions, 'categories': categories}
+            _touch(request)
+            return redirect('accounts:register_provider_documents')
+    return render(request, 'accounts/register_provider.html', ctx)
+
+# S10b: documents. The account is created here, in ONE transaction.
+def register_provider_documents(request):
+    details = request.session.get('reg_provider')
+    if not _provider_ready(request) or not details:
+        return redirect('accounts:register_expired')
+    name = details['first_name'] + ' ' + details['surname']
+    ctx = _provider_flow(request, 4, part='Part 2 of 2', errors={}, name=name, file_rules=FILE_RULES)
+    if request.method == 'POST':
+        id_file = request.FILES.get('id_photo')
+        certificates = request.FILES.getlist('certificates')
+        terms, privacy = request.POST.get('terms'), request.POST.get('privacy')
+        errors = validators.validate_documents(id_file, certificates, terms, privacy)
+        ctx.update(errors=errors, terms_accepted=bool(terms), privacy_accepted=bool(privacy))
+        if not errors:
+            now = timezone.now()
+            stored = []
+            try:
+                with transaction.atomic():
+                    user = User.objects.create(
+                        username=details['username'], email=request.session['reg_email'],
+                        first_name=details['first_name'], last_name=details['surname'],
+                        additional_names=details['additional_names'], phone=details['phone'],
+                        address=details['address'], role='handyman',
+                        password=request.session['reg_pwhash'],
+                        terms_accepted_at=now, privacy_accepted_at=now)
+                    profile = HandymanProfile.objects.create(user=user)   # status: PENDING_APPROVAL
+                    profile.service_areas.set(ServiceArea.objects.filter(name__in=details['regions']))
+                    profile.categories.set(ServiceCategory.objects.filter(name__in=details['categories']))
+                    uploads = [(ProviderDocument.KIND_ID, id_file)]
+                    uploads += [(ProviderDocument.KIND_CERTIFICATE, c) for c in certificates]
+                    for kind, f in uploads:
+                        original = f.name
+                        f.name = f'{uuid.uuid4().hex}{validators.check_image(f)[1]}'   # never trust the file name
+                        document = ProviderDocument(profile=profile, kind=kind, file=f,
+                                                    original_name=original[:255])
+                        document.save()
+                        stored.append(document)
+            except IntegrityError:
+                _discard(stored)
+                if User.objects.filter(email__iexact=request.session['reg_email']).exists():
+                    return redirect('accounts:register_email')
+                details['username'] = ''        # the username was taken in the meantime
+                request.session['reg_provider'] = details
+                return redirect('accounts:register_provider')
+            except OSError:
+                _discard(stored)
+                ctx['errors'] = {'id_photo': M.FILE_UPLOAD_FAILED}
+            else:
+                request.session['reg_name'] = name
+                for key in ('reg_role', 'reg_verified', 'reg_pwhash', 'reg_provider'):
+                    request.session.pop(key, None)
+                return redirect('accounts:register_provider_done')
+    return render(request, 'accounts/register_provider_documents.html', ctx)
+
+
+# S11: submitted. No automatic login: the provider logs in later and sees the application status.
+def register_provider_done(request):
+    name = request.session.get('reg_name')
+    if not name:
+        return redirect('accounts:register')
+    return render(request, 'accounts/register_provider_done.html', {
+        'step': 5, 'role': 'provider', 'role_label': M.ROLE_PROVIDER,
+        'name': name, 'email': request.session.get('reg_email', '')})

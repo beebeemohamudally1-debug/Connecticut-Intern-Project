@@ -29,9 +29,9 @@ urlpatterns = [
     path("register/customer", views.register_customer, name="register_customer"),
     path("register/customer/done", views.register_done, name="register_done"),
     # Service provider registration (S10, S10b, S11)
-    path("register/provider", r.register_provider, name="register_provider"),
-    path("register/provider/documents", r.register_provider_documents, name="register_provider_documents"),
-    path("register/provider/done", r.register_provider_done, name="register_provider_done"),
+    path("register/provider", views.register_provider, name="register_provider"),
+    path("register/provider/documents", views.register_provider_documents, name="register_provider_documents"),
+    path("register/provider/done", views.register_provider_done, name="register_provider_done"),
     path("register/check-username", views.username_check, name="username_check"),
     path("preview", v.preview_index, name="preview"),
 ]

@@ -3,8 +3,8 @@ import re
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import CommonPasswordValidator
 from django.core.exceptions import ValidationError
-
-from services.models import ServiceArea
+from PIL import Image
+from services.models import ServiceArea, ServiceCategory
 
 from . import auth_messages as M
 
@@ -64,4 +64,58 @@ def validate_customer(values, terms, privacy):
         errors['terms'] = e['terms']
     if not privacy:
         errors['privacy'] = e['privacy']
+    return errors
+
+DOC_FORMATS = {'JPEG': '.jpg', 'PNG': '.png'}
+
+
+def check_image(f):
+    """Return (error message, file extension). Checks the size and the real content."""
+    if f.size > M.DOC_MAX_MB * 1024 * 1024:
+        return f'{f.name}: {M.FILE_SIZE_ERROR}', ''
+    try:
+        f.seek(0)
+        with Image.open(f) as img:
+            img.verify()
+            image_format = img.format
+    except Exception:
+        return f'{f.name}: {M.FILE_TYPE_ERROR}', ''
+    f.seek(0)
+    if image_format not in DOC_FORMATS:
+        return f'{f.name}: {M.FILE_TYPE_ERROR}', ''
+    return '', DOC_FORMATS[image_format]
+
+
+def validate_provider(values, regions, categories):
+    """Field errors for the provider details form (S10)."""
+    errors = validate_customer({**values, 'region': (regions or [''])[0]}, True, True)
+    errors.pop('region', None)   # a provider has regions, not one region
+    active_regions = set(ServiceArea.objects.filter(is_active=True).values_list('name', flat=True))
+    active_categories = set(ServiceCategory.objects.filter(is_active=True).values_list('name', flat=True))
+    if not regions or not set(regions) <= active_regions:
+        errors['regions'] = M.PROVIDER_ERRORS['regions']
+    if not categories or not set(categories) <= active_categories:
+        errors['categories'] = M.PROVIDER_ERRORS['categories']
+    return errors
+
+
+def validate_documents(id_file, certificates, terms, privacy):
+    """Errors for the documents form (S10b)."""
+    errors = {}
+    if id_file is None:
+        errors['id_photo'] = M.DOC_ERRORS['id_photo']
+    else:
+        message, _ = check_image(id_file)
+        if message:
+            errors['id_photo'] = message
+    if not certificates:
+        errors['certificates'] = M.DOC_ERRORS['certificates']
+    else:
+        problems = [m for m, _ in (check_image(c) for c in certificates) if m]
+        if problems:
+            errors['certificates'] = ' '.join(problems)
+    if not terms:
+        errors['terms'] = M.DOC_ERRORS['terms']
+    if not privacy:
+        errors['privacy'] = M.DOC_ERRORS['privacy']
     return errors

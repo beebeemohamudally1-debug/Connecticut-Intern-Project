@@ -13,6 +13,13 @@ from accounts import auth_messages as M
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
+import io
+import shutil
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from PIL import Image
 
 User = get_user_model()
 PASSWORD = 'Str0ngPass!word'
@@ -178,4 +185,96 @@ class RegistrationFlowTests(TestCase):
         self.assertEqual(self.client.get(url, {'username': 'free_name'}).status_code, 200)
         self.assertEqual(self.client.get(url, {'username': 'TAKEN_NAME'}).status_code, 409)
         self.assertEqual(self.client.get(url, {'username': 'a!'}).status_code, 400)
+        
+TEMP_MEDIA = tempfile.mkdtemp()
+
+
+def image_file(name='doc.png', image_format='PNG'):
+    buffer = io.BytesIO()
+    Image.new('RGB', (10, 10), 'white').save(buffer, image_format)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/' + image_format.lower())
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA)
+class ProviderRegistrationTests(TestCase):
+    EMAIL = 'marc@example.com'
+    PASSWORD = 'Str0ngPass!word'
+    DETAILS = {
+        'first_name': 'Marc', 'surname': 'Lafleur', 'additional_names': '', 'username': 'marc_l',
+        'phone': '57123456', 'address': '5 Rue Royale',
+        'regions': ['Flacq', 'Moka'], 'categories': ['Plumbing', 'Electrical'],
+    }
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
+
+    def setUp(self):
+        for target, kwargs in (('accounts.verification.send_code', {'return_value': True}),
+                               ('accounts.verification.secrets.randbelow', {'return_value': 123456})):
+            patcher = patch(target, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def reach_details_page(self):
+        self.client.post(reverse('accounts:register'), {'role': 'provider'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        self.client.post(reverse('accounts:register_verify'), {'code': '123456'})
+        self.client.post(reverse('accounts:register_password'),
+                         {'password': self.PASSWORD, 'confirm': self.PASSWORD})
+
+    def reach_documents_page(self):
+        self.reach_details_page()
+        return self.client.post(reverse('accounts:register_provider'), self.DETAILS)
+
+    def submit(self, **overrides):
+        data = {'id_photo': image_file('id.png'),
+                'certificates': [image_file('c1.jpg', 'JPEG'), image_file('c2.png')],
+                'terms': 'on', 'privacy': 'on'}
+        data.update(overrides)
+        return self.client.post(reverse('accounts:register_provider_documents'), data)
+
+    def test_full_registration_creates_pending_account(self):
+        self.reach_documents_page()
+        r = self.submit()
+        self.assertRedirects(r, reverse('accounts:register_provider_done'), fetch_redirect_response=False)
+        user = User.objects.get(email=self.EMAIL)
+        self.assertEqual(user.role, 'handyman')
+        profile = user.handyman_profile
+        self.assertEqual(profile.status, HandymanProfile.STATUS_PENDING)
+        self.assertEqual(profile.documents.filter(kind='id_photo').count(), 1)
+        self.assertEqual(profile.documents.filter(kind='certificate').count(), 2)
+        self.assertEqual(set(profile.service_areas.values_list('name', flat=True)), {'Flacq', 'Moka'})
+        self.assertEqual(set(profile.categories.values_list('name', flat=True)), {'Plumbing', 'Electrical'})
+        self.assertNotIn('_auth_user_id', self.client.session)   # no automatic login
+
+    def test_fake_image_is_refused(self):
+        self.reach_documents_page()
+        fake = SimpleUploadedFile('id.png', b'this is not an image', content_type='image/png')
+        r = self.submit(id_photo=fake)
+        self.assertIn('id_photo', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_certificate_is_required(self):
+        self.reach_documents_page()
+        r = self.submit(certificates=[])
+        self.assertIn('certificates', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_consent_is_required(self):
+        self.reach_documents_page()
+        r = self.submit(terms='')
+        self.assertIn('terms', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_region_is_required(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_provider'), {**self.DETAILS, 'regions': []})
+        self.assertIn('regions', r.context['errors'])
+
+    def test_documents_page_needs_details_first(self):
+        r = self.client.get(reverse('accounts:register_provider_documents'))
+        self.assertRedirects(r, reverse('accounts:register_expired'), fetch_redirect_response=False)
 # Create your tests here.

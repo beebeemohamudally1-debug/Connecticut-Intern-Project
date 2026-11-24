@@ -93,3 +93,18 @@ class EmailVerification(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['email', 'purpose', 'created_at'])]
+        
+class ProviderDocument(models.Model):
+    """An ID photo or certificate uploaded by a handyman. Private: only administrators may view."""
+    KIND_ID = 'id_photo'
+    KIND_CERTIFICATE = 'certificate'
+    KIND_CHOICES = [(KIND_ID, 'ID card photo'), (KIND_CERTIFICATE, 'Certificate')]
+
+    profile = models.ForeignKey(HandymanProfile, on_delete=models.CASCADE, related_name='documents')
+    kind = models.CharField(max_length=12, choices=KIND_CHOICES)
+    file = models.FileField(upload_to='handyman_documents/%Y/%m/')
+    original_name = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.profile} - {self.get_kind_display()}'
