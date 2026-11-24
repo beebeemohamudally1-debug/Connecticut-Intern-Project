@@ -6,9 +6,8 @@
   Context `page`: the appointment row plus when (current date and slot), preferred, customer_email,
   customer_phone, form (date, slot, notes), conflict, busy (the handyman's confirmed bookings),
   handyman_pk, slots, today, detail_url.
-  Send Proposal posts date, slot and notes. The view checks them and the booking conflict, but
-  saves nothing yet. BACKEND: save the new time in the view (marked there).
-  Not in the backend yet: sending the proposal to the customer and storing their answer.
+  Send Proposal saves the new date/slot, returns the appointment to Pending, resets customer
+  response, and notifies the customer/handyman.
 {% endcomment %}
 
 {% block title %}Reschedule {{ page.ref }} | HandyConnect{% endblock %}

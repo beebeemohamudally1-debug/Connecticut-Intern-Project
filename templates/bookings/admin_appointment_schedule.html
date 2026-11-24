@@ -13,10 +13,9 @@
     busy                    -> their confirmed bookings (handyman, date, slot, ref) for the live check
     checks, blocked         -> service only: quotation and payment checks; blocked when not fully paid
     form, conflict, slots, today, list_url
-  Send to Customer posts handyman, date, slot and notes. The view checks them and the booking
-  conflict, but saves nothing yet. BACKEND: create the Pending appointment in the view (marked there).
-  Not in the backend yet: the inspection fee (so an inspection cannot be blocked for it), sending
-  the proposal to the customer, and handyman working hours.
+  Send to Customer creates a Pending appointment proposal and notifies the customer/handyman.
+  The customer responds on My Appointments; the admin confirms after acceptance.
+  Inspection fee and handyman working hours are not modeled.
 {% endcomment %}
 
 {% block title %}Schedule {{ page.kind_label }} Appointment | HandyConnect{% endblock %}
