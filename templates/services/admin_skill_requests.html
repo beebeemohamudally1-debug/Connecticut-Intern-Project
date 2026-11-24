@@ -1,0 +1,94 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Skills - Handyman Skill Requests list. View: accounts.admin_skills.skill_requests.
+
+  Data comes from the view as `page`:
+    page.rows     -> ref (SKR-101), handyman, skill, current (old name, for Change), action
+                     (add / modify / remove), action_label (Add / Change / Remove), status
+                     (pending / approved / rejected), status_label, submitted, url
+    page.pending  -> number of pending requests
+    page.statuses -> HandymanProfileRequest.STATUS_CHOICES, page.actions -> action labels
+  Rows are bookings.HandymanProfileRequest with request_type = skill, newest first.
+  Search, the status / type filters and the page buttons work in the browser.
+{% endcomment %}
+
+{% block title %}Skill Requests | Skills | HandyConnect{% endblock %}
+{% block page %}skills{% endblock %}
+{% block crumb %}Skills{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/admin_skills.css' %}">
+
+<a class="back" href="{% url 'accounts_admin:skills' %}">&larr; Back to Manage Skills</a>
+<div class="bar">
+  <div>
+    <h1>Handyman Skill Requests</h1>
+    <p class="sub">Review the skills handymen ask to add, change or remove.</p>
+  </div>
+</div>
+
+<section class="card lq-card" data-skills data-noun="request" data-page-size="{{ page.page_size }}">
+  <h2 class="sk-title">Skill Requests{% if page.pending %} <span class="sk-count is-wait">{{ page.pending }} pending</span>{% endif %}</h2>
+  <div class="lq-tools sk-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by handyman, skill or request ID</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search handyman, skill or request ID..." data-search>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        {% for key, label in page.statuses %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label><span class="sr-only">Type of change</span>
+      <select class="in" data-category>
+        <option value="">All changes</option>
+        {% for key, label in page.actions.items %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table sk-table">
+    <thead>
+      <tr>
+        <th scope="col">Request</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Skill</th>
+        <th scope="col">Change</th>
+        <th scope="col">Submitted</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in page.rows %}
+      <tr data-row data-status="{{ r.status }}" data-category="{{ r.action }}"
+          data-text="{{ r.ref|lower }} {{ r.handyman|lower }} {{ r.skill|lower }} {{ r.current|lower }}">
+        <td data-label="Request"><span class="lq-id">{{ r.ref }}</span></td>
+        <td data-label="Handyman">{{ r.handyman }}</td>
+        <td data-label="Skill">{% if r.current %}<span class="mut">{{ r.current }} &rarr;</span> {% endif %}{{ r.skill }}</td>
+        <td data-label="Change"><span class="sk-chg is-{{ r.action }}">{{ r.action_label }}</span></td>
+        <td data-label="Submitted">{{ r.submitted }}</td>
+        <td data-label="Status"><span class="b sk-st is-{{ r.status }}">{{ r.status_label }}</span></td>
+        <td data-label=""><a class="btn o s" href="{{ r.url }}">{% if r.status == 'pending' %}Review{% else %}View{% endif %}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty hidden>{% if page.rows %}Nothing matches that search. Try clearing the filters.{% else %}No skill requests yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'services/js/admin_skills.js' %}"></script>
+{% endblock %}

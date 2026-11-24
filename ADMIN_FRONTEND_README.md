@@ -29,6 +29,7 @@ It creates:
 - inspection and service appointments in every status (pending, confirmed, completed, cancelled), with one pending appointment that clashes with a confirmed one
 - service requests in every stage: not forwarded yet (with a sample chosen handyman), forwarded (no answer), rejected by the handyman (with a reason) and cancelled, next to the accepted ones
 - phone numbers, two suspended accounts, and approved / pending / rejected skill and service changes for the handymen
+- once the services app is there: 15 skills (3 inactive), handyman profiles with skills and areas, and skill requests to add, change and remove (`--reset` also deletes the demo skills, including the names used by the older version)
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
@@ -344,6 +345,25 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
 4. **Exact preferred time:** only a date and Morning / Afternoon exist, so the page shows "26 Nov 2026 · Afternoon".
 5. **Attachments:** no photos or files on a request, so the page shows "No attachments".
 6. **Services link:** the service is plain text (`service_category`), not linked to the Services app, so the Service filter lists the names found in the requests.
+
+## Manage Skills (connected to the backend, saving still needed)
+Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/admin_skills.py` (read only, admins only), URLs in `accounts/admin_urls.py`, templates in `templates/services/`. Category is the trade a skill belongs to (`Skill.category`, e.g. Plumbing).
+
+| Page | URL |
+|---|---|
+| Manage Skills | `/admin-portal/skills/` |
+| Skill Details (Deactivate / Reactivate pop-up) | `/admin-portal/skills/<id>/` |
+| Add Skill / Edit Skill | `/admin-portal/skills/add/`, `/admin-portal/skills/<id>/edit/` |
+| Handyman Skill Requests | `/admin-portal/skills/requests/` |
+| Review Skill Request | `/admin-portal/skills/requests/<id>/` |
+
+**Still needed from the backend (services)**
+1. **Add / Edit a skill:** a view that saves the name, category and availability. Then set the form's `action` and remove `data-demo` (`services/admin_skill_form.html`).
+2. **Deactivate / Reactivate:** a view that sets `Skill.is_active`. Then set the pop-up form's `action` and remove `data-demo` (`services/admin_skill_detail.html`).
+3. **Approve / Reject a skill request:** a view that sets `status`, `admin_note`, `reviewed_at` and `reviewed_by`, and on approval adds, changes or removes the skill in the handyman's `HandymanProfile.skills`. Then set the form's `action` and remove `data-demo` (`services/admin_skill_request_detail.html`).
+4. **Description and dates:** `Skill` has no description, created or updated date. The description is left out of the pages, and the list's **Updated** column shows "—" (marked `BACKEND`).
+5. **Requested skill is text:** `HandymanProfileRequest.requested_value` is not linked to `Skill`, so the Review page links to the skill only when the name matches one in the catalogue.
+6. **One place for a handyman's skills:** Manage Skills reads `HandymanProfile.skills`, but the Handyman Profile in Manage Users reads the approved `HandymanProfileRequest` rows. The team should keep one, so both pages show the same skills.
 
 ## Navbar search (connected to the backend)
 - The search box at the top of every admin page (`templates/base_admin.html`) opens `/admin-portal/search/?q=` (`accounts_admin:search`, view `search` in `accounts/admin_views.py`, template `accounts/admin_search.html`). Read only, admins only.

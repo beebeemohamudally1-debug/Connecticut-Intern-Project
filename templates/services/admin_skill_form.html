@@ -1,0 +1,73 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Skills - Add Skill / Edit Skill (one template). View: accounts.admin_skills.skill_form.
+
+  Data comes from the view as `page`:
+    editing (False = Add), ref, name, category, active, categories (category names: the trades,
+    services.ServiceCategory),
+    taken (skill names already used: Skill.name is unique), back_url
+  The fields match services.Skill: name, category (optional) and is_active.
+  Skills have no description or image in the backend, so those fields are left out.
+  BACKEND (services): there is no view that saves a skill yet, so the form checks the fields in
+  the browser and shows a demo message (data-demo). Post it to a create / update view, then
+  remove data-demo.
+{% endcomment %}
+
+{% block title %}{% if page.editing %}Edit {{ page.name }}{% else %}Add Skill{% endif %} | Skills | HandyConnect{% endblock %}
+{% block page %}skills{% endblock %}
+{% block crumb %}Skills{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/admin_skills.css' %}">
+
+<a class="back" href="{{ page.back_url }}">&larr; {% if page.editing %}Back to {{ page.name }}{% else %}Back to Manage Skills{% endif %}</a>
+<div class="bar">
+  <div>
+    <h1>{% if page.editing %}Edit Skill{% else %}Add Skill{% endif %}</h1>
+    <p class="sub">{% if page.editing %}Update {{ page.ref }} in the skill catalogue.{% else %}Create a new skill that handymen can add to their profile.{% endif %}</p>
+  </div>
+</div>
+<div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+
+<form class="card sk-form" method="post" action="#" novalidate data-skill-form
+      data-demo="Not saved yet: {% if page.editing %}editing{% else %}adding{% endif %} a skill is not in the backend (frontend demo only).">
+  {% csrf_token %}
+  {{ page.taken|json_script:"skill-names" }}
+  <h2>Skill Information</h2>
+  <p class="mut">These details are shown wherever handymen choose their skills.</p>
+
+  <div class="sk-fields">
+    <label class="sk-field">
+      <span class="sk-label">Skill name <span class="sk-req">*</span></span>
+      <input class="in" type="text" name="name" maxlength="100" value="{{ page.name }}" placeholder="e.g. Pipe fitting" required data-name>
+      <span class="sk-err" data-err-name hidden></span>
+    </label>
+    <label class="sk-field">
+      <span class="sk-label">Category</span>
+      <select class="in" name="category">
+        <option value="">No category</option>
+        {% for c in page.categories %}<option value="{{ c }}"{% if c == page.category %} selected{% endif %}>{{ c }}</option>{% endfor %}
+      </select>
+      <span class="mut sk-hint">The trade this skill belongs to, e.g. Plumbing, Electrical.</span>
+    </label>
+    <label class="sk-field">
+      <span class="sk-label">Availability</span>
+      <select class="in" name="is_active">
+        <option value="true"{% if page.active %} selected{% endif %}>Active: handymen can choose it</option>
+        <option value="false"{% if not page.active %} selected{% endif %}>Inactive: hidden from handymen</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="sk-form-foot">
+    <a class="btn o" href="{{ page.back_url }}">Cancel</a>
+    <button class="btn sk-main" type="submit">{% if page.editing %}Save Changes{% else %}Save Skill{% endif %}</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'services/js/admin_skills.js' %}"></script>
+{% endblock %}

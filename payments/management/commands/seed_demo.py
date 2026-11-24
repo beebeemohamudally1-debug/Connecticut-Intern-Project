@@ -27,6 +27,24 @@ User = get_user_model()
 BASE = 'http://127.0.0.1:8000'
 
 
+# Demo skills for Manage Skills: name, category (a trade), active. Skills are what a handyman can do;
+# the bookable tasks are the services of the services app, so the names differ from those.
+DEMO_SKILLS = [
+    ('Pipe fitting', 'Plumbing', True), ('Water heater maintenance', 'Plumbing', True),
+    ('Leak detection', 'Plumbing', True), ('Drain inspection', 'Plumbing', True),
+    ('Circuit testing', 'Electrical', True), ('House wiring', 'Electrical', True),
+    ('Fault finding', 'Electrical', True), ('Lock fitting', 'Carpentry', True),
+    ('Wood joinery', 'Carpentry', True), ('Spray painting', 'Painting', True),
+    ('Wall preparation', 'Painting', False), ('Plant care', 'Gardening', True),
+    ('Refrigerant handling', 'Air conditioning', True),
+    ('Appliance diagnostics', 'Appliance repair', False), ('Roof waterproofing', None, False),
+]
+# Names used by an older version of this command, deleted by --reset
+OLD_DEMO_SKILLS = ['Pipe installation', 'Water heater repair', 'Bathroom plumbing', 'Drain cleaning',
+                   'Electrical repair', 'Electrical wiring', 'Light fitting', 'Door fitting',
+                   'Furniture assembly', 'Painting', 'Wall plastering', 'Lawn care',
+                   'Air conditioner servicing', 'Washing machine repair', 'Roof repair']
+
 class Command(BaseCommand):
     help = 'Create demo data for the admin pages (local testing only).'
 
@@ -76,6 +94,11 @@ class Command(BaseCommand):
         HandymanProfileRequest.objects.filter(handyman__username__startswith='demo_').delete()
         ServiceRequest.objects.filter(customer__username__startswith='demo_').delete()
         User.objects.filter(username__startswith='demo_').delete()
+        try:   # demo skills (Manage Skills), including the names used by older versions of this command
+            from services.models import Skill
+            Skill.objects.filter(name__in=[n for n, _, _ in DEMO_SKILLS] + OLD_DEMO_SKILLS).delete()
+        except ImportError:
+            pass
         self.stdout.write('Old demo data deleted.')
 
     # ------------------------------------------------------------------- create
@@ -91,6 +114,7 @@ class Command(BaseCommand):
         self.user('demo_daniel', 'customer', 'Daniel', 'Brooks', '5 412 7788', active=False)
         self.user('demo_jean', 'handyman', 'Jean', 'Laval', '5 220 4810', active=False)
         self.profile_requests(admin, handymen)
+        self.skills(handymen)
 
         # (key, service, customer, handyman, labour, breakdown, estimate status, quotation status)
         rows = [
@@ -335,26 +359,73 @@ class Command(BaseCommand):
         now = timezone.now()
         H = HandymanProfileRequest
         rows = [
-            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Pipe installation', H.STATUS_APPROVED, 30),
-            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Water heater repair', H.STATUS_APPROVED, 29),
-            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Bathroom plumbing', H.STATUS_APPROVED, 28),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Pipe fitting', H.STATUS_APPROVED, 30),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Water heater maintenance', H.STATUS_APPROVED, 29),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Leak detection', H.STATUS_APPROVED, 28),
             (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Pipe leak repair', H.STATUS_APPROVED, 28),
             (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Tap replacement', H.STATUS_APPROVED, 27),
             (0, H.TYPE_SERVICE, H.ACTION_MODIFY, 'Tap replacement', 'Tap and mixer replacement', H.STATUS_APPROVED, 10),
             (0, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gate repair', H.STATUS_APPROVED, 8),
-            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Roof repair', H.STATUS_PENDING, 2),
-            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Electrical repair', H.STATUS_APPROVED, 25),
-            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Painting', H.STATUS_APPROVED, 24),
+            (0, H.TYPE_SKILL, H.ACTION_ADD, '', 'Roof waterproofing', H.STATUS_PENDING, 2),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Circuit testing', H.STATUS_APPROVED, 25),
+            (1, H.TYPE_SKILL, H.ACTION_ADD, '', 'Spray painting', H.STATUS_APPROVED, 24),
             (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Light fitting', H.STATUS_APPROVED, 24),
             (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Wall painting', H.STATUS_APPROVED, 23),
             (1, H.TYPE_SERVICE, H.ACTION_ADD, '', 'Gas fitting', H.STATUS_REJECTED, 12),
         ]
         for h, kind, action, current, requested, status, days in rows:
             done = status != H.STATUS_PENDING
-            H.objects.create(handyman=handymen[h], request_type=kind, action=action, current_value=current,
-                             requested_value=requested, status=status,
-                             reviewed_by=admin if done else None,
-                             reviewed_at=now - timedelta(days=days - 1) if done else None)
+            r = H.objects.create(handyman=handymen[h], request_type=kind, action=action, current_value=current,
+                                 requested_value=requested, status=status,
+                                 reviewed_by=admin if done else None,
+                                 reviewed_at=now - timedelta(days=days - 1) if done else None)
+            H.objects.filter(pk=r.pk).update(submitted_at=now - timedelta(days=days))   # auto_now_add
+
+    def skills(self, handymen):
+        """Skill catalogue, handyman profiles and extra skill requests (Manage Skills pages).
+        Needs the services app and accounts.HandymanProfile (services PR); skipped without them."""
+        try:
+            from accounts.models import HandymanProfile
+            from services.models import ServiceArea, ServiceCategory, Skill
+        except ImportError:
+            return
+        skill = {}
+        for name, cat, active in DEMO_SKILLS:
+            category = ServiceCategory.objects.filter(name=cat).first() if cat else None
+            obj, _ = Skill.objects.update_or_create(name=name, defaults={'category': category, 'is_active': active})
+            skill[name] = obj
+        jean = User.objects.get(username='demo_jean')
+        profiles = [
+            (handymen[0], HandymanProfile.STATUS_ACTIVE, ['Pipe fitting', 'Water heater maintenance', 'Leak detection']),
+            (handymen[1], HandymanProfile.STATUS_ACTIVE, ['Circuit testing', 'Spray painting', 'Fault finding']),
+            (jean, HandymanProfile.STATUS_PENDING, ['Leak detection', 'House wiring']),
+        ]
+        areas = {a.name: a for a in ServiceArea.objects.all()}
+        coverage = {handymen[0]: ['Port Louis', 'Moka'], handymen[1]: ['Plaines Wilhems'], jean: ['Flacq']}
+        for user, status, names in profiles:
+            profile = HandymanProfile.objects.create(user=user, status=status)
+            profile.skills.set([skill[n] for n in names])
+            profile.service_areas.set([areas[a] for a in coverage[user] if a in areas])
+            User.objects.filter(pk=user.pk).update(region=areas.get(coverage[user][0]))
+
+        H = HandymanProfileRequest
+        now = timezone.now()
+        rows = [   # handyman, action, current, requested, status, days ago, reason, admin note
+            (handymen[1], H.ACTION_ADD, '', 'House wiring', H.STATUS_PENDING, 1,
+             'Five years of house wiring work and a valid electrician licence.', ''),
+            (handymen[0], H.ACTION_MODIFY, 'Water heater maintenance', 'Solar heater maintenance', H.STATUS_PENDING, 3,
+             'Most of my water heater jobs are now solar systems.', ''),
+            (handymen[1], H.ACTION_REMOVE, 'Spray painting', '', H.STATUS_PENDING, 4,
+             'I no longer do spray painting.', ''),
+            (handymen[0], H.ACTION_ADD, '', 'Drain inspection', H.STATUS_REJECTED, 15,
+             'I can inspect drains with a camera.', 'Please upload proof of drain inspection work first.'),
+        ]
+        for h, action, current, requested, status, days, reason, note in rows:
+            done = status != H.STATUS_PENDING
+            r = H.objects.create(handyman=h, request_type=H.TYPE_SKILL, action=action, current_value=current,
+                                 requested_value=requested, reason=reason, status=status, admin_note=note,
+                                 reviewed_at=now - timedelta(days=days - 1) if done else None)
+            H.objects.filter(pk=r.pk).update(submitted_at=now - timedelta(days=days))   # auto_now_add
 
     def work_progress(self, admin, customers, handymen, report_jobs):
         """Arrival times, daily reports and photos for Monitor Work Progress,
