@@ -57,4 +57,22 @@ class PermissionTests(TestCase):
         with self.assertRaises(PermissionDenied):
             view(request)
 
+class AdminStatusTests(TestCase):
+    def setUp(self):
+        from accounts.admin_views import _account_status
+        self.status = _account_status
+
+    def test_normal_user_is_active(self):
+        user = User.objects.create_user(username='a1', email='a1@example.com', password=PASSWORD)
+        self.assertEqual(self.status(user), 'Active')
+
+    def test_suspended_user_shows_as_suspended(self):
+        user = User.objects.create_user(
+            username='s1', email='s1@example.com', password=PASSWORD, is_suspended=True)
+        self.assertEqual(self.status(user), 'Suspended')
+
+    def test_deactivated_user_shows_as_suspended(self):
+        user = User.objects.create_user(
+            username='d1', email='d1@example.com', password=PASSWORD, is_active=False)
+        self.assertEqual(self.status(user), 'Suspended')
 # Create your tests here.
