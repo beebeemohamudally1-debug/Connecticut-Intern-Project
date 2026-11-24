@@ -12,7 +12,6 @@ urlpatterns = [
     # your handyman pages
     path('handyman/assigned-jobs/', views.assigned_jobs, name='assigned_jobs'),
     path('handyman/job-requests/', views.job_requests, name='job_requests'),
-    path('handyman/job-tracking/', views.job_tracking, name='job_tracking'),
     path('handyman/job-in-progress/', views.job_in_progress, name='job_in_progress'),
     path('handyman/job-completed/', views.job_completed, name='job_completed'),
     path('handyman/report-customer/', views.report_customer, name='report_customer'),
