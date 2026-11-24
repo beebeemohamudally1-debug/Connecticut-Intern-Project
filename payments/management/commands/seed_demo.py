@@ -386,7 +386,7 @@ class Command(BaseCommand):
         Needs the services app and accounts.HandymanProfile (services PR); skipped without them."""
         try:
             from accounts.models import HandymanProfile
-            from services.models import ServiceArea, ServiceCategory, Skill
+            from services.models import Service, ServiceArea, ServiceCategory, Skill
         except ImportError:
             return
         skill = {}
@@ -395,16 +395,27 @@ class Command(BaseCommand):
             obj, _ = Skill.objects.update_or_create(name=name, defaults={'category': category, 'is_active': active})
             skill[name] = obj
         jean = User.objects.get(username='demo_jean')
+        # A new handyman whose registration waits for approval (Pending on Manage Users)
+        amir = self.user('demo_amir', 'handyman', 'Amir', 'Patel', '5 418 2276')
         profiles = [
             (handymen[0], HandymanProfile.STATUS_ACTIVE, ['Pipe fitting', 'Water heater maintenance', 'Leak detection']),
             (handymen[1], HandymanProfile.STATUS_ACTIVE, ['Circuit testing', 'Spray painting', 'Fault finding']),
             (jean, HandymanProfile.STATUS_PENDING, ['Leak detection', 'House wiring']),
+            (amir, HandymanProfile.STATUS_PENDING, ['Pipe fitting', 'Drain inspection']),
         ]
         areas = {a.name: a for a in ServiceArea.objects.all()}
-        coverage = {handymen[0]: ['Port Louis', 'Moka'], handymen[1]: ['Plaines Wilhems'], jean: ['Flacq']}
+        coverage = {handymen[0]: ['Port Louis', 'Moka'], handymen[1]: ['Plaines Wilhems'], jean: ['Flacq'], amir: ['Grand Port', 'Savanne']}
+        offered = {   # services (bookable tasks) each handyman offers, from the services catalogue
+            handymen[0]: ['Pipe leak repair', 'Tap replacement', 'Water heater installation'],
+            handymen[1]: ['Light fitting installation', 'Interior wall painting'],
+            jean: ['Drain unblocking'], amir: ['Pipe leak repair'],
+        }
         for user, status, names in profiles:
             profile = HandymanProfile.objects.create(user=user, status=status)
             profile.skills.set([skill[n] for n in names])
+            chosen = list(Service.objects.filter(name__in=offered[user]))
+            profile.services.set(chosen)
+            profile.categories.set({s.category for s in chosen})
             profile.service_areas.set([areas[a] for a in coverage[user] if a in areas])
             User.objects.filter(pk=user.pk).update(region=areas.get(coverage[user][0]))
 

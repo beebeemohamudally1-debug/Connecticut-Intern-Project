@@ -7,10 +7,12 @@
     page.stats   -> total, customers, handymen, pending
     page.users   -> name, initials, role, email, status, url
   Connected: accounts/admin_views.py users (every customer and handyman,
-  newest first). status is 'Active' or 'Suspended' (user.is_active); url is the
+  newest first). status is 'Suspended' (user.is_suspended or not is_active), else
+  for a handyman 'Pending' or 'Rejected' from accounts.HandymanProfile.status, else
+  'Active'. stats.pending counts the handymen waiting for approval. url is the
   Customer Details or Handyman Profile page.
-  Not in the backend yet: registration verification, so stats.pending is 0 and
-  no user is 'Pending'.
+  Not in the backend yet: approve / reject of a registration (see Registration
+  Verification).
   Search, role, status filters and the page buttons work in the browser on the
   rows sent (5 per page).
 {% endcomment %}
@@ -76,6 +78,7 @@
         <option value="">All Statuses</option>
         <option value="active">Active</option>
         <option value="pending">Pending</option>
+        <option value="rejected">Rejected</option>
         <option value="suspended">Suspended</option>
       </select>
     </label>
@@ -102,7 +105,7 @@
         <td data-label="Role">{{ u.role }}</td>
         <td data-label="Email" class="um-email">{{ u.email }}</td>
         <td data-label="Status">
-          <span class="b {% if u.status == 'Active' %}gr{% elif u.status == 'Suspended' %}re{% elif u.status == 'Pending' %}ye{% endif %}">{{ u.status }}</span>
+          <span class="b {% if u.status == 'Active' %}gr{% elif u.status == 'Suspended' or u.status == 'Rejected' %}re{% elif u.status == 'Pending' %}ye{% endif %}">{{ u.status }}</span>
         </td>
         <td data-label="Actions">
           <a class="btn o s" href="{{ u.url|default:'#' }}">{% if u.status == 'Pending' %}Verify{% else %}View{% endif %}<span class="sr-only"> {{ u.name }}</span></a>

@@ -9,6 +9,7 @@ from django.template.defaultfilters import filesizeformat
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import HandymanProfile
 from bookings.models import HandymanProfileRequest, ServiceRequest
 from complaints.models import Complaint, ComplaintMessage
 from dashboard.permissions import role_required
@@ -34,13 +35,30 @@ def profile(request):
     }
     return render(request, 'accounts/admin_profile.html', {'admin': admin})
 
-# ---------- Manage Users (section 3): real accounts.User data ----------
-# Not in the backend yet: suspend / reactivate / delete views, handyman
-# registration verification and documents, verified flag, service areas and
-# availability. Those parts of the pages stay as before (demo buttons, "Not recorded").
+# ---------- Manage Users (section 3): real accounts.User and accounts.HandymanProfile data ----------
+# Not in the backend yet: suspend / reactivate / delete views, registration documents and
+# approve / reject, and availability. Those parts of the pages stay as before
+# (demo buttons, sample verification page, "Not recorded").
+
+def _profile(u):
+    """The handyman's HandymanProfile, or None (customers, or a handyman without one)."""
+    try:
+        return u.handyman_profile
+    except HandymanProfile.DoesNotExist:
+        return None
+
 
 def _account_status(u):
-    return 'Suspended' if (u.is_suspended or not u.is_active) else 'Active'
+    """Suspended (is_suspended or not is_active) comes first; then a handyman's profile approval."""
+    if u.is_suspended or not u.is_active:
+        return 'Suspended'
+    if u.role == 'handyman':
+        profile = _profile(u)
+        if profile and profile.status == HandymanProfile.STATUS_PENDING:
+            return 'Pending'
+        if profile and profile.status == HandymanProfile.STATUS_REJECTED:
+            return 'Rejected'
+    return 'Active'
 
 
 def _user_url(u):
@@ -103,7 +121,8 @@ def search(request):
 @role_required('admin')
 def users(request):
     """Manage Users: every customer and handyman, newest first."""
-    accounts = User.objects.filter(role__in=['customer', 'handyman']).order_by('-date_joined')
+    accounts = (User.objects.filter(role__in=['customer', 'handyman'])
+                .select_related('handyman_profile').order_by('-date_joined'))
     rows = [{
         'name': _person_name(u), 'initials': _initials(u), 'role': u.get_role_display(),
         'email': u.email, 'status': _account_status(u), 'url': _user_url(u),
@@ -112,7 +131,7 @@ def users(request):
         'total': len(rows),
         'customers': sum(1 for u in accounts if u.role == 'customer'),
         'handymen': sum(1 for u in accounts if u.role == 'handyman'),
-        'pending': 0,   # no registration verification in the backend yet
+        'pending': sum(1 for r in rows if r['status'] == 'Pending'),   # handymen waiting for approval
     }
     return render(request, 'accounts/admin_users.html', {'page': {'stats': stats, 'users': rows}})
 
@@ -127,8 +146,8 @@ def customer_detail(request, pk):
         'kind': 'customer', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'registered': _local_date(u.date_joined),
         'email': u.email or '-', 'phone': u.phone or '-',
-        # No address on the user: the address of the latest service request
-        'address': reqs[0].service_address if reqs else '-',
+        # The user's address; if empty, the address of the latest service request
+        'address': u.address or (reqs[0].service_address if reqs else '-'),
         'status': _account_status(u),
         'counts': {
             'submitted': len(reqs),
@@ -138,6 +157,7 @@ def customer_detail(request, pk):
         },
         'requests': [{
             'id': r.reference, 'title': r.service_category, 'status': r.get_status_display(),
+            'url': reverse('bookings:admin_request_detail', args=[r.pk]),   # Service Request Details
             'state': 'done' if r.status == done else 'cancel' if r.status == cancelled else 'wait',
         } for r in reqs],
     }
@@ -161,20 +181,32 @@ def _approved_values(u, kind):
 
 @role_required('admin')
 def handyman_profile(request, pk):
-    """Handyman Profile: account, jobs, and skills / services from approved profile requests."""
-    u = get_object_or_404(User, pk=pk, role='handyman')
+    """Handyman Profile: account, jobs, and the skills, services and areas of the HandymanProfile."""
+    u = get_object_or_404(User.objects.select_related('region'), pk=pk, role='handyman')
     jobs = list(Job.objects.filter(handyman=u))
     latest = jobs[0] if jobs else None          # newest first
+    profile = _profile(u)
+    if profile:
+        skills = [s.name for s in profile.skills.order_by('name')]
+        services = [s.name for s in profile.services.order_by('name')]
+        areas = ', '.join(a.name for a in profile.service_areas.order_by('name'))
+        verified = profile.status == HandymanProfile.STATUS_ACTIVE   # approved by an administrator
+    else:
+        # No profile yet (older accounts): fall back to the approved profile change requests
+        skills = _approved_values(u, HandymanProfileRequest.TYPE_SKILL)
+        services = _approved_values(u, HandymanProfileRequest.TYPE_SERVICE)
+        areas, verified = '', None
     handyman = {
         'kind': 'handyman', 'name': _person_name(u), 'initials': _initials(u),
-        'id': f'USR-{u.pk:04d}', 'verified': None,   # no verification in the backend yet
+        'id': f'USR-{u.pk:04d}', 'verified': verified,
         'status': _account_status(u), 'email': u.email or '-', 'phone': u.phone or '-',
-        'areas': 'Not recorded', 'availability': 'Not recorded',
+        'areas': areas or (u.region.name if u.region else 'Not recorded'),
+        'availability': 'Not recorded',   # no availability field in the backend yet
         'registered': _local_date(u.date_joined),
         'completed': sum(1 for j in jobs if j.status == Job.COMPLETED),
         'assigned': sum(1 for j in jobs if j.is_open),
-        'skills': _approved_values(u, HandymanProfileRequest.TYPE_SKILL),
-        'services': _approved_values(u, HandymanProfileRequest.TYPE_SERVICE),
+        'skills': skills,
+        'services': services,
         'reports_url': reverse('accounts_admin:work_progress_reports', args=[latest.pk]) if latest else '',
     }
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': handyman})
