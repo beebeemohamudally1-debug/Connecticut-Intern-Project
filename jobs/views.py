@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import CompletionForm, EvidenceForm, FlagForm, ProgressReportForm
 from .models import Job, ProgressReport, TimeLog, WorkEvidence
+from bookings.models import Appointment, AppointmentEvent, ServiceRequest
 from .permissions import base_template_for, get_role, role_required
 from .signals import job_completed
 
@@ -169,6 +170,23 @@ def complete_job(request, pk):
         job.completed_at = timezone.now()
         job.save()
         job.time_logs.filter(clocked_out_at__isnull=True).update(clocked_out_at=timezone.now())
+        if job.service_request_id:
+            service_request = job.service_request
+            service_request.status = ServiceRequest.STATUS_COMPLETED
+            service_request.save(update_fields=['status', 'updated_at'])
+            appointments = Appointment.objects.filter(
+                service_request=service_request,
+                handyman=job.handyman,
+                appointment_type=Appointment.TYPE_SERVICE,
+                status=Appointment.STATUS_CONFIRMED,
+            )
+            for appointment in appointments:
+                appointment.status = Appointment.STATUS_COMPLETED
+                appointment.save(update_fields=['status', 'updated_at'])
+                AppointmentEvent.objects.create(
+                    appointment=appointment, event_type=AppointmentEvent.COMPLETED,
+                    actor=request.user,
+                )
     job_completed.send(sender=Job, job=job)
     messages.success(request, 'Job submitted as completed. The administrator has been informed.')
     return redirect('jobs:detail', pk=pk)
