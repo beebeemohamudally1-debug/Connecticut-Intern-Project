@@ -114,10 +114,13 @@ a.we-img:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .we-state.clear { color: #11836D; background: #E6F6EF; }
 
 /* ---------- Flag pop-up ---------- */
-.we-demo {
-  margin: 0 0 12px; padding: 10px 14px; font-size: 14px;
-  color: #11836D; background: #E6F6EF; border-radius: 8px;
+.we-flash { margin: 0 0 12px; }
+.we-flash p {
+  margin: 0 0 6px; padding: 10px 14px; font-size: 14px; font-weight: 600;
+  color: #11836D; background: #E6F6EF; border: 1px solid #CDEBDD; border-radius: 10px;
 }
+.we-flash p.error { color: #B74555; background: #FEEDF0; border-color: #F5C9D0; }
+.we-none { grid-column: 1 / -1; margin: 24px 0; text-align: center; }
 
 .fl-modal {
   width: min(566px, calc(100vw - 32px)); padding: 0;

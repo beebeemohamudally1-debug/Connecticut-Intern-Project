@@ -11,15 +11,16 @@
     service        -> job.service_name
     customer       -> job.customer full name
     handyman       -> job.handyman full name
-    percent        -> latest DailyReport.percent_complete (0 if none yet)
+    percent        -> latest ProgressReport.percent_complete (0 if none yet,
+                      100 once the job is completed)
     due            -> job.due_date             (a date, no time)
     status         -> 'assigned' | 'in_progress' | 'completed' | 'delayed'
                       ('delayed' = job.is_delayed, not a stored status)
     status_label   -> text shown in the pill
     url            -> link to this job's progress details page
-  BACKEND: replace the sample data with real jobs. Search, filters and the
-  page buttons work in the browser on the rows sent (6 per page). If you
-  paginate on the server, send one page at a time and swap the buttons for links.
+  Connected: accounts/admin_views.py work_progress (every job except cancelled
+  ones, newest first). Search, filters and the page buttons work in the browser
+  on the rows sent (6 per page).
 {% endcomment %}
 
 {% block title %}Monitor Work Progress | HandyConnect{% endblock %}
@@ -97,7 +98,7 @@
             <progress class="wp-track" value="{{ j.percent }}" max="100" aria-label="{{ j.percent }} percent complete"></progress>
           </span>
         </td>
-        <td data-label="Due Date">{{ j.due|date:"d M Y" }}</td>
+        <td data-label="Due Date">{{ j.due|date:"d M Y"|default:"-" }}</td>
         <td data-label="Status">
           <span class="b wp-{{ j.status }}">{{ j.status_label }}</span>
         </td>

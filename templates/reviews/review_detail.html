@@ -1,0 +1,115 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Private Feedback - Feedback details and assessment (admin). View: reviews.views.review_detail
+  Context: review (with job, customer, assessed_by).
+  Approve and Reject (only while pending) post to reviews:approve_review / reviews:reject_review,
+  which come back to this page. There is no field for an admin note or a reason.
+{% endcomment %}
+
+{% block title %}Feedback FB-{{ review.pk|stringformat:"04d" }} | HandyConnect{% endblock %}
+{% block page %}reviews{% endblock %}
+{% block crumb %}Private Feedback{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'reviews/css/admin_reviews.css' %}">
+
+{% with r=review job=review.job customer=review.customer %}
+<a class="back" href="{% url 'reviews:admin_reviews' %}">&larr; Back to Private Feedback</a>
+
+<div class="bar">
+  <div>
+    <h1>Feedback Details</h1>
+    <p class="sub rv-sub">FB-{{ r.pk|stringformat:"04d" }} &bull;
+      <span class="rv-pill is-{{ r.status }}">{% if r.status == 'pending' %}Awaiting assessment{% else %}{{ r.get_status_display }}{% endif %}</span>
+    </p>
+  </div>
+</div>
+
+<div class="rv-grid">
+  <section class="card rv-review">
+    <div class="rv-who">
+      <span class="rv-avatar" aria-hidden="true">{% firstof customer.first_name|slice:":1" customer.username|slice:":1" %}{{ customer.last_name|slice:":1" }}</span>
+      <div>
+        <h2>{% firstof customer.get_full_name customer.username %}</h2>
+        <p class="mut">Customer &middot; submitted {{ r.created_at|date:"d M Y, H:i" }}</p>
+      </div>
+    </div>
+
+    <dl class="rv-rating">
+      <div>
+        <dt>Rating</dt>
+        <dd><span class="rv-stars" aria-hidden="true">{% for i in "12345" %}<span{% if forloop.counter <= r.rating %} class="on"{% endif %}>&#9733;</span>{% endfor %}</span>
+          <strong>{{ r.rating }}.0</strong><span class="mut">out of 5</span></dd>
+      </div>
+      <div>
+        <dt>Overall</dt>
+        <dd><span class="rv-tag is-{% if r.rating >= 4 %}good{% elif r.rating == 3 %}ok{% else %}low{% endif %}">{% if r.rating == 5 %}Excellent{% elif r.rating == 4 %}Good{% elif r.rating == 3 %}Okay{% elif r.rating == 2 %}Fair{% else %}Poor{% endif %}</span></dd>
+      </div>
+    </dl>
+
+    <h3>What the customer said</h3>
+    <blockquote class="rv-quote">&ldquo;{{ r.comment }}&rdquo;</blockquote>
+
+    <p class="rv-visible"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Private: only the customer and administrators can see this.</p>
+  </section>
+
+  <div class="rv-side">
+    <section class="card">
+      <h2>Job</h2>
+      <dl class="rv-info">
+        <div><dt>Job</dt><dd>{{ job.reference }}</dd></div>
+        <div><dt>Service</dt><dd>{{ job.service_name }}</dd></div>
+        <div><dt>Handyman</dt><dd>{% firstof job.handyman.get_full_name job.handyman.username %}</dd></div>
+        <div><dt>Completed</dt><dd>{{ job.completed_at|date:"d M Y"|default:"-" }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card rv-assess">
+      <h2>Assessment</h2>
+      {% if r.status == 'pending' %}
+      <p class="rv-help">Read the feedback, then choose an outcome. You can only do this once.</p>
+      <div class="rv-choices">
+        <button class="btn soft-green" type="button" data-open="modal-approve">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>Approve</button>
+        <button class="btn soft-red" type="button" data-open="modal-reject">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Reject</button>
+      </div>
+      {% else %}
+      <div class="rv-result is-{{ r.status }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">{% if r.status == 'approved' %}<path d="m5 12 5 5 9-10"/>{% else %}<path d="M6 6l12 12M18 6 6 18"/>{% endif %}</svg>
+        <div>
+          <strong>{{ r.get_status_display }}</strong>
+          <p>by {% if r.assessed_by %}{% firstof r.assessed_by.get_full_name r.assessed_by.username %}{% else %}an administrator{% endif %}{% if r.assessed_at %} on {{ r.assessed_at|date:"d M Y, H:i" }}{% endif %}</p>
+        </div>
+      </div>
+      {% endif %}
+      <p class="mut rv-foot">This is an internal record and is never shown to the handyman.</p>
+    </section>
+  </div>
+</div>
+
+{% if r.status == 'pending' %}
+<dialog class="rv-modal" id="modal-approve" aria-labelledby="ap-title">
+  <form method="post" action="{% url 'reviews:approve_review' r.pk %}">
+    {% csrf_token %}
+    <h2 id="ap-title">Approve this feedback?</h2>
+    <p class="mut">FB-{{ r.pk|stringformat:"04d" }} from {% firstof customer.get_full_name customer.username %} ({{ r.rating }} out of 5) will be marked as approved.</p>
+    <div class="rv-btns"><button class="btn o" type="button" data-close>Cancel</button><button class="btn soft-green" type="submit">Approve</button></div>
+  </form>
+</dialog>
+<dialog class="rv-modal" id="modal-reject" aria-labelledby="rj-title">
+  <form method="post" action="{% url 'reviews:reject_review' r.pk %}">
+    {% csrf_token %}
+    <h2 id="rj-title">Reject this feedback?</h2>
+    <p class="mut">FB-{{ r.pk|stringformat:"04d" }} from {% firstof customer.get_full_name customer.username %} will be marked as rejected.</p>
+    <div class="rv-btns"><button class="btn o" type="button" data-close>Cancel</button><button class="btn soft-red" type="submit">Reject</button></div>
+  </form>
+</dialog>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'reviews/js/admin_reviews.js' %}"></script>
+{% endblock %}

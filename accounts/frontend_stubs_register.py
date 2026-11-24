@@ -1,5 +1,5 @@
 """
-FRONTEND STUB VIEWS for customer registration (S02 to S09).
+FRONTEND STUB VIEWS for registration (S02 to S11: customer and service provider).
 
 Like frontend_stubs.py, these render finished templates with fake data so every state can be seen
 without a backend (add ?state=<name> to a GET URL; see /preview). Unlike the login stubs they also
@@ -17,6 +17,7 @@ import re
 
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.templatetags.static import static
 
 from . import auth_messages as M
 
@@ -69,6 +70,49 @@ DETAILS = {
     "filled": {"values": SAMPLE_VALUES, "terms_accepted": True, "privacy_accepted": True},
 }
 
+# ---- Service provider registration (S10, S10b, S11) ------------------------------------------------------------------
+PROVIDER_VALUES = {
+    "first_name": "Jane", "surname": "Doe", "additional_names": "", "username": "jane_doe",
+    "phone": "51234567", "address": "12 Royal Road, Port Louis",
+}
+PROVIDER_PICKS = {"selected_regions": ["Port Louis", "Moka"], "selected_categories": ["Plumbing", "Electrical"]}
+PROVIDER = {  # S10. "selected" = Figma "Default with selections", "expanded" = "Expanded multiselects".
+    "default": {},
+    "selected": {"values": PROVIDER_VALUES, **PROVIDER_PICKS},
+    "expanded": {"values": PROVIDER_VALUES, **PROVIDER_PICKS, "open_menus": True},
+    "errors": {"errors": dict(M.PROVIDER_ERRORS), "values": {"phone": "5123", "username": "a!"}},
+    "taken": {"errors": {"username": M.USERNAME_TAKEN}, "values": {**PROVIDER_VALUES, "username": "taken"}, **PROVIDER_PICKS},
+    "no_selection": {"errors": {"regions": M.PROVIDER_ERRORS["regions"], "categories": M.PROVIDER_ERRORS["categories"]},
+                     "values": PROVIDER_VALUES},
+}
+DEMO_IMAGE = "accounts/img/home-service.jpg"  # stands in for an uploaded photo in the demo states
+
+
+def _uploaded():
+    """Demo of files the server already holds (Figma "Uploaded files"). Real backend: only if you keep uploads between
+    submits; each entry needs token (id of the stored file), name, type (JPEG or PNG), size (label) and url (to preview)."""
+    url = static(DEMO_IMAGE)
+    return {
+        "id_photo": [{"token": "demo-id", "name": "id_card.jpg", "type": "JPEG", "size": "2.1 MB", "url": url}],
+        "certificates": [
+            {"token": "demo-cert-1", "name": "plumbing_certificate.png", "type": "PNG", "size": "1.4 MB", "url": url},
+            {"token": "demo-cert-2", "name": "electrical_certificate.jpg", "type": "JPEG", "size": "1.8 MB", "url": url},
+        ],
+    }
+
+
+DOCUMENTS = {  # S10b. "uploaded" = Figma "Uploaded files", "preview" = "Larger preview" (the page opens the ID preview).
+    "default": {},
+    "uploaded": {"uploaded": _uploaded, "terms_accepted": True, "privacy_accepted": True},
+    "preview": {"uploaded": _uploaded, "terms_accepted": True, "privacy_accepted": True, "auto_preview": "id_photo"},
+    "missing": {"errors": {"id_photo": M.DOC_ERRORS["id_photo"], "certificates": M.DOC_ERRORS["certificates"]}},
+    "bad_file": {"errors": {"id_photo": f"id_card.pdf: {M.FILE_TYPE_ERROR}",
+                            "certificates": f"scan_large.png: {M.FILE_SIZE_ERROR}"}},
+    "failed": {"errors": {"certificates": M.FILE_UPLOAD_FAILED}},
+    "terms": {"uploaded": _uploaded, "errors": {"terms": M.DOC_ERRORS["terms"], "privacy": M.DOC_ERRORS["privacy"]}},
+}
+FILE_RULES = {"types": ",".join(M.DOC_TYPES), "max_mb": M.DOC_MAX_MB, "type_error": M.FILE_TYPE_ERROR, "size_error": M.FILE_SIZE_ERROR}
+
 # (title, url, table) rows added to the /preview gallery
 PREVIEW_GROUPS = [
     ("S02 Choose account type", "/register", ROLE), ("S03 Email", "/register/email", EMAIL),
@@ -77,6 +121,9 @@ PREVIEW_GROUPS = [
     ("S07 Session expired", "/register/expired", {"default": {}}),
     ("S08 Customer details", "/register/customer", DETAILS),
     ("S09 Account created", "/register/customer/done", {"default": {}}),
+    ("S10 Provider details", "/register/provider", PROVIDER),
+    ("S10b Provider documents", "/register/provider/documents", DOCUMENTS),
+    ("S11 Application submitted", "/register/provider/done", {"default": {}}),
 ]
 
 
@@ -179,8 +226,8 @@ def register_password(request):
         elif password != confirm:
             ctx["errors"] = {"confirm": M.REG_PW_MISMATCH}
         else:
-            # Providers continue to S10 (provider details), which is not built yet.
-            return redirect("accounts:register_customer" if _role(request)[0] == "customer" else "accounts:home")
+            # Customers continue to S08, service providers to S10.
+            return redirect("accounts:register_customer" if _role(request)[0] == "customer" else "accounts:register_provider")
     return render(request, "accounts/register_password.html", ctx)
 
 
@@ -209,6 +256,57 @@ def register_done(request):
     # TODO(backend): show the new account's name. Design decision: no auto-login, the user goes to the login page.
     name = request.session.get("reg_name", "Sample Customer")
     return render(request, "accounts/register_done.html", {"step": 5, "name": name, "email": request.session.get("reg_email", SAMPLE_EMAIL)})
+
+
+# --- S10 -------------------------------------------------------------------
+def _provider_flow(request, step, **extra):
+    """Same as _flow, but these pages always belong to the service provider path."""
+    return {**_flow(request, step, **extra), "role": "provider", "role_label": M.ROLE_PROVIDER}
+
+
+def register_provider(request):
+    # TODO(backend): validate every field and keep the answers on the RegistrationSession (nothing is created yet);
+    # the account is created in one transaction on S10b (FR-SPR-01..09, FR-SPR-19).
+    ctx = {**_provider_flow(request, 4, part="Part 1 of 2", errors={}, values={}, regions=M.REGIONS, categories=M.SERVICE_CATEGORIES,
+                            selected_regions=[], selected_categories=[]), **_pick(request, PROVIDER)}
+    if request.method == "POST":
+        values = {k: request.POST.get(k, "").strip() for k in PROVIDER_VALUES}
+        regions, categories = request.POST.getlist("regions"), request.POST.getlist("categories")
+        errors = validate_provider(values, regions, categories)
+        ctx.update(values=values, errors=errors, selected_regions=regions, selected_categories=categories)
+        if not errors:
+            request.session["reg_provider"] = {**values, "regions": regions, "categories": categories}
+            return redirect("accounts:register_provider_documents")
+    return render(request, "accounts/register_provider.html", ctx)
+
+
+# --- S10b ------------------------------------------------------------------
+def register_provider_documents(request):
+    # TODO(backend): if the RegistrationSession has no S10 answers, redirect to accounts:register_expired. On POST check
+    # every file (JPEG/PNG, max 5 MB, FR-SPR-16), then in ONE transaction create the account with status PENDING_APPROVAL,
+    # store each document linked to it and record consent (FR-SPR-10, 14, 15, 19). If any upload fails create nothing.
+    details = request.session.get("reg_provider") or PROVIDER_VALUES
+    name = f"{details['first_name']} {details['surname']}"
+    ctx = {**_provider_flow(request, 4, part="Part 2 of 2", errors={}, name=name, file_rules=FILE_RULES, uploaded={}),
+           **_pick(request, DOCUMENTS)}
+    if callable(ctx.get("uploaded")):
+        ctx["uploaded"] = ctx["uploaded"]()
+    if request.method == "POST":
+        errors = validate_documents(request)
+        ctx.update(errors=errors, terms_accepted=bool(request.POST.get("terms")), privacy_accepted=bool(request.POST.get("privacy")))
+        if not errors:
+            request.session["reg_name"] = name
+            return redirect("accounts:register_provider_done")
+    return render(request, "accounts/register_provider_documents.html", ctx)
+
+
+# --- S11 -------------------------------------------------------------------
+def register_provider_done(request):
+    # TODO(backend): show the new account's name. The account is Pending Approval; no auto-login, the provider goes to login (FR-ACC-13).
+    return render(request, "accounts/register_provider_done.html", {
+        "step": 5, "role": "provider", "role_label": M.ROLE_PROVIDER,
+        "name": request.session.get("reg_name", "Jane Doe"), "email": request.session.get("reg_email", "jane@example.com"),
+    })
 
 
 # --- live username check (HTMX/fetch) ---------------------------------------
@@ -258,4 +356,43 @@ def validate_customer(values, terms, privacy):
         errors["terms"] = e["terms"]
     if not privacy:
         errors["privacy"] = e["privacy"]
+    return errors
+
+
+def validate_provider(values, regions, categories):
+    """Field errors for the provider details form. Names, username, phone and address follow the customer rules."""
+    errors = validate_customer({**values, "region": M.REGIONS[0][0]}, True, True)  # region, terms, privacy do not apply here
+    if not regions or not set(regions) <= {v for v, _ in M.REGIONS}:
+        errors["regions"] = M.PROVIDER_ERRORS["regions"]
+    if not categories or not set(categories) <= {v for v, _ in M.SERVICE_CATEGORIES}:
+        errors["categories"] = M.PROVIDER_ERRORS["categories"]
+    return errors
+
+
+def validate_documents(request):
+    """Errors for the documents form. Files: JPEG or PNG, at most 5 MB each (FR-SPR-14..16).
+    keep_id_photo / keep_certificates carry the tokens of files the server already holds (only if you keep uploads)."""
+    def bad(f):
+        if f.content_type not in M.DOC_TYPES:
+            return f"{f.name}: {M.FILE_TYPE_ERROR}"
+        if f.size > M.DOC_MAX_MB * 1024 * 1024:
+            return f"{f.name}: {M.FILE_SIZE_ERROR}"
+        return ""
+
+    errors = {}
+    id_file, certs = request.FILES.get("id_photo"), request.FILES.getlist("certificates")
+    if id_file:
+        if bad(id_file):
+            errors["id_photo"] = bad(id_file)
+    elif not request.POST.get("keep_id_photo"):
+        errors["id_photo"] = M.DOC_ERRORS["id_photo"]
+    cert_errors = [m for m in map(bad, certs) if m]
+    if cert_errors:
+        errors["certificates"] = " ".join(cert_errors)
+    elif not certs and not request.POST.getlist("keep_certificates"):
+        errors["certificates"] = M.DOC_ERRORS["certificates"]
+    if not request.POST.get("terms"):
+        errors["terms"] = M.DOC_ERRORS["terms"]
+    if not request.POST.get("privacy"):
+        errors["privacy"] = M.DOC_ERRORS["privacy"]
     return errors

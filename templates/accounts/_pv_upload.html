@@ -1,0 +1,17 @@
+{% comment %} One upload field. include with: id, name, label, hint, multiple ("1" or ""), pick_first, pick_more, files [{token, name, type, size, url}], error, icon.
+   Real control = <input type="file" name="{{ name }}"> (multiple for certificates). provider.js keeps the chosen files in it, so a normal
+   multipart POST sends request.FILES.get("id_photo") / request.FILES.getlist("certificates").
+   Files the server already holds are rendered as seeds and sent back as hidden inputs keep_{{ name }} until the user removes them. {% endcomment %}
+<div class="au-field rg-field pv-upload" data-pv-upload data-field="{{ name }}" data-multiple="{% if multiple %}1{% else %}0{% endif %}">
+<label class="au-label" for="{{ id }}">{{ label }}</label>
+<p class="pv-hint" id="{{ id }}-help">{{ hint }}</p>
+<ul class="pv-files" data-pv-files aria-label="{{ label }}: chosen files">{% for f in files %}<li class="pv-seed" data-pv-seed data-token="{{ f.token }}" data-name="{{ f.name }}" data-type="{{ f.type }}" data-size="{{ f.size }}" data-url="{{ f.url }}">{{ f.name }} · {{ f.type }} · {{ f.size }}<input type="hidden" name="keep_{{ name }}" value="{{ f.token }}"></li>{% endfor %}</ul>
+<div class="pv-drop{% if error %} is-bad{% endif %}" data-pv-drop>
+<span class="pv-drop-icon" aria-hidden="true"><svg class="au-ic"><use href="#{{ icon|default:'pv-i-upload' }}"/></svg></span>
+<span class="pv-drop-text">Drag and drop {% if multiple %}files{% else %}a file{% endif %} here, or</span>
+<button type="button" class="au-btn is-secondary is-compact pv-pick" data-pv-pick data-first="{{ pick_first }}" data-more="{{ pick_more|default:pick_first }}"><span class="au-label">{{ pick_first }}</span></button>
+</div>
+<input class="pv-file-input" type="file" id="{{ id }}" name="{{ name }}" accept="image/jpeg,image/png"{% if multiple %} multiple{% endif %} aria-describedby="{{ id }}-help {{ id }}-status {{ id }}-error"{% if error %} aria-invalid="true"{% endif %}>
+<p class="pv-status" id="{{ id }}-status" aria-live="polite" data-pv-status>No files uploaded</p>
+<div id="{{ id }}-error" class="au-help is-error rg-error" aria-live="polite">{% if error %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ error }}{% endif %}</div>
+</div>

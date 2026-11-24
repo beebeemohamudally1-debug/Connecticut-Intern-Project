@@ -84,7 +84,7 @@
   // Tell the server. The page already shows the change, so a failure only warns in the console.
   function save(url) {
     if (!url) return;
-    fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrf }, credentials: 'same-origin' })
+    fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrf }, credentials: 'same-origin', keepalive: true })
       .then(function (r) { if (!r.ok) console.warn('Could not save read state (' + r.status + ')'); })
       .catch(function () { console.warn('Could not save read state'); });
   }

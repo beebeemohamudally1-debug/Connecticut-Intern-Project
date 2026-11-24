@@ -1,0 +1,145 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Reports - Job Summary Report (admin). View: reports.views.job_summary_report
+  Context: report_title, jobs (list of Job, each with quotation_amount and payment_state:
+  none | unpaid | partial | paid), status_choices, selected_status, selected_status_label,
+  start_date, end_date, errors, filters_valid, total_jobs, assigned_jobs, in_progress_jobs,
+  completed_jobs, cancelled_jobs.
+  The filters are a GET form (status, start_date, end_date). The dates filter on the date the
+  job was created (Job.created_at), so the table shows that date too. Pages work in the browser;
+  Preview and Print show every row in a clean A4 layout.
+{% endcomment %}
+
+{% block title %}{{ report_title }} | HandyConnect{% endblock %}
+{% block page %}reports{% endblock %}
+{% block crumb %}Reports{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'reports/css/job_summary.css' %}">
+
+<div class="bar rp-bar">
+  <div>
+    <h1>{{ report_title }}</h1>
+    <p class="sub">Service jobs with their customer, quotation amount, payment status and job status.</p>
+  </div>
+</div>
+
+{# ---------- Shown only in the preview and on paper ---------- #}
+<header class="rp-print-head">
+  <div>
+    <p class="rp-brand">HandyConnect</p>
+    <h1>{{ report_title }}</h1>
+  </div>
+  <dl>
+    <div><dt>Job status</dt><dd>{{ selected_status_label }}</dd></div>
+    <div><dt>Jobs created</dt><dd>{% if start_date %}{{ start_date }}{% else %}All dates{% endif %} to {% if end_date %}{{ end_date }}{% else %}today{% endif %}</dd></div>
+    <div><dt>Generated</dt><dd>{% now "d M Y, H:i" %}</dd></div>
+  </dl>
+</header>
+
+<form class="card rp-filters" method="get" novalidate>
+  <label class="rp-field"><span>Created from</span>
+    <input class="in" type="date" name="start_date" value="{{ start_date }}">
+  </label>
+  <label class="rp-field"><span>Created to</span>
+    <input class="in" type="date" name="end_date" value="{{ end_date }}">
+  </label>
+  <label class="rp-field"><span>Job status</span>
+    <select class="in" name="status">
+      <option value="">All statuses</option>
+      {% for value, label in status_choices %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <div class="rp-filter-btns">
+    <a class="btn o" href="{% url 'reports:job_summary' %}">Clear</a>
+    <button class="btn soft-blue" type="submit">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Generate Report</button>
+  </div>
+</form>
+
+{% if errors %}
+<div class="rp-errors" role="alert">
+  <strong>The report could not be generated.</strong>
+  {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+</div>
+{% endif %}
+
+{% if filters_valid %}
+<section class="rp-stats" aria-label="Job totals">
+  <div class="card rp-stat"><p>Total jobs</p><strong>{{ total_jobs }}</strong></div>
+  <div class="card rp-stat is-assigned"><p>Assigned</p><strong>{{ assigned_jobs }}</strong></div>
+  <div class="card rp-stat is-in_progress"><p>In progress</p><strong>{{ in_progress_jobs }}</strong></div>
+  <div class="card rp-stat is-completed"><p>Completed</p><strong>{{ completed_jobs }}</strong></div>
+  <div class="card rp-stat is-cancelled"><p>Cancelled</p><strong>{{ cancelled_jobs }}</strong></div>
+</section>
+
+<section class="card rp-card" data-report data-page-size="5">
+  <div class="rp-card-head">
+    <div>
+      <h2>Jobs</h2>
+      <p class="mut">{{ selected_status_label }} &middot; created {% if start_date or end_date %}{% if start_date %}{{ start_date }}{% else %}All dates{% endif %} to {% if end_date %}{{ end_date }}{% else %}today{% endif %}{% else %}All dates{% endif %}</p>
+    </div>
+    {% if jobs %}
+    <div class="rp-actions">
+      <button class="btn soft-blue" type="button" data-preview>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Preview</button>
+      <button class="btn soft-green" type="button" data-print>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <table class="tb rp-table">
+    <thead>
+      <tr>
+        <th scope="col">Job</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Service</th>
+        <th scope="col" class="n">Quotation (MUR)</th>
+        <th scope="col">Payment</th>
+        <th scope="col">Job status</th>
+        <th scope="col">Created</th>
+        <th scope="col">Completed</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr data-row>
+        <td data-label="Job"><span class="rp-id">{{ job.reference }}</span><span class="rp-sub">{% if job.scheduled_start %}Scheduled {{ job.scheduled_start|date:"d M Y" }}{% else %}Not scheduled{% endif %}</span></td>
+        <td data-label="Customer">{% firstof job.customer.get_full_name job.customer.username %}</td>
+        <td data-label="Handyman">{% firstof job.handyman.get_full_name job.handyman.username %}</td>
+        <td data-label="Service">{{ job.service_name }}</td>
+        <td data-label="Quotation (MUR)" class="n">{% if job.quotation_amount is not None %}{{ job.quotation_amount|floatformat:"2g" }}{% else %}-{% endif %}</td>
+        <td data-label="Payment"><span class="rp-pill pay-{{ job.payment_state }}">{% if job.payment_state == 'paid' %}Paid{% elif job.payment_state == 'partial' %}Partly paid{% elif job.payment_state == 'unpaid' %}Unpaid{% else %}No quotation{% endif %}</span></td>
+        <td data-label="Job status"><span class="rp-pill job-{{ job.status }}">{{ job.get_status_display }}</span></td>
+        <td data-label="Created">{{ job.created_at|date:"d M Y" }}</td>
+        <td data-label="Completed">{{ job.completed_at|date:"d M Y"|default:"-" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="rp-empty">No jobs available.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="rp-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="rp-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endif %}
+
+{# ---------- Preview bar (only while previewing) ---------- #}
+<div class="rp-preview-bar" role="region" aria-label="Report preview">
+  <p><strong>Print preview</strong> &middot; this is how the report will look on paper (A4 landscape).</p>
+  <div>
+    <button class="btn o" type="button" data-close-preview>Close Preview</button>
+    <button class="btn soft-green" type="button" data-print>Print</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'reports/js/job_summary.js' %}"></script>
+{% endblock %}

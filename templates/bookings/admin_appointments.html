@@ -1,0 +1,138 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Appointments - Manage Appointments (admin). View: accounts/admin_appointments.py appointments
+  Context `page`:
+    rows      -> one per bookings.Appointment (newest date first): pk, ref (APT-<1000+id>),
+                 request_ref, service, type ('inspection' | 'service'), type_label, customer,
+                 handyman, date, slot ('Morning' | 'Afternoon'), status ('pending' | 'confirmed' |
+                 'cancelled' | 'completed'), status_label, url (details page)
+    counts    -> all, inspection, service (for the type tabs)
+    handymen  -> names for the handyman filter
+    schedule_inspection / schedule_service -> the two Schedule pages
+  The type tabs, search, filters and page buttons work in the browser on the rows sent (5 per page).
+{% endcomment %}
+
+{% block title %}Appointments | HandyConnect{% endblock %}
+{% block page %}appointments{% endblock %}
+{% block crumb %}Appointments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+
+<div class="bar">
+  <div>
+    <h1>Manage Appointments</h1>
+    <p class="sub">Schedule inspections and services, confirm them with the customer and keep handymen free of clashes.</p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<section class="card lq-card ap-card" data-appointments data-page-size="6">
+  <div class="ap-top">
+    <nav class="lq-tabs ap-tabs" aria-label="Appointment type">
+      <button type="button" data-type="" aria-pressed="true">All ({{ page.counts.all }})</button>
+      <button type="button" data-type="inspection" aria-pressed="false">Inspection ({{ page.counts.inspection }})</button>
+      <button type="button" data-type="service" aria-pressed="false">Service ({{ page.counts.service }})</button>
+    </nav>
+    <div class="ap-actions ap-list-actions">
+      <a class="btn o" href="{% url 'accounts_admin:appointment_calendar' %}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Calendar View</a>
+      <button class="btn o ap-main" type="button" data-open="choose-type"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Schedule</button>
+    </div>
+  </div>
+
+  <div class="lq-tools ap-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by appointment, request, customer or handyman</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search..." data-search>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </label>
+    <label><span class="sr-only">Date</span>
+      <select class="in" data-date>
+        <option value="">All dates</option>
+        <option value="today">Today</option>
+        <option value="week">Next 7 days</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="past">Past</option>
+      </select>
+    </label>
+    <label><span class="sr-only">Handyman</span>
+      <select class="in" data-handyman>
+        <option value="">All handymen</option>
+        {% for h in page.handymen %}<option value="{{ h }}">{{ h }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table">
+    <thead>
+      <tr>
+        <th scope="col">Appointment</th>
+        <th scope="col">Type</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Handyman</th>
+        <th scope="col">Date &amp; Time</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in page.rows %}
+      <tr data-row data-type="{{ r.type }}" data-status="{{ r.status }}" data-handyman="{{ r.handyman }}" data-date="{{ r.date|date:'Y-m-d' }}"
+          data-text="{{ r.ref }} {{ r.request_ref }} {{ r.customer }} {{ r.handyman }} {{ r.service }}">
+        <td data-label="Appointment"><span class="lq-id">{{ r.ref }}</span><span class="lq-sub">{{ r.request_ref }} &middot; {{ r.service }}</span></td>
+        <td data-label="Type"><span class="ap-type is-{{ r.type }}">{{ r.type_label }}</span></td>
+        <td data-label="Customer">{{ r.customer }}</td>
+        <td data-label="Handyman">{{ r.handyman }}</td>
+        <td data-label="Date &amp; Time"><span class="lq-amt">{{ r.date|date:"d M Y" }}</span><span class="lq-sub">{{ r.slot }}</span></td>
+        <td data-label="Status"><span class="b lq-{% if r.status == 'pending' %}review{% elif r.status == 'confirmed' %}pending{% elif r.status == 'completed' %}accepted{% else %}cancelled{% endif %}">{{ r.status_label }}</span>{% if r.overdue %}<span class="lq-sub ap-late">Date passed</span>{% endif %}</td>
+        <td data-label=""><a class="btn o s" href="{{ r.url }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty hidden>{% if page.rows %}Nothing matches that search. Try clearing the filters.{% else %}No appointments yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+
+{# ---------- Choose appointment type (low-fi 04) ---------- #}
+<dialog class="ql-modal ap-choose" id="choose-type" aria-labelledby="ct-title">
+  <div class="ap-body">
+    <h2 id="ct-title">Schedule Appointment</h2>
+    <p class="mut">Choose the appointment type.</p>
+    <a class="ap-option" href="{{ page.schedule_inspection }}">
+      <span class="ap-opt-icon is-inspection" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+      <span><strong>Inspection Appointment</strong><span class="mut">Arrange a site inspection before the quotation.</span></span>
+      <span class="ap-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+    <a class="ap-option" href="{{ page.schedule_service }}">
+      <span class="ap-opt-icon is-service" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></span>
+      <span><strong>Service Appointment</strong><span class="mut">Arrange the service after the required payments.</span></span>
+      <span class="ap-arrow" aria-hidden="true">&rarr;</span>
+    </a>
+    <div class="ql-btns"><button class="btn o" type="button" data-close>Close</button></div>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
+{% endblock %}

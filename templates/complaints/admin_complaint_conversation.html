@@ -22,8 +22,7 @@
 {% block crumb %}Complaints / {{ page.reference }}{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}">
-
+<link rel="stylesheet" href="{% static 'complaints/css/admin_complaint_case.css' %}?v=2">
 <div class="bar">
   <div>
     <h1>Private chat with {{ page.person.first_name }}</h1>
@@ -32,6 +31,9 @@
   <a class="btn o s" href="{{ page.case_url|default:'#' }}">&larr; Back to case</a>
 </div>
 
+{% if messages %}
+<div class="cc-flash" role="status">{% for m in messages %}<p class="{{ m.tags }}">{{ m }}</p>{% endfor %}</div>
+{% endif %}
 <div class="cc-chat">
   <section class="card cc-card cc-thread">
     <div class="cc-person">
@@ -54,9 +56,10 @@
     {% if page.is_resolved %}
     <p class="cc-tip mut">This case is closed, so new messages can't be sent.</p>
     {% else %}
-    <form class="cc-reply" method="post" action="{{ page.enquiry_url|default:'#' }}" data-demo="Sending is not connected yet.">
+    <form class="cc-reply" method="post" action="{{ page.enquiry_url|default:'#' }}">
       {% csrf_token %}
       <input type="hidden" name="recipient" value="{{ page.recipient_id }}">
+      <input type="hidden" name="next" value="{{ page.next_url }}">
       <label class="sr-only" for="body">Message {{ page.person.first_name }}</label>
       <textarea class="in" id="body" name="body" rows="2" required placeholder="Write a private message to {{ page.person.first_name }}..."></textarea>
       <button class="btn accent" type="submit">Send</button>

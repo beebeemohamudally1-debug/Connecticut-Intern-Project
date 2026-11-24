@@ -1,0 +1,168 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Appointments - Appointment Details (admin). View: accounts/admin_appointments.py appointment_detail
+  Context `page`: the appointment row (ref, request_ref, service, type, type_label, customer, handyman,
+  date, slot, status, status_label) plus service_address, notes, customer_email, customer_phone,
+  preferred (the customer's preferred date and slot), when, slot_time, history (label, when, done),
+  checks (service appointments only: rows of label / value / ok, and ready), conflict (another
+  confirmed booking of the handyman in this slot, or None), can_change, and the
+  reschedule_url / list_url links.
+  BACKEND: there are no confirm / cancel views yet, so the Confirm and Cancel pop-ups save nothing
+  (data-demo). When they exist: set each form's action to the view, remove data-demo, and after
+  confirming open the "Appointment Confirmed" pop-up (for example redirect with ?confirmed=1).
+  Not in the backend yet: the customer's answer to the proposed time (the admin confirms once the
+  customer agrees), handyman availability, and notifications to the customer and handyman.
+{% endcomment %}
+
+{% block title %}{{ page.ref }} · Appointment Details | HandyConnect{% endblock %}
+{% block page %}appointments{% endblock %}
+{% block crumb %}Appointments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+
+<a class="back" href="{{ page.list_url }}">&larr; Back to Appointments</a>
+<div class="bar ap-bar">
+  <div>
+    <h1>Appointment Details</h1>
+    <p class="sub">{{ page.ref }} &bull; <span class="ap-pill is-{{ page.status }}">{{ page.status_label }}</span></p>
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+  <div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+  <div class="ap-actions">
+    {% if page.can_change %}
+    <button class="btn soft-red" type="button" data-open="modal-cancel">Cancel</button>
+    <a class="btn o" href="{{ page.reschedule_url }}">Reschedule</a>
+    {% endif %}
+    {% if page.status == 'pending' %}
+      {% if page.conflict %}<button class="btn o ap-main" type="button" disabled title="Reschedule first: the handyman is already booked in this slot">Confirm Appointment</button>
+      {% else %}<button class="btn o ap-main" type="button" data-open="modal-confirm">Confirm Appointment</button>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if page.overdue %}
+<p class="ap-warn" role="alert"><strong>Date passed:</strong> this appointment was never confirmed. Reschedule it or cancel it.</p>
+{% endif %}
+{% if page.conflict and page.status == 'pending' %}
+<p class="ap-warn" role="alert"><strong>Booking conflict:</strong> {{ page.handyman }} already has {{ page.conflict.ref }} ({{ page.conflict.request_ref }}) confirmed in this slot. Reschedule before confirming.</p>
+{% endif %}
+
+<div class="ap-grid">
+  <section class="card ap-box">
+    <h2>Appointment Information</h2>
+    <dl class="ap-dl">
+      <div><dt>Appointment ID</dt><dd>{{ page.ref }}</dd></div>
+      <div><dt>Type</dt><dd><span class="ap-type is-{{ page.type }}">{{ page.type_label }} appointment</span></dd></div>
+      <div><dt>Service</dt><dd>{{ page.service|default:"-" }} &middot; {{ page.request_ref }}</dd></div>
+      <div><dt>Date &amp; time</dt><dd>{{ page.when }} <span class="mut">({{ page.slot_time }})</span></dd></div>
+      <div><dt>Customer preferred</dt><dd>{{ page.preferred }}</dd></div>
+      {% if page.notes %}<div><dt>Note</dt><dd>{{ page.notes }}</dd></div>{% endif %}
+    </dl>
+  </section>
+
+  <section class="card ap-box">
+    <h2>Assigned Parties</h2>
+    <div class="ap-people">
+      <div class="ap-person"><span class="ap-av">{{ page.customer_initials }}</span><div><p class="ap-role">Customer</p><p class="ap-name">{{ page.customer }}</p><p class="mut">{{ page.customer_email }} &middot; {{ page.customer_phone }}</p></div></div>
+      <div class="ap-person"><span class="ap-av is-hm">{{ page.handyman_initials }}</span><div><p class="ap-role">Handyman</p><p class="ap-name">{{ page.handyman }}</p><p class="mut">{% if page.conflict %}Booked elsewhere in this slot{% else %}No other confirmed booking in this slot{% endif %}</p></div></div>
+    </div>
+    <dl class="ap-dl"><div><dt>Service location</dt><dd>{{ page.service_address }}</dd></div></dl>
+  </section>
+
+  <section class="card ap-box">
+    <h2>Payment &amp; Prerequisites{% if page.quotation_url %}<a class="ap-h2-link" href="{{ page.quotation_url }}">View quotation</a>{% endif %}</h2>
+    {% if page.checks %}
+    <ul class="ap-checks">
+      {% for c in page.checks.rows %}<li class="{% if c.ok %}ok{% else %}no{% endif %}"><span>{{ c.label }}</span><strong>{{ c.value }}</strong></li>{% endfor %}
+    </ul>
+    {% else %}
+    <ul class="ap-checks">
+      <li class="ok"><span>Service quotation</span><strong>Not needed before an inspection</strong></li>
+      <li class="no"><span>Inspection fee</span><strong>Not recorded in the system</strong></li>
+    </ul>
+    <p class="mut ap-small">The backend has no inspection fee yet, so it cannot be checked here.</p>
+    {% endif %}
+  </section>
+
+  <section class="card ap-box">
+    <h2>Status History</h2>
+    <ol class="ap-steps">
+      {% for s in page.history %}
+      <li class="{% if s.stop %}stop{% elif s.done %}done{% else %}current{% endif %}"><span class="ap-dot"></span><strong>{{ s.label }}</strong><span>{% if s.when %}{{ s.when|date:"d M Y, H:i" }}{% else %}In progress{% endif %}</span></li>
+      {% endfor %}
+    </ol>
+  </section>
+</div>
+
+{# ---------- Confirm (after the customer agrees; low-fi 12) ---------- #}
+{% if page.status == 'pending' %}
+<dialog class="ql-modal" id="modal-confirm" aria-labelledby="cf-title">
+  {# BACKEND: action = the confirm view, then remove data-demo #}
+  <form method="post" action="#" data-demo="Not saved yet: confirming is not in the backend (frontend demo only)." data-demo-next="modal-confirmed">
+    {% csrf_token %}
+    <h2 id="cf-title">Confirm appointment?</h2>
+    <dl class="ql-ctx">
+      <div><dt>Appointment</dt><dd>{{ page.ref }}</dd></div>
+      <div><dt>Handyman</dt><dd>{{ page.handyman }}</dd></div>
+      <div><dt>Date &amp; time</dt><dd>{{ page.when }}</dd></div>
+    </dl>
+    <p class="mut">Confirm once {{ page.customer }} has agreed to this time. The handyman's slot is then booked.</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Not yet</button>
+      <button class="btn soft-green" type="submit">Confirm Appointment</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+{# ---------- Cancel (low-fi 13) ---------- #}
+{% if page.can_change %}
+<dialog class="ql-modal" id="modal-cancel" aria-labelledby="cn-title">
+  {# BACKEND: action = the cancel view, then remove data-demo #}
+  <form method="post" action="#" data-demo="Not saved yet: cancelling is not in the backend (frontend demo only).">
+    {% csrf_token %}
+    <span class="ap-icon is-red" aria-hidden="true">!</span>
+    <h2 id="cn-title" class="ap-center">Cancel Appointment</h2>
+    <dl class="ql-ctx">
+      <div><dt>Appointment</dt><dd>{{ page.ref }} &middot; {{ page.service }}</dd></div>
+      <div><dt>Handyman / Customer</dt><dd>{{ page.handyman }} / {{ page.customer }}</dd></div>
+      <div><dt>Date &amp; time</dt><dd>{{ page.when }}</dd></div>
+    </dl>
+    {# BACKEND: the Appointment model has no field for the reason yet #}
+    <label class="ap-label" for="cn-reason">Reason for cancelling</label>
+    <textarea class="in ap-reason" id="cn-reason" name="reason" rows="2" maxlength="300" required placeholder="For example: the customer is no longer available"></textarea>
+    <p class="mut">The appointment is marked as cancelled. Let the customer and the handyman know (the system does not notify them yet).</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Keep Appointment</button>
+      <button class="btn soft-red" type="submit">Cancel Appointment</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+{# ---------- Appointment confirmed (low-fi 10): shown after Confirm (preview until it saves) ---------- #}
+{% if page.status == 'pending' %}
+<dialog class="ql-modal" id="modal-confirmed" aria-labelledby="ok-title">
+  <div class="ap-body">
+    <span class="ap-icon is-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg></span>
+    <h2 id="ok-title" class="ap-center">Appointment Confirmed</h2>
+    <dl class="ap-sum">
+      <div><dt>Appointment ID</dt><dd>{{ page.ref }}</dd></div>
+      <div><dt>Service</dt><dd>{{ page.service }}</dd></div>
+      <div><dt>Handyman</dt><dd>{{ page.handyman }}</dd></div>
+      <div><dt>Customer</dt><dd>{{ page.customer }}</dd></div>
+      <div><dt>Date and time</dt><dd>{{ page.when }}</dd></div>
+    </dl>
+    <div class="ql-btns"><button class="btn soft-blue" type="button" data-close>View Appointment</button></div>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "accounts/register_base.html" %}
+{% load static %}
+{# S11 Application submitted (pending approval). Context: name, email, step=5. Design decision: no auto-login, the provider goes to the login page and then sees the application status (S18). #}
+{% block title %}Application submitted | HandyConnect{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'accounts/css/provider.css' %}">{% endblock %}
+{% block step_content %}
+<div class="rg-center"><span class="rg-badge is-amber rg-pop" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-hourglass"/></svg></span>
+<h1>Application submitted.</h1><p class="au-sub">Your account is pending approval. You will be emailed the result.</p></div>
+<dl class="rg-summary"><div><dt>Name</dt><dd>{{ name }}</dd></div><div><dt>Email</dt><dd class="rg-break">{{ email }}</dd></div><div><dt>Account type</dt><dd>Service Provider</dd></div><div><dt>Status</dt><dd><span class="au-badge is-pending"><svg class="au-ic" aria-hidden="true"><use href="#au-i-clock"/></svg>Pending approval</span></dd></div></dl>
+<ol class="rg-next" aria-label="What happens next">
+<li><span class="rg-next-num" aria-hidden="true">1</span><span><b>We review your documents</b><small>An administrator checks your ID card photo and certificates.</small></span></li>
+<li><span class="rg-next-num" aria-hidden="true">2</span><span><b>You receive an email</b><small>It tells you if your account is Active or Rejected, with a reason if rejected.</small></span></li>
+<li><span class="rg-next-num" aria-hidden="true">3</span><span><b>Log in any time</b><small>You can follow the status of your application after you log in.</small></span></li>
+</ol>
+<a class="au-btn rg-submit" href="{% url 'accounts:login' %}"><span class="au-label">Go to login</span><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-right"/></svg></a>
+{% endblock %}

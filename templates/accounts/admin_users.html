@@ -6,11 +6,13 @@
   Data comes from the view as `page`:
     page.stats   -> total, customers, handymen, pending
     page.users   -> name, initials, role, email, status, url
-  BACKEND: replace the sample data with real users. Each user needs a `url`
-  (customer details or handyman profile / verification page).
+  Connected: accounts/admin_views.py users (every customer and handyman,
+  newest first). status is 'Active' or 'Suspended' (user.is_active); url is the
+  Customer Details or Handyman Profile page.
+  Not in the backend yet: registration verification, so stats.pending is 0 and
+  no user is 'Pending'.
   Search, role, status filters and the page buttons work in the browser on the
-  rows sent (5 per page). BACKEND: if you paginate on the server, send one page
-  at a time and replace the page buttons with links.
+  rows sent (5 per page).
 {% endcomment %}
 
 {% block title %}Manage Users | HandyConnect{% endblock %}

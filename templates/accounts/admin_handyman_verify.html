@@ -15,7 +15,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=2">
 {% url 'accounts_admin:users' as users_url %}
 
 <a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>

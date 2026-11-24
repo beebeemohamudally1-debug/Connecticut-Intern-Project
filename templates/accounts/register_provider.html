@@ -1,0 +1,40 @@
+{% extends "accounts/register_base.html" %}
+{% load static %}
+{% comment %}
+  S10 Provider details (Figma: "Default with selections" and "Expanded multiselects").
+  Context: email, values {first_name, surname, additional_names, username, phone, address},
+           regions [(value, label)] (nine), categories [(value, label)] (eight),
+           selected_regions, selected_categories (lists of values, to keep the ticks),
+           errors {first_name, surname, additional_names, username, phone, address, regions, categories},
+           open_menus (preview only: draws the regions menu open), role_label, part ("Part 1 of 2"), step=4.
+  POST: the text fields, plus regions and categories (repeated fields: request.POST.getlist). Username is also checked live on blur.
+  Next: accounts:register_provider_documents (S10b). Nothing is saved as an account until S10b succeeds.
+{% endcomment %}
+{% block title %}Provider details | HandyConnect{% endblock %}
+{% block card_class %}is-wide{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'accounts/css/provider.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'accounts/js/provider.js' %}" defer></script>{% endblock %}
+{% block step_content %}
+{% include "accounts/_pv_icons.html" %}
+{% include "accounts/_reg_role_chip.html" %}
+<div class="au-intro"><h1>Provider details</h1><p class="au-sub">Complete your details for <b class="rg-break">{{ email }}</b>.</p></div>
+<form method="post" novalidate data-au-once data-pv-details>{% csrf_token %}
+<section class="pv-section" aria-labelledby="pv-h-personal">
+<h2 class="pv-h" id="pv-h-personal"><span class="pv-h-icon" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-user"/></svg></span>Personal details</h2>
+<div class="rg-grid">
+{% include "accounts/_reg_field.html" with id="first_name" name="first_name" label="First name" value=values.first_name error=errors.first_name autocomplete="given-name" placeholder="Jane" required="1" %}
+{% include "accounts/_reg_field.html" with id="surname" name="surname" label="Surname" value=values.surname error=errors.surname autocomplete="family-name" placeholder="Doe" required="1" %}
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="additional_names" name="additional_names" label="Additional names" optional="1" value=values.additional_names error=errors.additional_names autocomplete="additional-name" placeholder="Enter additional names" %}</div>
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="username" name="username" label="Username" value=values.username error=errors.username help="Unique, 3-30 characters, letters, digits and underscores" autocomplete="username" maxlength="30" placeholder="jane_doe" required="1" live="1" %}<div id="username-status" class="rg-status" aria-live="polite"></div></div>
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="phone" name="phone" label="Phone" type="text" value=values.phone error=errors.phone help="Exactly 8 digits" autocomplete="tel-national" inputmode="numeric" maxlength="8" prefix="+230" placeholder="51234567" required="1" %}</div>
+<div class="rg-full">{% include "accounts/_reg_field.html" with id="address" name="address" label="Residential address" value=values.address error=errors.address autocomplete="street-address" placeholder="12 Royal Road, Port Louis" required="1" %}</div>
+</div>
+</section>
+<section class="pv-section" aria-labelledby="pv-h-services">
+<h2 class="pv-h" id="pv-h-services"><span class="pv-h-icon" aria-hidden="true"><svg class="au-ic"><use href="#rg-i-wrench"/></svg></span>Your services</h2>
+{% include "accounts/_pv_multiselect.html" with id="regions" name="regions" label="Regions where you offer services" options=regions selected=selected_regions error=errors.regions help="At least 1 required" placeholder="Select regions" noun="region" noun_plural="regions" open=open_menus %}
+{% include "accounts/_pv_multiselect.html" with id="categories" name="categories" label="Service categories" options=categories selected=selected_categories error=errors.categories help="At least 1 required" placeholder="Select service categories" noun="category" noun_plural="categories" %}
+</section>
+<aside class="pv-next-doc"><span class="pv-next-icon" aria-hidden="true"><svg class="au-ic"><use href="#pv-i-file"/></svg></span><div><strong>Documents</strong><p>Next, you will upload your ID card photo and your certificates.</p></div></aside>
+<button class="au-btn rg-submit" type="submit"><span class="au-label">Continue to documents</span><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-right"/></svg></button></form>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "accounts/register_base.html" %}
+{% load static %}
+{% comment %}
+  S10b Documents (Figma: "Empty / default", "Uploaded files", "Larger preview").
+  Context: name, email, errors {id_photo, certificates, terms, privacy}, terms_accepted, privacy_accepted (bools, to keep the ticks),
+           file_rules {types, max_mb, type_error, size_error} (copy comes from auth_messages, the page uses it for its own checks),
+           uploaded {id_photo: [file], certificates: [file, ...]} (optional, files the server already holds; each file is
+           {token, name, type, size, url}), auto_preview ("id_photo" or "certificates", preview only), role_label, part ("Part 2 of 2"), step=4.
+  POST (multipart/form-data): id_photo (one file), certificates (one or more files, same field name), terms, privacy,
+           keep_id_photo / keep_certificates (tokens of files the server already holds that the user did not remove).
+  The server checks everything again: JPEG or PNG, max 5 MB each, at least one of each document, both consents.
+  Submit stays disabled until the page is complete; this is only a convenience, never trust it.
+{% endcomment %}
+{% block title %}Documents | HandyConnect{% endblock %}
+{% block card_class %}is-wide{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'accounts/css/provider.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'accounts/js/provider.js' %}" defer></script>{% endblock %}
+{% block step_content %}
+{% include "accounts/_pv_icons.html" %}
+{% include "accounts/_reg_role_chip.html" %}
+<div class="au-intro"><h1>Documents</h1><p class="au-sub">{{ name }} · <span class="rg-break">{{ email }}</span></p></div>
+{% include "accounts/_auth_alert.html" with kind="info" text="An administrator reviews these documents before your account is approved." %}
+<form method="post" enctype="multipart/form-data" novalidate data-au-once data-pv-docs data-types="{{ file_rules.types }}" data-max-mb="{{ file_rules.max_mb }}" data-msg-type="{{ file_rules.type_error }}" data-msg-size="{{ file_rules.size_error }}"{% if auto_preview %} data-auto-preview="{{ auto_preview }}"{% endif %}>{% csrf_token %}
+{% include "accounts/_pv_upload.html" with id="id_photo" name="id_photo" label="ID card photo (required)" hint="JPEG or PNG, max 5 MB each" pick_first="Upload ID card photo" files=uploaded.id_photo error=errors.id_photo icon="pv-i-id" %}
+{% include "accounts/_pv_upload.html" with id="certificates" name="certificates" label="Certificates (at least one required, more allowed)" hint="JPEG or PNG, max 5 MB each" multiple="1" pick_first="Upload certificates" pick_more="Upload another certificate" files=uploaded.certificates error=errors.certificates icon="pv-i-award" %}
+<div class="rg-consent">
+<label class="rg-check"><input type="checkbox" name="terms" value="1"{% if terms_accepted %} checked{% endif %}{% if errors.terms %} aria-invalid="true"{% endif %} aria-describedby="terms-error"><span>I accept the <a href="#" target="_blank" rel="noopener">Terms and Conditions</a>.</span></label>
+<div id="terms-error" class="au-help is-error rg-error" aria-live="polite">{% if errors.terms %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ errors.terms }}{% endif %}</div>
+<label class="rg-check"><input type="checkbox" name="privacy" value="1"{% if privacy_accepted %} checked{% endif %}{% if errors.privacy %} aria-invalid="true"{% endif %} aria-describedby="privacy-error"><span>I accept the <a href="#" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+<div id="privacy-error" class="au-help is-error rg-error" aria-live="polite">{% if errors.privacy %}<svg class="au-ic" aria-hidden="true"><use href="#au-i-alert"/></svg>{{ errors.privacy }}{% endif %}</div>
+</div>
+<p class="pv-requirements" id="submit-requirements">Upload an ID card photo and at least one certificate, then accept both policies to submit.</p>
+<button class="au-btn rg-submit pv-submit" type="submit" data-pv-gate aria-describedby="submit-requirements"><span class="au-label">Submit application</span></button>
+<p class="rg-note"><a class="rg-back" href="{% url 'accounts:register_provider' %}"><svg class="au-ic" aria-hidden="true"><use href="#rg-i-arrow-left"/></svg>Back to provider details</a></p>
+</form>
+{% endblock %}

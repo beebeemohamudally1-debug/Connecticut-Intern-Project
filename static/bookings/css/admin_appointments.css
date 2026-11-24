@@ -1,0 +1,193 @@
+/* Appointments (admin): list, calendar, details, schedule and reschedule pages.
+   The list also uses payments/css/admin_labour_quotations.css; the pop-ups use admin_quotation_lists.css. */
+
+:root {
+  --card-shadow: 0 1px 2px rgba(20, 45, 72, 0.06), 0 6px 16px rgba(20, 45, 72, 0.08);
+  --card-hover: 0 8px 22px rgba(37, 99, 235, 0.25);
+}
+[hidden] { display: none !important; }
+
+.back { display: inline-block; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #2A69B5; text-decoration: none; }
+.back:hover { text-decoration: underline; }
+.bar { margin-bottom: 14px; }
+.bar h1 { font-size: 26px; }
+.bar .sub { margin-bottom: 0; }
+.ap-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.ap-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-left: auto; }
+.ap-actions .btn { font: inherit; font-size: 14px; cursor: pointer; }
+/* List page: the two buttons match the height of the type tabs next to them */
+.ap-list-actions { align-self: flex-start; gap: 8px; }
+.ap-list-actions .btn { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; font-weight: 600; }
+.ap-list-actions .ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Buttons: main action orange outline, soft tints for the others */
+.btn.ap-main { color: var(--orange); background: #fff; border-color: var(--orange); }
+.btn.ap-main:hover:not(:disabled) { background: #FFF5EE; filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+.btn.soft-blue { color: #2866B1; background: #ECF3FA; border-color: #E5EAF0; }
+.btn.soft-green { color: #11836D; background: #E6F6EF; border-color: #E5EAF0; }
+.btn.soft-red { color: #B74555; background: #FEEDF0; border-color: #E5EAF0; }
+.btn.soft-blue:hover, .btn.soft-green:hover, .btn.soft-red:hover { filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }
+.btn.o:hover { box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); filter: none; }
+
+/* ---------- Manage Appointments ---------- */
+.ap-card { padding-top: 16px; }
+.ap-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.ap-tabs { margin-bottom: 0 !important; }
+.lq-tools.ap-tools { grid-template-columns: minmax(180px, 1fr) 170px 160px 180px auto; }
+.ap-type { display: inline-flex; align-items: center; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 100px; }
+.ap-type.is-inspection { color: #8A4FC6; background: #F3ECFC; }
+.ap-type.is-service { color: #2866B1; background: #ECF3FA; }
+
+/* Choose type pop-up */
+.ap-body { display: flex; flex-direction: column; gap: 12px; padding: 24px 28px; }
+.ap-body h2, .ap-body p { margin: 0; }
+.ap-option {
+  display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 14px;
+  padding: 16px 18px; color: var(--navy); text-decoration: none;
+  background: var(--grey-bg); border: 1px solid var(--line); border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.ap-option:hover { background: #fff; border-color: #C9D8EC; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18); }
+.ap-option strong { display: block; font-size: 16px; }
+.ap-option .mut { display: block; font-size: 13px; }
+.ap-opt-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; }
+.ap-opt-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ap-opt-icon.is-inspection { color: #8A4FC6; background: #F3ECFC; }
+.ap-opt-icon.is-service { color: #2866B1; background: #ECF3FA; }
+.ap-arrow { font-size: 20px; color: var(--muted); }
+
+/* ---------- Cards (details, schedule, reschedule) ---------- */
+.ap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ap-grid-top { margin-bottom: 16px; }
+.ap-box { margin: 0; padding: 18px 24px; box-shadow: var(--card-shadow); transition: box-shadow 0.15s ease; }
+.ap-box:hover { box-shadow: var(--card-hover); }
+.ap-box h2 { margin: 0 0 10px; font-size: 18px; color: var(--navy); }
+.ap-dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin: 0; }
+.ap-dl dt { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.ap-dl dd { margin: 2px 0 0; font-size: 14px; font-weight: 600; color: var(--navy); }
+.ap-dl dd .mut { font-weight: 400; }
+.ap-small { margin: 8px 0 0; font-size: 12px; }
+
+.ap-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 100px; }
+.ap-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ap-pill.is-pending { color: #A66A16; background: #FFF4DF; }
+.ap-pill.is-confirmed { color: #2866B1; background: #ECF3FA; }
+.ap-pill.is-completed { color: #11836D; background: #E6F6EF; }
+.ap-pill.is-cancelled { color: #718199; background: #F4F7FA; }
+
+.ap-warn { margin: 0 0 14px; padding: 10px 16px; font-size: 14px; color: #B74555; background: #FEEDF0; border: 1px solid #F5C9D0; border-radius: 10px; }
+
+.ap-people { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.ap-person { display: flex; align-items: center; gap: 12px; }
+.ap-person p { margin: 0; }
+.ap-av { display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; font-size: 13px; font-weight: 700; color: #2866B1; background: #E3EFF6; border-radius: 50%; }
+.ap-av.is-hm { color: #B76B27; background: #FFF3E9; }
+.ap-role { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.ap-name { font-weight: 600; color: var(--navy); }
+.ap-person .mut { font-size: 12px; }
+
+.ap-checks { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ap-checks li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px 6px 28px; font-size: 14px; border-radius: 8px; position: relative; }
+.ap-checks li::before { position: absolute; left: 10px; font-weight: 700; }
+.ap-checks li.ok { background: #F1FAF6; }
+.ap-checks li.ok::before { content: "✓"; color: #11836D; }
+.ap-checks li.no { background: #FEF5F6; }
+.ap-checks li.no::before { content: "!"; color: #B74555; left: 13px; }
+.ap-checks strong { color: var(--navy); }
+
+.ap-steps { margin: 0; padding: 0; list-style: none; }
+.ap-steps li { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; padding: 6px 0; font-size: 14px; position: relative; }
+.ap-steps li:not(:last-child)::after { content: ""; position: absolute; left: 6px; top: 22px; bottom: -8px; width: 2px; background: #D7E1EC; }
+.ap-dot { width: 14px; height: 14px; border-radius: 50%; background: #11836D; position: relative; z-index: 1; }
+.ap-steps li.current .ap-dot { background: #fff; border: 2px solid #2A69B5; }
+.ap-steps li.stop .ap-dot { background: #B74555; }
+.ap-steps strong { color: var(--navy); }
+.ap-steps li > span:last-child { font-size: 12px; color: var(--muted); }
+
+/* Pop-up icons */
+.ap-icon { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto; font-size: 24px; font-weight: 700; border-radius: 50%; }
+.ap-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.ap-icon.is-red { color: #B74555; background: #FEEDF0; }
+.ap-icon.is-green { color: #11836D; background: #E6F6EF; }
+.ap-center { text-align: center; }
+.ap-sum { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px 16px; background: var(--grey-bg); border-radius: 10px; }
+.ap-sum div { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.ap-sum dt { color: var(--muted); }
+.ap-sum dd { margin: 0; font-weight: 600; color: var(--navy); text-align: right; }
+
+/* ---------- Schedule / reschedule: slot form ---------- */
+.ap-picker { margin-bottom: 12px; }
+.ap-picker .in { width: 100%; max-width: none; }
+.ap-slot { display: flex; flex-direction: column; gap: 12px; }
+.ap-slot h2 { margin-bottom: 0; }
+.ap-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.ap-fields label, .ap-note { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--navy); }
+.ap-fields .in, .ap-note .in { width: 100%; max-width: none; }
+.ap-fields .ap-wide { grid-column: span 2; }
+.ap-note .mut { font-weight: 400; }
+.ap-fixed { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.ap-fixed span { font-weight: 600; color: var(--navy); }
+.ap-fixed strong { padding: 9px 0; font-weight: 400; color: var(--text); }
+.ap-slot-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.ap-slot-foot .btn { font: inherit; font-size: 14px; }
+.ap-avail { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+.ap-avail.is-free { color: #11836D; }
+.ap-avail.is-busy { color: #B74555; }
+
+/* ---------- Calendar ---------- */
+.ap-cal { margin: 0; padding: 16px 22px; box-shadow: var(--card-shadow); }
+.ap-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.ap-cal-nav { display: flex; align-items: center; gap: 10px; }
+.ap-cal-nav h2 { min-width: 210px; margin: 0; font-size: 18px; color: var(--navy); text-align: center; }
+.ap-arrowbtn { display: grid; place-items: center; width: 32px; height: 32px; font-size: 20px; color: var(--navy); text-decoration: none; border: 1px solid var(--line); border-radius: 8px; }
+.ap-arrowbtn:hover { color: var(--blue); border-color: var(--blue); }
+.ap-legend { display: flex; gap: 8px; }
+.ap-views { margin-bottom: 0 !important; }
+.ap-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.ap-dow { padding: 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #73839A; }
+.ap-cell { display: flex; flex-direction: column; gap: 3px; min-height: 78px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 8px; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.ap-cell:hover { border-color: #C9D8EC; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12); }
+.ap-cal.is-week .ap-cell { min-height: 420px; }
+.ap-cell.out { background: var(--grey-bg); }
+.ap-cell.out .ap-num { color: #A9B6C6; }
+.ap-cell.today { border-color: var(--orange); }
+.ap-num { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.ap-cell.today .ap-num { color: var(--orange); }
+.ap-num:hover { color: var(--blue); }
+.ap-ev { display: block; overflow: hidden; padding: 3px 6px; font-size: 11px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; text-decoration: none; border-left: 3px solid; border-radius: 4px; }
+.ap-ev.is-service { color: #2866B1; background: #ECF3FA; }
+.ap-ev.is-inspection { color: #8A4FC6; background: #F3ECFC; }
+.ap-ev.st-pending { border-left-style: dashed; }
+.ap-ev:hover { filter: brightness(0.96); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2); }
+.ap-cal.is-week .ap-ev { white-space: normal; }
+.ap-more { font-size: 11px; color: var(--muted); text-decoration: none; }
+.ap-day { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ap-day-slot { min-height: 440px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.ap-day-label { margin: 0 0 10px; font-weight: 700; color: var(--navy); }
+.ap-day-items { display: flex; flex-direction: column; gap: 8px; }
+.ap-day .ap-ev { padding: 10px 12px; font-size: 13px; white-space: normal; }
+.ap-day .ap-ev strong, .ap-day .ap-ev span { display: block; }
+.ap-day .ap-ev span { font-weight: 400; }
+
+@media (max-width: 1023px) {
+  .ap-grid, .ap-day { grid-template-columns: 1fr; }
+  .ap-fields { grid-template-columns: 1fr 1fr; }
+  .lq-tools.ap-tools { grid-template-columns: 1fr 1fr; }
+  .ap-cal-head, .ap-top { flex-wrap: wrap; }
+}
+@media (max-width: 767px) {
+  .ap-bar { flex-direction: column; align-items: flex-start; }
+  .ap-actions { margin-left: 0; }
+  .ap-fields, .ap-dl { grid-template-columns: 1fr; }
+  .ap-cal-grid { grid-template-columns: repeat(7, minmax(40px, 1fr)); }
+  .ap-ev { font-size: 10px; }
+}
+
+/* Cancel reason and the 'Date passed' note */
+.ap-label { display: block; margin: 4px 0 6px; font-size: 13px; font-weight: 600; color: #26344A; }
+.ap-reason { width: 100%; max-width: none; resize: vertical; min-height: 56px; }
+.ap-late { color: #B74555; font-weight: 600; }
+.ap-late a { color: inherit; text-decoration: underline; }
+.ap-warn a { color: inherit; font-weight: 600; }
+.ap-h2-link { float: right; margin-top: 3px; font-size: 13px; font-weight: 600; color: #2866B1; text-decoration: none; }
+.ap-h2-link:hover { text-decoration: underline; }

@@ -1,0 +1,163 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Appointments - Schedule Inspection / Service Appointment (admin).
+  View: accounts/admin_appointments.py appointment_schedule  (URL: appointments/schedule/<kind>/?request=<id>)
+  Context `page`:
+    kind, kind_label        -> 'inspection' | 'service'
+    requests                -> requests to choose from (pk, label): a handyman has accepted the request;
+                               for a service, the service quotation is accepted (unpaid ones are marked)
+    request                 -> the chosen request (pk, ref, customer, service, address, preferred,
+                               preferred_date, preferred_slot) or None
+    handymen                -> the handymen who accepted the request (pk, name)
+    busy                    -> their confirmed bookings (handyman, date, slot, ref) for the live check
+    checks, blocked         -> service only: quotation and payment checks; blocked when not fully paid
+    form, conflict, slots, today, list_url
+  Send to Customer posts handyman, date, slot and notes. The view checks them and the booking
+  conflict, but saves nothing yet. BACKEND: create the Pending appointment in the view (marked there).
+  Not in the backend yet: the inspection fee (so an inspection cannot be blocked for it), sending
+  the proposal to the customer, and handyman working hours.
+{% endcomment %}
+
+{% block title %}Schedule {{ page.kind_label }} Appointment | HandyConnect{% endblock %}
+{% block page %}appointments{% endblock %}
+{% block crumb %}Appointments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+
+<a class="back" href="{{ page.list_url }}">&larr; Back to Appointments</a>
+<div class="bar ap-bar">
+  <div>
+    <h1>Schedule {{ page.kind_label }} Appointment</h1>
+    {% if page.existing %}<p class="sub ap-late" role="alert">Already scheduled: {{ page.request.ref }} has {{ page.existing.ref }} ({{ page.existing.status }}). <a href="{{ page.existing.url }}">Open it</a> to reschedule or cancel instead.</p>
+    {% else %}<p class="sub">{% if page.kind == 'inspection' %}Arrange a site inspection before the quotation.{% else %}Arrange the service once both quotations are accepted and fully paid.{% endif %}</p>{% endif %}
+  </div>
+  {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+</div>
+
+<div class="ap-grid ap-grid-top">
+  <section class="card ap-box">
+    <h2>Customer Request</h2>
+    <form method="get" class="ap-picker">
+      <label class="sr-only" for="ap-request">Service request</label>
+      <select class="in" id="ap-request" name="request" data-request-picker>
+        <option value="">{% if page.requests %}Choose a request...{% else %}No request is ready for this appointment{% endif %}</option>
+        {% for r in page.requests %}<option value="{{ r.pk }}"{% if page.request.pk == r.pk %} selected{% endif %}>{{ r.label }}</option>{% endfor %}
+      </select>
+      <noscript><button class="btn o s" type="submit">Load</button></noscript>
+    </form>
+    {% if page.request %}
+    <dl class="ap-dl">
+      <div><dt>Request ID</dt><dd>{{ page.request.ref }}</dd></div>
+      <div><dt>Customer</dt><dd>{{ page.request.customer }}</dd></div>
+      <div><dt>Service</dt><dd>{{ page.request.service|default:"-" }}</dd></div>
+      <div><dt>Preferred slot</dt><dd>{{ page.request.preferred }}</dd></div>
+    </dl>
+    {% else %}
+    <p class="mut ap-small">Pick the service request to schedule. {% if page.kind == 'service' %}Requests with an accepted service quotation and no service appointment yet are listed; the service can be scheduled once both quotations are fully paid.{% else %}Requests a handyman has accepted and that have no inspection yet are listed.{% endif %}</p>
+    {% endif %}
+  </section>
+
+  <section class="card ap-box">
+    {% if page.kind == 'service' %}
+    <h2>Quotation and Payment Checks</h2>
+    {% if page.checks %}
+    <ul class="ap-checks">
+      {% for c in page.checks.rows %}<li class="{% if c.ok %}ok{% else %}no{% endif %}"><span>{{ c.label }}</span><strong>{{ c.value }}</strong></li>{% endfor %}
+    </ul>
+    {% else %}<p class="mut ap-small">Choose a request to see its quotations and payments.</p>{% endif %}
+    {% else %}
+    <h2>Inspection Prerequisite</h2>
+    <ul class="ap-checks">
+      <li class="no"><span>Inspection fee</span><strong>Not recorded in the system</strong></li>
+      <li class="ok"><span>Scheduling</span><strong>Permitted</strong></li>
+    </ul>
+    <p class="mut ap-small">The backend has no inspection fee yet. Check it has been paid offline before sending the appointment.</p>
+    {% endif %}
+  </section>
+</div>
+
+<form class="card ap-box ap-slot" method="post" data-slot-form>
+  {% csrf_token %}
+  <input type="hidden" name="request" value="{{ page.request.pk|default:'' }}">
+  <h2>Choose {{ page.kind_label }} Slot</h2>
+  <div class="ap-fields">
+    <label>Handyman
+      <select class="in" name="handyman" {% if not page.request or page.locked %}disabled{% endif %} required>
+        {% for h in page.handymen %}<option value="{{ h.pk }}"{% if page.form.handyman == h.pk|stringformat:'s' %} selected{% endif %}>{{ h.name }}</option>{% empty %}<option value="">-</option>{% endfor %}
+      </select>
+    </label>
+    <label>{{ page.kind_label }} date
+      <input class="in" type="date" name="date" min="{{ page.today }}" value="{% firstof page.form.date page.request.preferred_date %}" {% if not page.request or page.locked %}disabled{% endif %} required>
+    </label>
+    <label>Time slot
+      <select class="in" name="slot" {% if not page.request or page.locked %}disabled{% endif %} required>
+        {% for k, label in page.slots %}<option value="{{ k }}"{% if page.form.slot == k or not page.form.slot and page.request.preferred_slot == k %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="ap-fixed"><span>Site location</span><strong>{{ page.request.address|default:"-" }}</strong></div>
+  </div>
+  <label class="ap-note">Message to the customer <span class="mut">(saved as the appointment note)</span>
+    <input class="in" type="text" name="notes" maxlength="250" value="{{ page.form.notes }}" placeholder="For example: the handyman will call 30 minutes before arriving." {% if not page.request or page.locked %}disabled{% endif %}>
+  </label>
+  <div class="ap-slot-foot">
+    <p class="ap-avail" data-availability aria-live="polite"></p>
+    <button class="btn o ap-main" type="submit" {% if not page.request or page.locked %}disabled{% endif %}>Send to Customer</button>
+  </div>
+</form>
+{{ page.busy|json_script:"busy-data" }}
+
+{# ---------- Full offline payment required (low-fi 06) ---------- #}
+{% if page.blocked %}
+<dialog class="ql-modal" id="modal-unpaid" aria-labelledby="up-title" data-auto-open>
+  <div class="ap-body">
+    <span class="ap-icon is-red" aria-hidden="true">!</span>
+    <h2 id="up-title" class="ap-center">Full Offline Payment Required</h2>
+    <p class="mut ap-center">Both quotations must be accepted and paid before the service is scheduled.</p>
+    <ul class="ap-checks">
+      {% for c in page.checks.rows %}<li class="{% if c.ok %}ok{% else %}no{% endif %}"><span>{{ c.label }}</span><strong>{{ c.value }}</strong></li>{% endfor %}
+    </ul>
+    <div class="ql-btns">
+      {# Payments are recorded in the payments section (payments team), not from here #}
+      <button class="btn o" type="button" data-close>Close</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+
+{# ---------- Handyman booking conflict (low-fi 09) ---------- #}
+{% if page.conflict %}
+<dialog class="ql-modal" id="modal-conflict" aria-labelledby="cx-title" data-auto-open>
+  <div class="ap-body">
+    <span class="ap-icon is-red" aria-hidden="true">!</span>
+    <h2 id="cx-title" class="ap-center">Handyman Booking Conflict</h2>
+    <dl class="ap-sum">
+      <div><dt>Handyman</dt><dd>{{ page.conflict.handyman }}</dd></div>
+      <div><dt>Requested slot</dt><dd>{{ page.conflict.requested }}</dd></div>
+      <div><dt>Existing appointment</dt><dd>{{ page.conflict.ref }} &middot; {{ page.conflict.request_ref }}</dd></div>
+      <div><dt>Already booked</dt><dd>{{ page.conflict.booked }}</dd></div>
+    </dl>
+    <p class="mut ap-center">Choose another available date or time.</p>
+    <div class="ql-btns">
+      <a class="btn o" href="{{ page.list_url }}">Cancel</a>
+      <button class="btn soft-blue" type="button" data-close data-focus-date>Change Slot</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
+<script>
+  (function () {
+    var d = document.querySelector('[data-auto-open]');
+    if (d) d.showModal();
+    var change = document.querySelector('[data-focus-date]');
+    if (change) change.addEventListener('click', function () { var f = document.querySelector('[name="date"]'); if (f) f.focus(); });
+  })();
+</script>
+{% endblock %}
