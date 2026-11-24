@@ -4,8 +4,7 @@
   Service Request Details (FR-A-4). View: bookings.views.admin_request_detail (admin only).
 
   Data comes from the view as `page`:
-    ref, service, state, label, customer, customer_url, handyman (the one the customer chose;
-    once sent, the one it was sent to), sample (True when that choice is sample data),
+    ref, service, state, label, customer, customer_url, handyman (the chosen/forwarded handyman),
     preferred (date · Morning / Afternoon), address, phone, contact, email, description,
     response: label, tone (ok, bad, wait), details, on (answered on),
     handyman_pk (posted by the Forward pop-up),
@@ -19,9 +18,7 @@
     rejected  -> Notify Customer (pop-up)
     booked -> View Appointment / View Job; completed -> View Job
   ?response=1 (for links from notifications) opens the "Handyman Accepted / Rejected" pop-up.
-  BACKEND (bookings): no views yet to forward a request or notify the customer, so those pop-ups
-  save nothing (data-demo). There is also no field for the handyman chosen by the customer, so a
-  request not sent yet shows a SAMPLE choice with a "Sample" tag. See ADMIN_FRONTEND_README.md.
+  Forward and Notify Customer post to the bookings workflow views.
 {% endcomment %}
 
 {% block title %}Service Request {{ page.ref }} | HandyConnect{% endblock %}
@@ -39,7 +36,7 @@
     <p class="sub">View the request, the handyman's answer and the next step.</p>
   </div>
 </div>
-<div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+{% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
 
 <section class="card sr-head">
   <h2>{{ page.ref }} &bull; {{ page.service }}</h2>
@@ -51,7 +48,7 @@
     <h2>Request Information</h2>
     <dl class="sr-dl">
       <div><dt>Customer</dt><dd><a href="{{ page.customer_url }}">{{ page.customer }}</a></dd></div>
-      <div><dt>Handyman chosen</dt><dd>{% if page.handyman %}{{ page.handyman }}{% if page.sample %} <span class="sr-sample" title="Sample: the backend does not store the customer\'s choice yet">Sample</span>{% endif %}{% else %}<span class="mut">Not chosen</span>{% endif %}</dd></div>
+      <div><dt>Handyman chosen</dt><dd>{% if page.handyman %}{{ page.handyman }}{% else %}<span class="mut">Not chosen</span>{% endif %}</dd></div>
       <div><dt>Service</dt><dd>{{ page.service }}</dd></div>
       <div><dt>Preferred appointment</dt><dd>{{ page.preferred }}</dd></div>
       <div><dt>Service address</dt><dd>{{ page.address }}</dd></div>
@@ -87,7 +84,8 @@
     </p>
   </div>
   <div class="sr-actions">
-    {% if page.state == 'review' %}<button class="btn o sr-main" type="button" data-open="modal-forward">Forward Request</button>
+    {% if page.state == 'review' and page.handyman_pk %}<button class="btn o sr-main" type="button" data-open="modal-forward">Forward Request</button>
+    {% elif page.state == 'review' %}<button class="btn o sr-main" type="button" disabled title="The customer must choose a handyman first">Forward Request</button>
     {% elif page.state == 'accepted' and page.quotation_step.2 %}<a class="btn o sr-main" href="{{ page.quotation_step.2 }}">{{ page.quotation_step.1 }}</a>
     {% elif page.state == 'rejected' %}<button class="btn o sr-main" type="button" data-open="modal-notify">Notify Customer</button>
     {% endif %}
@@ -99,8 +97,7 @@
 {# ---------- Forward request (low-fi / high-fi 17) ---------- #}
 {% if page.state == 'review' %}
 <dialog class="ql-modal" id="modal-forward" aria-labelledby="fw-title">
-  {# BACKEND: post to a forward view that creates a ServiceRequestAssignment (status sent), then remove data-demo #}
-  <form method="post" action="#" data-demo="Not saved yet: forwarding is not in the backend (frontend demo only).">
+  <form method="post" action="{{ page.forward_url }}">
     {% csrf_token %}
     <span class="sr-icon is-blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     <h2 id="fw-title" class="sr-center">Forward Request to Handyman?</h2>
@@ -151,8 +148,7 @@
   </div>
 </dialog>
 <dialog class="ql-modal" id="modal-notify" aria-labelledby="nt-title">
-  {# BACKEND: post to a view that notifies the customer, then remove data-demo #}
-  <form method="post" action="#" data-demo="Not sent yet: notifying the customer is not in the backend (frontend demo only).">
+  <form method="post" action="{{ page.notify_url }}">
     {% csrf_token %}
     <span class="sr-icon is-red" aria-hidden="true">!</span>
     <h2 id="nt-title" class="sr-center">Notify Customer?</h2>
