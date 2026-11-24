@@ -8,11 +8,7 @@
   checks (service appointments only: rows of label / value / ok, and ready), conflict (another
   confirmed booking of the handyman in this slot, or None), can_change, and the
   reschedule_url / list_url links.
-  BACKEND: there are no confirm / cancel views yet, so the Confirm and Cancel pop-ups save nothing
-  (data-demo). When they exist: set each form's action to the view, remove data-demo, and after
-  confirming open the "Appointment Confirmed" pop-up (for example redirect with ?confirmed=1).
-  Not in the backend yet: the customer's answer to the proposed time (the admin confirms once the
-  customer agrees), handyman availability, and notifications to the customer and handyman.
+  Confirm and cancel are persisted. Customers respond through /bookings/my/appointments/.
 {% endcomment %}
 
 {% block title %}{{ page.ref }} · Appointment Details | HandyConnect{% endblock %}
@@ -30,14 +26,14 @@
     <p class="sub">{{ page.ref }} &bull; <span class="ap-pill is-{{ page.status }}">{{ page.status_label }}</span></p>
   </div>
   {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
-  <div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
   <div class="ap-actions">
     {% if page.can_change %}
     <button class="btn soft-red" type="button" data-open="modal-cancel">Cancel</button>
     <a class="btn o" href="{{ page.reschedule_url }}">Reschedule</a>
     {% endif %}
     {% if page.status == 'pending' %}
-      {% if page.conflict %}<button class="btn o ap-main" type="button" disabled title="Reschedule first: the handyman is already booked in this slot">Confirm Appointment</button>
+      {% if page.customer_response != 'accepted' %}<button class="btn o ap-main" type="button" disabled>Waiting for customer response</button>
+      {% elif not page.can_confirm %}<button class="btn o ap-main" type="button" disabled>{% if page.conflict %}Reschedule: slot conflict{% else %}Payment requirements not met{% endif %}</button>
       {% else %}<button class="btn o ap-main" type="button" data-open="modal-confirm">Confirm Appointment</button>{% endif %}
     {% endif %}
   </div>
@@ -60,7 +56,14 @@
       <div><dt>Date &amp; time</dt><dd>{{ page.when }} <span class="mut">({{ page.slot_time }})</span></dd></div>
       <div><dt>Customer preferred</dt><dd>{{ page.preferred }}</dd></div>
       {% if page.notes %}<div><dt>Note</dt><dd>{{ page.notes }}</dd></div>{% endif %}
+      {% if page.cancellation_reason %}<div><dt>Cancellation reason</dt><dd>{{ page.cancellation_reason }}</dd></div>{% endif %}
     </dl>
+  </section>
+
+  <section class="card ap-box">
+    <h2>Customer Confirmation</h2>
+    <dl class="ap-dl"><div><dt>Response</dt><dd>{{ page.customer_response_label }}</dd></div></dl>
+    {% if page.customer_response == 'pending' %}<p class="mut ap-small">The customer can accept or decline this proposal from My Appointments.</p>{% endif %}
   </section>
 
   <section class="card ap-box">
@@ -91,7 +94,7 @@
     <h2>Status History</h2>
     <ol class="ap-steps">
       {% for s in page.history %}
-      <li class="{% if s.stop %}stop{% elif s.done %}done{% else %}current{% endif %}"><span class="ap-dot"></span><strong>{{ s.label }}</strong><span>{% if s.when %}{{ s.when|date:"d M Y, H:i" }}{% else %}In progress{% endif %}</span></li>
+      <li class="{% if s.stop %}stop{% elif s.done %}done{% else %}current{% endif %}"><span class="ap-dot"></span><strong>{{ s.label }}</strong><span>{% if s.when %}{{ s.when|date:"d M Y, H:i" }}{% else %}In progress{% endif %}{% if s.detail %}<br>{{ s.detail }}{% endif %}</span></li>
       {% endfor %}
     </ol>
   </section>
@@ -100,8 +103,7 @@
 {# ---------- Confirm (after the customer agrees; low-fi 12) ---------- #}
 {% if page.status == 'pending' %}
 <dialog class="ql-modal" id="modal-confirm" aria-labelledby="cf-title">
-  {# BACKEND: action = the confirm view, then remove data-demo #}
-  <form method="post" action="#" data-demo="Not saved yet: confirming is not in the backend (frontend demo only)." data-demo-next="modal-confirmed">
+  <form method="post" action="{{ page.confirm_url }}">
     {% csrf_token %}
     <h2 id="cf-title">Confirm appointment?</h2>
     <dl class="ql-ctx">
@@ -121,8 +123,7 @@
 {# ---------- Cancel (low-fi 13) ---------- #}
 {% if page.can_change %}
 <dialog class="ql-modal" id="modal-cancel" aria-labelledby="cn-title">
-  {# BACKEND: action = the cancel view, then remove data-demo #}
-  <form method="post" action="#" data-demo="Not saved yet: cancelling is not in the backend (frontend demo only).">
+  <form method="post" action="{{ page.cancel_url }}">
     {% csrf_token %}
     <span class="ap-icon is-red" aria-hidden="true">!</span>
     <h2 id="cn-title" class="ap-center">Cancel Appointment</h2>
@@ -131,10 +132,9 @@
       <div><dt>Handyman / Customer</dt><dd>{{ page.handyman }} / {{ page.customer }}</dd></div>
       <div><dt>Date &amp; time</dt><dd>{{ page.when }}</dd></div>
     </dl>
-    {# BACKEND: the Appointment model has no field for the reason yet #}
     <label class="ap-label" for="cn-reason">Reason for cancelling</label>
     <textarea class="in ap-reason" id="cn-reason" name="reason" rows="2" maxlength="300" required placeholder="For example: the customer is no longer available"></textarea>
-    <p class="mut">The appointment is marked as cancelled. Let the customer and the handyman know (the system does not notify them yet).</p>
+    <p class="mut">The customer and handyman will be notified.</p>
     <div class="ql-btns">
       <button class="btn o" type="button" data-close>Keep Appointment</button>
       <button class="btn soft-red" type="submit">Cancel Appointment</button>
@@ -144,8 +144,8 @@
 {% endif %}
 
 {# ---------- Appointment confirmed (low-fi 10): shown after Confirm (preview until it saves) ---------- #}
-{% if page.status == 'pending' %}
-<dialog class="ql-modal" id="modal-confirmed" aria-labelledby="ok-title">
+{% if page.show_confirmed %}
+<dialog class="ql-modal" id="modal-confirmed" aria-labelledby="ok-title" data-auto-open>
   <div class="ap-body">
     <span class="ap-icon is-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg></span>
     <h2 id="ok-title" class="ap-center">Appointment Confirmed</h2>
@@ -165,4 +165,5 @@
 {% block page_js %}
 <script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
 <script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
+{% if page.show_confirmed %}<script>(function(){var d=document.getElementById('modal-confirmed');if(d)d.showModal();})();</script>{% endif %}
 {% endblock %}
