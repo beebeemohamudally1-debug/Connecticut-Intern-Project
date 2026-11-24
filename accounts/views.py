@@ -16,7 +16,7 @@ from services.models import ServiceArea, ServiceCategory
 from . import auth_messages as M
 from . import validators, verification
 from .models import HandymanProfile, ProviderDocument
-from .permissions import get_role
+from .permissions import get_role, role_required
 
 User = get_user_model()
 
@@ -547,3 +547,17 @@ def reset_new(request):
             _reset_clear(request)
             return redirect('accounts:reset_done')
     return render(request, 'accounts/reset_new.html', ctx)
+
+# ===================================================================== provider status
+@role_required('handyman')
+def provider_status(request):
+    """The logged-in handyman's own application status. Nobody else can see it."""
+    user = request.user
+    profile = getattr(user, 'handyman_profile', None)
+    return render(request, 'accounts/provider_status.html', {
+        'display_name': user.get_full_name() or user.username,
+        'email': user.email,
+        # a handyman created by an administrator has no application: treat as active
+        'account_status': profile.status if profile else HandymanProfile.STATUS_ACTIVE,
+        'rejection_reason': profile.rejection_reason if profile else '',
+    })

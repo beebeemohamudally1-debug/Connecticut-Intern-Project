@@ -15,7 +15,7 @@ urlpatterns = [
     path("forgot-password/verify", views.reset_verify, name="reset_verify"),
     path("forgot-password/new", views.reset_new, name="reset_new"),
     path("forgot-password/done", v.reset_done, name="reset_done"),
-    path("provider/status", v.provider_status, name="provider_status"),
+    path("provider/status", views.provider_status, name="provider_status"),
     # Admin sign-in lives under admin-portal/ because Django's own admin already owns admin/.
     path("admin-portal/login/mfa", v.admin_mfa, name="admin_mfa"),
     path("admin-portal/first-login", v.admin_first_login, name="admin_first_login"),
