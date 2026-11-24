@@ -1,0 +1,176 @@
+
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Add New Service | HandyConnect{% endblock %}
+{% block page %}services{% endblock %}
+{% block crumb %}Add New Service{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom: 20px;">
+    <a href="{% url 'accounts_admin:manage_services' %}"
+       style="color: #2563eb; font-weight: 600; text-decoration: underline;">
+        &larr; Back to Manage Services
+    </a>
+</div>
+
+<div class="bar">
+    <div>
+        <h1>Add New Service</h1>
+        <p class="sub">Enter the details of the new service.</p>
+    </div>
+</div>
+
+<section class="card add-service-card">
+    <!-- TODO: BACKEND INTEGRATION
+         Connect this form to the Service creation view.
+         Add Django form validation and image upload handling.
+    -->
+
+    <form id="add-service-form" enctype="multipart/form-data">
+        <h2>Details</h2>
+
+        <div class="service-form-grid">
+            <div class="service-field">
+                <label for="service-name">Service Name *</label>
+                <input type="text" id="service-name"
+                    name="name" required maxlength="120"
+                    placeholder="e.g. Pipe leak repair">
+            </div>
+
+            <div class="service-field">
+                <label for="service-category">Category *</label>
+                <select id="service-category" name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="plumbing">Plumbing</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="carpentry">Carpentry</option>
+                    <option value="painting">Painting</option>
+                    <option value="cleaning">Cleaning</option>
+                    <option value="gardening">Gardening</option>
+                    <option value="air-conditioning">Air conditioning</option>
+                    <option value="appliance-repair">Appliance repair</option>
+                </select>
+            </div>
+
+            <div class="service-field full-width">
+                <label for="service-description">Description *</label>
+                <textarea id="service-description"
+                          name="description" rows="4"
+                          required
+                          placeholder="Describe the service"></textarea>
+            </div>
+
+            <div class="service-field">
+                <label for="service-availability">Availability *</label>
+                <select id="service-availability"
+                        name="availability" required>
+                    <option value="active">Available</option>
+                    <option value="inactive">Unavailable</option>
+                </select>
+            </div>
+
+            <div class="service-field">
+                <label for="service-image">Service Image</label>
+                <input type="file" id="service-image"
+                       name="image" accept="image/*">
+                <small>Choose an image for this service.</small>
+            </div>
+        </div>
+
+        <div class="service-form-actions">
+            <a href="{% url 'accounts_admin:manage_services' %}"
+               class="btn o">Cancel</a>
+            <button type="submit" class="btn">
+                Save
+            </button>
+        </div>
+    </form>
+</section>
+
+<style>
+    .add-service-card {
+        padding: 28px;
+        max-width: 950px;
+    }
+
+    .service-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+        margin-top: 24px;
+    }
+
+    .service-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .service-field label {
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .service-field input,
+    .service-field select,
+    .service-field textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font: inherit;
+        background: #fff;
+        color: #1e293b;
+    }
+
+    .service-field textarea {
+        resize: vertical;
+    }
+
+    .service-field small {
+        color: #64748b;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .service-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 30px;
+    }
+
+    @media (max-width: 650px) {
+        .service-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .add-service-card {
+            padding: 18px;
+        }
+    }
+</style>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("add-service-form");
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        if (!form.reportValidity()) return;
+
+        // TODO: BACKEND INTEGRATION
+        // Submit validated data to the Django Service creation view.
+        alert("Demo only: Service creation is not connected to the backend yet.");
+    });
+});
+</script>
+{% endblock %}

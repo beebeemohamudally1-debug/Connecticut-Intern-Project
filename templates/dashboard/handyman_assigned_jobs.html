@@ -1,0 +1,166 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Assigned Jobs | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_assigned_jobs.css' %}">
+</head>
+<body data-page="assigned" data-uid="{{ hc_uid|default:'guest' }}">
+<div class="layout">
+
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            HandyConnect
+        </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
+
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a class="active" aria-current="page" href="{% url 'dashboard:assigned_jobs' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Job In Progress</a>
+            <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
+        </nav>
+
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Assigned Jobs</div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
+                </a>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
+            </div>
+        </header>
+
+        <main class="content">
+<h1 class="page-title">Assigned jobs</h1>
+<p class="page-sub">Start a job when you arrive. Finished jobs move to Job Completion.</p>
+<div class="tabs" role="group" aria-label="Filter">
+    <button class="tab active" data-f="all">All</button><button class="tab" data-f="scheduled">Scheduled</button><button class="tab" data-f="in_progress">In progress</button>
+</div>
+<section class="card"><div class="tw"><table>
+    <thead><tr><th>Job / customer</th><th>Service</th><th>Appointment</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody id="rows" data-url="{% url 'dashboard:job_in_progress' %}"></tbody>
+</table></div><p class="empty" id="none" hidden>No jobs here.</p></section>
+</main>
+    </div>
+</div>
+
+<script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
+(function () {
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
+
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+    };
+
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+})();
+
+</script>
+<script>
+(function () {
+    var body = document.getElementById('rows'), f = 'all', url = body.dataset.url;
+    function cell(tr, t, tag) { var c = HC.el(tag || 'td', '', t); tr.appendChild(c); return c; }
+    function render() {
+        var jobs = HC.get('jobs').filter(function (j) { return j.status !== 'completed' && (f === 'all' || j.status === f); });
+        body.innerHTML = ''; document.getElementById('none').hidden = jobs.length > 0;
+        jobs.forEach(function (j) {
+            var tr = document.createElement('tr');
+            cell(tr, j.id + ' \u00b7 ' + j.customer, 'th'); cell(tr, j.service); cell(tr, j.slot); cell(tr, 'MUR ' + j.amount);
+            var s = cell(tr, ''); s.appendChild(HC.el('span', 'pill ' + j.status, j.status === 'scheduled' ? 'Scheduled' : 'In progress'));
+            var a = cell(tr, '');
+            if (j.status === 'scheduled') {
+                var b = HC.el('button', 'btn', 'Start job'); b.type = 'button';
+                b.onclick = function () {
+                    var all = HC.get('jobs'); all.forEach(function (x) { if (x.id === j.id) x.status = 'in_progress'; });
+                    HC.set('jobs', all); HC.notify('job', 'Job started', j.id + ' \u00b7 ' + j.service);
+                    location.href = url + '?job=' + j.id;
+                };
+                a.appendChild(b);
+            } else { var l = HC.el('a', 'btn-o', 'Continue'); l.href = url + '?job=' + j.id; a.appendChild(l); }
+            body.appendChild(tr);
+        });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+        t.onclick = function () {
+            document.querySelector('.tab.active').classList.remove('active'); t.classList.add('active'); f = t.dataset.f; render();
+        };
+    });
+    render();
+})();
+</script>
+
+</body>
+</html>

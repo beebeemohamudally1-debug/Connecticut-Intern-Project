@@ -5,15 +5,19 @@
   Data comes from the view as `handyman` (accounts/admin_views.py handyman_profile):
     name, initials, email, phone -> accounts.User
     id                           -> USR-<user id>
-    status                       -> 'Active' or 'Suspended' (user.is_active)
+    status                       -> 'Suspended', 'Pending', 'Rejected' or 'Active'
+                                    (user.is_suspended / is_active, then the profile status)
     registered                   -> user.date_joined
     completed, assigned          -> counts of the handyman's jobs (completed / open)
-    skills, services             -> from the handyman's approved
+    skills, services, areas      -> accounts.HandymanProfile (skills, services, service_areas;
+                                    areas falls back to user.region). Without a profile:
+                                    skills and services from the approved
                                     bookings.HandymanProfileRequest changes
+    verified                     -> True when the profile is approved (ACTIVE), False while
+                                    it is pending or rejected, None without a profile
     reports_url                  -> Daily Work Reports of the latest job ('' if none)
-  Not in the backend yet: verified (None, so no badge), service areas and
-  availability ("Not recorded"), registration documents, and the Suspend /
-  Reactivate / Delete views (still demo only).
+  Not in the backend yet: availability ("Not recorded"), registration documents, and
+  the Suspend / Reactivate / Delete views (still demo only).
   The three pop-ups live in _user_modals.html (screens 05, 06, 07).
 {% endcomment %}
 
@@ -68,20 +72,20 @@
     <h2>Job Summary</h2>
     <div class="row"><span>Completed jobs</span><strong>{{ handyman.completed }}</strong></div>
     <div class="row"><span>Assigned jobs</span><strong>{{ handyman.assigned }}</strong></div>
-    <div class="row"><span>Account status</span><strong class="state {% if handyman.status == 'Suspended' %}bad{% else %}ok{% endif %}" data-status>{{ handyman.status }}</strong></div>
+    <div class="row"><span>Account status</span><strong class="state {% if handyman.status == 'Suspended' or handyman.status == 'Rejected' %}bad{% elif handyman.status == 'Active' %}ok{% endif %}" data-status>{{ handyman.status }}</strong></div>
     <div class="row"><span>Registered</span><strong>{{ handyman.registered }}</strong></div>
   </section>
 
   <section class="card cd-card hp-skills">
     <div class="card-head">
-      <h2>Approved Skills</h2>
+      <h2>{% if handyman.verified is False %}Skills{% else %}Approved Skills{% endif %}</h2>
       <span class="b">{{ handyman.skills|length }} skill{{ handyman.skills|length|pluralize }}</span>
     </div>
     <ul class="list">
       {% for s in handyman.skills %}
       <li>
         <span class="skill"><svg class="dia" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/><path d="M12 8l4 4-4 4-4-4z"/></svg>{{ s }}</span>
-        <span class="b gr">Approved</span>
+        {% if handyman.verified is False %}<span class="b ye">Not approved yet</span>{% else %}<span class="b gr">Approved</span>{% endif %}
       </li>
       {% empty %}
       <li class="mut">No approved skills yet.</li>
@@ -105,8 +109,9 @@
       <h2>Registration verification</h2>
       <p class="mut">Identity document and qualification records are available for administrator review.</p>
     </div>
-    {% url 'accounts_admin:handyman_documents' as verify_url %}
-    <a class="btn soft-blue s" href="{{ verify_url|default:'#' }}">View documents</a>
+    {# Sample pages until registration documents are in the backend: the pending one while not approved #}
+    {% if handyman.verified is False %}{% url 'accounts_admin:handyman_verify' as verify_url %}{% else %}{% url 'accounts_admin:handyman_documents' as verify_url %}{% endif %}
+    <a class="btn soft-blue s" href="{{ verify_url|default:'#' }}">{% if handyman.verified is False %}Review registration{% else %}View documents{% endif %}</a>
   </section>
 </div>
 

@@ -1,0 +1,261 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job Requests | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_requests.css' %}">
+</head>
+<body data-page="requests" data-uid="{{ hc_uid|default:'guest' }}">
+<div class="layout">
+
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            HandyConnect
+        </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
+
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="{% url 'dashboard:assigned_jobs' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>Assigned Jobs</a>
+            <a class="active" aria-current="page" href="{% url 'dashboard:job_requests' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Job In Progress</a>
+            <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
+        </nav>
+
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman workspace</a> / Job Requests</div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
+                </a>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
+            </div>
+        </header>
+
+        <main class="content">
+            <h1 class="page-title" id="hello" data-first="{{ hc_first|default:'there' }}">Good morning, {{ hc_first|default:"there" }}.</h1>
+            <p class="page-sub">Saturday, October 24 | Here&rsquo;s what&rsquo;s on your schedule.</p>
+            <div class="stats">
+                <section class="stat"><div class="stat-top"><span>Assigned jobs</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg></div><strong id="st-a">0</strong><small id="st-an"></small></section>
+                <section class="stat"><div class="stat-top"><span>This week&rsquo;s completed jobs</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div><strong id="st-w">0</strong><small>3 more than last week</small></section>
+                <section class="stat"><div class="stat-top"><span>This month&rsquo;s earnings</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><strong id="st-e">MUR 0</strong><small>+MUR 6,000 from last month</small></section>
+                <section class="stat"><div class="stat-top"><span>Listing status</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z"/></svg></div><strong>Active</strong><small>Your profile is visible &middot; Top rated</small></section>
+            </div>
+            <div class="grid2">
+                <div class="stack">
+                    <nav class="tabs" aria-label="Job groups">
+                        <a class="tab active" href="{% url 'dashboard:job_requests' %}" aria-current="page">Today &middot; 2</a>
+                        <a class="tab" href="{% url 'dashboard:assigned_jobs' %}">Upcoming &middot; 4</a>
+                        <a class="tab" href="{% url 'dashboard:job_completed' %}">Completed</a>
+                        <a class="tab" href="{% url 'dashboard:job_completed' %}">Work history</a>
+                    </nav>
+                    <section class="card">
+                        <div class="req-title"><h2>Available work requests</h2><span class="pill-new" id="new-count"></span></div>
+                        <p class="muted small req-sub">Review customer details and service history before accepting a job.</p>
+                        <p class="sr-only" id="live" aria-live="polite"></p>
+                        <div id="list"></div><p class="empty" id="none" hidden>No new requests. You&rsquo;re all caught up.</p>
+                        <div id="past-wrap" hidden><h3 class="past-h">Answered</h3><div id="past"></div></div>
+                    </section>
+                </div>
+                <div class="stack">
+                    <section class="card cal">
+                        <div class="cal-head"><div><h2 id="cal-month">October 2026</h2><p class="muted small">Appointment calendar &middot; Mauritius Time</p></div>
+                            <div class="cal-nav"><button type="button" id="cal-prev" aria-label="Previous week">&lsaquo;</button><button type="button" id="cal-next" aria-label="Next week">&rsaquo;</button></div></div>
+                        <div class="week" id="week" role="group" aria-label="Week"></div>
+                        <h3 class="day-title" id="day-title"></h3>
+                        <div id="day-list"></div>
+                        <a class="btn-o block" href="{% url 'dashboard:assigned_jobs' %}">View all appointments</a>
+                    </section>
+                    <section class="card ready"><h2>Ready for the day?</h2>
+                        <p class="muted small">Bring the right tools and let customers know if you&rsquo;re running late. A little preparation goes a long way.</p></section>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
+(function () {
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
+
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+    };
+
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+})();
+
+</script>
+<script>
+(function () {
+    function $(id) { return document.getElementById(id); }
+    var CITY = { 'MJO-1042': 'Port Louis', 'MJO-1043': 'La Louise' };
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    function greet() {
+        var h = parseInt(new Date().toLocaleString('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Indian/Mauritius' }), 10);
+        var el = $('hello'); el.textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening') + ', ' + el.dataset.first + '.';
+    }
+    function stats() {
+        var jobs = HC.get('jobs'), done = jobs.filter(function (j) { return j.completedAt; });
+        $('st-a').textContent = jobs.filter(function (j) { return j.status !== 'completed'; }).length;
+        $('st-an').textContent = jobs.filter(function (j) { return j.status === 'scheduled'; }).length + ' scheduled \u00b7 ' + jobs.filter(function (j) { return j.status === 'in_progress'; }).length + ' in progress';
+        $('st-w').textContent = 12 + done.length;
+        $('st-e').textContent = 'MUR ' + (42800 + done.reduce(function (s, j) { return s + (+j.amount || 0); }, 0));
+    }
+    /* calendar: built from the shared job list (sample month: October 2026) */
+    var DAYMS = 86400000, weekStart = Date.UTC(2026, 9, 19), selected = Date.UTC(2026, 9, 24);
+    function appts() {
+        var map = {};
+        HC.get('jobs').forEach(function (j) {
+            var m = /Oct\s+(\d+)/.exec(j.slot); if (!m) return;
+            var tm = /(\d\d:\d\d)\s*[\u2013-]\s*(\d\d:\d\d)/.exec(j.slot), morning = /Morning/.test(j.slot) || (tm && parseInt(tm[1], 10) < 12);
+            var when = (morning ? 'Morning' : 'Afternoon') + ' \u00b7 ' + (tm ? tm[1] + '\u2013' + tm[2] : (morning ? '09:00\u201312:00' : '13:00\u201317:00'));
+            var k = '2026-10-' + ('0' + m[1]).slice(-2);
+            (map[k] = map[k] || []).push({ when: when, title: j.service, who: j.customer + (CITY[j.id] ? ' \u00b7 ' + CITY[j.id] : ''), morning: !!morning });
+        });
+        return map;
+    }
+    function calList() {
+        var d = new Date(selected), items = appts()[new Date(selected).toISOString().slice(0, 10)] || [], box = $('day-list');
+        $('day-title').textContent = DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate();
+        box.innerHTML = '';
+        if (!items.length) box.appendChild(HC.el('p', 'muted small no-appt', 'No appointments on this day.'));
+        items.forEach(function (a) {
+            var b = HC.el('div', 'slot ' + (a.morning ? 'morning' : 'afternoon'));
+            b.appendChild(HC.el('span', 'slot-when', a.when)); b.appendChild(HC.el('strong', '', a.title)); b.appendChild(HC.el('span', 'slot-who', a.who)); box.appendChild(b);
+        });
+    }
+    function calWeek() {
+        var w = $('week'); w.innerHTML = ''; var d0 = new Date(selected);
+        $('cal-month').textContent = MONTHS[d0.getUTCMonth()] + ' ' + d0.getUTCFullYear();
+        for (var i = 0; i < 7; i++) (function (i) {
+            var ms = weekStart + i * DAYMS, d = new Date(ms), b = HC.el('button', 'dayb' + (ms === selected ? ' on' : '')); b.type = 'button';
+            b.setAttribute('aria-pressed', ms === selected); b.setAttribute('aria-label', DAYS[d.getUTCDay()] + ' ' + d.getUTCDate());
+            b.appendChild(HC.el('small', '', 'MTWTFSS'[i])); b.appendChild(HC.el('span', '', d.getUTCDate()));
+            b.onclick = function () { selected = ms; calWeek(); calList(); }; w.appendChild(b);
+        })(i);
+    }
+    function shift(n) { weekStart += n * DAYMS; selected += n * DAYMS; calWeek(); calList(); }
+    $('cal-prev').onclick = function () { shift(-7); }; $('cal-next').onclick = function () { shift(7); };
+    function refreshAll() { stats(); calWeek(); calList(); }
+
+    var RICH = {
+        'MJO-1051': { ago: '12 minutes ago', address: '48 Royal Road, Rose Hill, Mauritius', desc: 'The bathroom tap keeps dripping even when fully closed. Please check the washer and replace it if needed.',
+            history: [['Kitchen drain cleaning', 'Sep 18, 2026'], ['Water heater servicing', 'Jun 04, 2026']] },
+        'MJO-1052': { ago: '35 minutes ago', address: '16 Palm Avenue, Quatre Bornes, Mauritius', desc: 'Install a new ceiling fan in the living room. The fan is supplied and an existing electrical point is available.',
+            history: [['Light fixture replacement', 'Aug 12, 2026'], ['Electrical socket repair', 'Mar 21, 2026']] }
+    };
+    function card(r, answered) {
+        var x = Object.assign({ ago: 'just now', address: 'Address shared once you accept', desc: 'The customer will share more details once you accept.', history: [] }, RICH[r.id] || {});
+        var c = HC.el('article', 'req'), h = HC.el('div', 'req-head'), t = HC.el('div');
+        t.appendChild(HC.el('h3', '', r.service)); t.appendChild(HC.el('p', 'muted small', r.id + ' \u00b7 Requested ' + x.ago)); h.appendChild(t);
+        h.appendChild(HC.el('span', 'pill ' + (answered ? r.state : 'pending'), answered ? (r.state === 'approved' ? 'Approved' : 'Declined') : 'Pending approval')); c.appendChild(h);
+        var body = HC.el('div', 'req-body'), l = HC.el('div'), cu = HC.el('div', 'cust-row');
+        cu.appendChild(HC.el('span', 'avatar', r.customer.split(' ').map(function (w) { return w[0]; }).slice(0, 2).join(''))); cu.appendChild(HC.el('strong', '', r.customer)); l.appendChild(cu);
+        l.appendChild(HC.el('p', 'addr', '\u25CF ' + x.address)); l.appendChild(HC.el('p', 'desc', x.desc)); body.appendChild(l);
+        var hs = HC.el('aside', 'history'), hh = HC.el('div', 'history-head'); hh.appendChild(HC.el('strong', '', 'Service history')); hh.appendChild(HC.el('span', '', x.history.length + ' completed')); hs.appendChild(hh);
+        var ul = HC.el('ul'); x.history.forEach(function (e) { var li = HC.el('li'); li.appendChild(HC.el('strong', '', e[0])); li.appendChild(HC.el('span', '', e[1] + ' \u00b7 Completed')); ul.appendChild(li); });
+        if (!x.history.length) ul.appendChild(HC.el('li', '', 'No previous jobs with you.')); hs.appendChild(ul); body.appendChild(hs); c.appendChild(body);
+        var f = HC.el('div', 'req-foot'), w = HC.el('div', 'when'); w.appendChild(HC.el('strong', '', r.slot)); w.appendChild(HC.el('span', '', 'Customer budget: MUR ' + r.amount)); f.appendChild(w);
+        if (!answered) {
+            var a = HC.el('div', 'req-actions');
+            [['declined', '\u2715 Decline', 'btn-o'], ['approved', '\u2713 Approve', 'btn']].forEach(function (b) { var e = HC.el('button', b[2], b[1]); e.type = 'button'; e.onclick = function () { answer(r.id, b[0]); }; a.appendChild(e); });
+            f.appendChild(a);
+        }
+        c.appendChild(f); return c;
+    }
+    function answer(id, state) {
+        var reqs = HC.get('requests'), jobs = HC.get('jobs'), name = '';
+        reqs.forEach(function (r) {
+            if (r.id !== id) return; r.state = state; name = r.service;
+            if (state === 'approved') {
+                jobs.push({ id: r.id, customer: r.customer, service: r.service, slot: r.slot, status: 'scheduled', amount: r.amount }); HC.set('jobs', jobs);
+                HC.notify('appointment', 'Job accepted', r.id + ' \u00b7 ' + r.service + ' is now scheduled.');
+            } else HC.notify('job', 'Request declined', r.id + ' \u00b7 ' + r.service);
+        });
+        HC.set('requests', reqs); $('live').textContent = name + (state === 'approved' ? ' approved.' : ' declined.'); render(); refreshAll();
+    }
+    function render() {
+        var reqs = HC.get('requests'), open = reqs.filter(function (r) { return r.state === 'pending'; }), done = reqs.filter(function (r) { return r.state !== 'pending'; });
+        $('list').innerHTML = $('past').innerHTML = '';
+        open.forEach(function (r) { $('list').appendChild(card(r, false)); }); done.forEach(function (r) { $('past').appendChild(card(r, true)); });
+        $('none').hidden = open.length > 0; $('past-wrap').hidden = done.length === 0;
+        $('new-count').textContent = open.length ? open.length + (open.length === 1 ? ' new request' : ' new requests') : 'No new requests';
+    }
+    greet(); render(); refreshAll();
+})();
+</script>
+</body>
+</html>

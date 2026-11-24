@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from . import views
@@ -23,6 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('notifications/', include('notifications.urls')),
     path('payments/', include('payments.urls')),
+    path('bookings/', include('bookings.urls')),
     path('jobs/', include('jobs.urls')),
     path('complaints/', include('complaints.urls')),
     path('admin-portal/', include('accounts.admin_urls')),
@@ -32,3 +35,7 @@ urlpatterns = [
     path('reviews/', include('reviews.urls')),
     path('services/', include('services.urls')),
 ]
+
+# Uploaded files (for example material receipts) are served by Django only while DEBUG is on
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

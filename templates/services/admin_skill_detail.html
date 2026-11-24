@@ -1,0 +1,109 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Skills - Skill details (with the Deactivate / Reactivate pop-up).
+  View: accounts.admin_skills.skill_detail (admin only).
+
+  Data comes from the view as `page`:
+    ref (SKL-001), name, category, active, pending (handyman requests waiting that name this skill),
+    edit_url, handymen -> name, initials, areas, status (Approved / Pending / Rejected), tone, url
+  The handymen are the profiles that have this skill (accounts.HandymanProfile.skills).
+  Skills have no description or dates in the backend (services.Skill), so those are left out.
+{% endcomment %}
+
+{% block title %}{{ page.name }} | Skills | HandyConnect{% endblock %}
+{% block page %}skills{% endblock %}
+{% block crumb %}Skills{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/admin_skills.css' %}">
+
+<a class="back" href="{% url 'accounts_admin:skills' %}">&larr; Back to Manage Skills</a>
+<div class="bar">
+  <div>
+    <h1>Skill Details</h1>
+    <p class="sub">View the skill and the handymen who offer it.</p>
+  </div>
+</div>
+<div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+
+<div class="sk-grid">
+  <section class="card sk-box">
+    <div class="sk-box-head">
+      <h2 class="sk-name">{{ page.name }}</h2>
+      {% if page.active %}<span class="sk-st is-on">Active</span>{% else %}<span class="sk-st is-off">Inactive</span>{% endif %}
+    </div>
+    <dl class="sk-dl">
+      <div><dt>Skill ID</dt><dd>{{ page.ref }}</dd></div>
+      <div><dt>Category</dt><dd>{% if page.category %}{{ page.category }}{% else %}<span class="mut">No category</span>{% endif %}</dd></div>
+      <div><dt>Handymen with this skill</dt><dd>{{ page.handymen|length }}</dd></div>
+      <div><dt>Pending requests</dt><dd>{% if page.pending %}{{ page.pending }} &middot; <a href="{% url 'accounts_admin:skill_requests' %}">View requests</a>{% else %}None{% endif %}</dd></div>
+      <div class="sk-wide"><dt>Availability</dt><dd class="sk-text">{% if page.active %}Handymen can choose this skill for their profile.{% else %}Hidden: handymen cannot choose this skill for their profile.{% endif %}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card sk-box">
+    <h2>Handymen With This Skill</h2>
+    {% if page.handymen %}
+    <ul class="sk-people">
+      {% for h in page.handymen|slice:":4" %}
+      <li>
+        <span class="sk-av" aria-hidden="true">{{ h.initials }}</span>
+        <span class="sk-who"><strong>{{ h.name }}</strong><span class="mut">{{ h.areas|default:"No area yet" }}</span></span>
+        <span class="sk-tag is-{{ h.tone }}">{{ h.status }}</span>
+        <a class="btn o s" href="{{ h.url }}">View</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if page.handymen|length > 4 %}<p class="mut sk-more">+ {{ page.handymen|length|add:"-4" }} more handymen</p>{% endif %}
+    {% else %}
+    <p class="mut">No handyman has this skill yet.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card sk-next">
+  <div>
+    <h2>Manage Skill</h2>
+    <p class="mut">Edit this skill or change its availability.</p>
+  </div>
+  <div class="sk-actions">
+    <a class="btn sk-main" href="{{ page.edit_url }}">Edit Skill</a>
+    {% if page.active %}<button class="btn soft-red" type="button" data-open="modal-status">Deactivate</button>
+    {% else %}<button class="btn soft-green" type="button" data-open="modal-status">Reactivate</button>{% endif %}
+  </div>
+</section>
+
+{# ---------- Deactivate / Reactivate pop-up (high-fi 12) ---------- #}
+<dialog class="ql-modal" id="modal-status" aria-labelledby="st-title">
+  {# BACKEND: post to a view that sets Skill.is_active, then remove data-demo #}
+  <form method="post" action="#" data-demo="Not saved yet: changing a skill's availability is not in the backend (frontend demo only).">
+    {% csrf_token %}
+    <input type="hidden" name="is_active" value="{% if page.active %}false{% else %}true{% endif %}">
+    {% if page.active %}
+    <span class="sk-icon is-red" aria-hidden="true">!</span>
+    <h2 id="st-title" class="sk-center">Deactivate this skill?</h2>
+    <p class="sk-center">Are you sure you want to deactivate <strong>{{ page.name }}</strong>?</p>
+    <p class="mut sk-center">It will no longer be available for new handyman skill selections.{% if page.handymen %} Handymen who already have it keep it.{% endif %}</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Keep Active</button>
+      <button class="btn soft-red" type="submit">Deactivate Skill</button>
+    </div>
+    {% else %}
+    <span class="sk-icon is-green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg></span>
+    <h2 id="st-title" class="sk-center">Reactivate this skill?</h2>
+    <p class="sk-center">Make <strong>{{ page.name }}</strong> available again?</p>
+    <p class="mut sk-center">Handymen will be able to choose it for their profile.</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-green" type="submit">Reactivate Skill</button>
+    </div>
+    {% endif %}
+  </form>
+</dialog>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'services/js/admin_skills.js' %}"></script>
+{% endblock %}
