@@ -364,6 +364,12 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
 5. **Requested skill is text:** `HandymanProfileRequest.requested_value` is not linked to `Skill`, so the Review page links to the skill only when the name matches one in the catalogue.
 6. **Keep a handyman's skills in one place:** Manage Skills and the Handyman Profile both read `HandymanProfile.skills`, so approving a request must update it (see item 3).
 
+## Back links
+`static/js/admin_back.js` (loaded by `base_admin.html`) makes the "← Back" link of every admin page go back to the admin page the admin came from, with its name ("Back to Skill Details", "Back to search results"). The pages and labels are the `PAGES` list at the top of the file: add a new admin page there.
+- Where the admin came from is kept per page in `sessionStorage` (this tab only), so it stays after a refresh, a save that reloads the page, or the browser's Back button. Pressing a back link does not loop.
+- Form pages (add, edit, schedule, reschedule, resolve) and the same page are never used as the place to go back to.
+- Opened in a new tab, from a bookmark or from outside the admin pages, the link stays as written in the template.
+
 ## Navbar search (connected to the backend)
 - The search box at the top of every admin page (`templates/base_admin.html`) opens `/admin-portal/search/?q=` (`accounts_admin:search`, view `search` in `accounts/admin_views.py`, template `accounts/admin_search.html`). Read only, admins only.
 - It looks for every word of the search text in:
