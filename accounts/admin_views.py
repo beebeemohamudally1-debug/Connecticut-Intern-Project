@@ -40,7 +40,7 @@ def profile(request):
 # availability. Those parts of the pages stay as before (demo buttons, "Not recorded").
 
 def _account_status(u):
-    return 'Active' if u.is_active else 'Suspended'
+    return 'Suspended' if (u.is_suspended or not u.is_active) else 'Active'
 
 
 def _user_url(u):
