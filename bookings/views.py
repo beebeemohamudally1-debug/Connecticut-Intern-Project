@@ -1,23 +1,26 @@
-"""Admin portal - Manage Service Requests (FR-A-4): real data from bookings.ServiceRequest.
-
-These views only READ the database (admin only). The customer's request and the handyman's
-answer (ServiceRequestAssignment) are shown as they are.
-BACKEND (bookings): there are no views yet to forward a request to a handyman or to notify the
-customer after a rejection, so those buttons save nothing and show a demo message (marked
-"BACKEND" in the templates). ServiceRequest also has no field for the handyman the customer
-chose, so requests not sent yet show a SAMPLE choice (see _chosen). See ADMIN_FRONTEND_README.md.
-"""
+"""Service request and appointment workflows."""
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.db import transaction
 from django.db.models import Prefetch
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.models import User
 from dashboard.permissions import role_required
 from jobs.models import Job
 from payments.models import LabourEstimate, Quotation
 
+from .forms import ServiceRequestForm
 from .models import Appointment, ServiceRequest, ServiceRequestAssignment
+from .services import (
+    cancel_appointment, confirm_appointment, create_appointment_proposal,
+    forward_request, notify_customer_rejection, propose_reschedule,
+    respond_to_appointment, respond_to_assignment,
+)
 
 # Page state -> label shown in the list and on the details page
 STATES = {
@@ -43,6 +46,8 @@ def _latest(sr):
 def _state(sr, latest):
     if sr.status in (ServiceRequest.STATUS_CANCELLED, ServiceRequest.STATUS_COMPLETED, ServiceRequest.STATUS_BOOKED):
         return sr.status
+    if sr.status == ServiceRequest.STATUS_REVIEWING and latest and sr.chosen_handyman_id != latest.handyman_id:
+        return 'review'
     if latest is None or latest.status == ServiceRequestAssignment.STATUS_WITHDRAWN:
         return 'review'
     return {ServiceRequestAssignment.STATUS_SENT: 'forwarded',
@@ -50,23 +55,13 @@ def _state(sr, latest):
             ServiceRequestAssignment.STATUS_REJECTED: 'rejected'}[latest.status]
 
 
-def _sample_handymen():
-    return list(User.objects.filter(role='handyman', is_active=True).order_by('pk'))
-
-
-def _chosen(sr, latest, sample_handymen):
-    """The handyman the customer chose, and whether it is sample data.
-
-    Once the request is sent, it is the handyman it was sent to (real data).
-    BACKEND (bookings): add the customer's chosen handyman to ServiceRequest (for example a
-    `chosen_handyman` ForeignKey) and return it here; until then a SAMPLE handyman is shown for
-    requests that were not sent yet.
-    """
-    if latest:
+def _chosen(sr, latest):
+    """Show the persisted customer choice or the latest forwarded handyman."""
+    if latest and sr.chosen_handyman_id == latest.handyman_id:
         return latest.handyman, False
-    if not sample_handymen:
-        return None, False
-    return sample_handymen[sr.pk % len(sample_handymen)], True
+    if latest and sr.status != ServiceRequest.STATUS_REVIEWING:
+        return latest.handyman, False
+    return sr.chosen_handyman, False
 
 
 def _preferred(sr):
@@ -102,7 +97,7 @@ def _quotation_step(sr):
 
 
 def _requests():
-    return (ServiceRequest.objects.select_related('customer')
+    return (ServiceRequest.objects.select_related('customer', 'chosen_handyman')
             .prefetch_related(Prefetch('handyman_responses', to_attr='responses',
                                        queryset=ServiceRequestAssignment.objects.select_related('handyman').order_by('-sent_at', '-pk')))
             .order_by('-created_at'))
@@ -112,11 +107,10 @@ def _requests():
 def admin_requests(request):
     """Manage Service Requests - list page."""
     rows = []
-    sample_handymen = _sample_handymen()
     for sr in _requests():
         latest = _latest(sr)
         state = _state(sr, latest)
-        chosen, sample = _chosen(sr, latest, sample_handymen)
+        chosen, sample = _chosen(sr, latest)
         rows.append({
             'ref': sr.reference, 'customer': _name(sr.customer), 'service': sr.service_category or 'Service request',
             'handyman': _name(chosen), 'sample': sample, 'state': state, 'label': STATES[state],
@@ -140,7 +134,7 @@ def admin_request_detail(request, pk):
     sr = get_object_or_404(_requests(), pk=pk)
     latest = _latest(sr)
     state = _state(sr, latest)
-    handyman, sample = _chosen(sr, latest, _sample_handymen())
+    handyman, sample = _chosen(sr, latest)
     details = {
         'review': 'Not sent to a handyman yet.',
         'forwarded': "Waiting for the handyman's answer.",
@@ -167,6 +161,8 @@ def admin_request_detail(request, pk):
             'on': f'{timezone.localtime(latest.responded_at):%d %b %Y}' if latest and latest.responded_at else '',
         },
         'handyman_pk': handyman.pk if handyman else '',
+        'forward_url': reverse('bookings:admin_forward_request', args=[sr.pk]),
+        'notify_url': reverse('bookings:admin_notify_rejection', args=[sr.pk]),
         # Accepted: the next step is the labour estimate / service quotation
         'quotation_step': _quotation_step(sr) if state == 'accepted' else None,
         'appointment_url': reverse('accounts_admin:appointment_detail', args=[appointment.pk]) if appointment else '',
@@ -175,3 +171,153 @@ def admin_request_detail(request, pk):
         'list_url': reverse('bookings:admin_requests'),
     }
     return render(request, 'bookings/admin_service_request_detail.html', {'page': page})
+
+
+@require_POST
+@role_required('admin')
+def admin_forward_request(request, pk):
+    sr = get_object_or_404(ServiceRequest, pk=pk)
+    try:
+        forward_request(sr, request.user)
+        messages.success(request, f'{sr.reference} was forwarded to the selected handyman.')
+    except ValidationError as error:
+        messages.error(request, ' '.join(error.messages))
+    return redirect('bookings:admin_request_detail', pk=pk)
+
+
+@require_POST
+@role_required('admin')
+def admin_notify_rejection(request, pk):
+    sr = get_object_or_404(ServiceRequest, pk=pk)
+    try:
+        notify_customer_rejection(sr)
+        messages.success(request, 'The customer has been notified to choose another handyman.')
+    except ValidationError as error:
+        messages.error(request, ' '.join(error.messages))
+    return redirect('bookings:admin_request_detail', pk=pk)
+
+
+@login_required
+def my_requests(request):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    return render(request, 'bookings/my_requests.html', {
+        'requests': _requests().filter(customer=request.user),
+    })
+
+
+@login_required
+def create_request(request):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    form = ServiceRequestForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        service_request = form.save(commit=False)
+        service_request.customer = request.user
+        service_request.status = ServiceRequest.STATUS_SUBMITTED
+        service_request.contact_email = service_request.contact_email or request.user.email
+        try:
+            with transaction.atomic():
+                service_request.full_clean()
+                service_request.save()
+        except ValidationError as error:
+            form.add_error(None, ' '.join(error.messages))
+        else:
+            messages.success(request, f'Request {service_request.reference} was submitted.')
+            return redirect('bookings:my_request_detail', pk=service_request.pk)
+    return render(request, 'bookings/request_form.html', {'form': form})
+
+
+@login_required
+def my_request_detail(request, pk):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    sr = get_object_or_404(_requests(), pk=pk, customer=request.user)
+    latest = _latest(sr)
+    appointment = sr.appointments.exclude(status=Appointment.STATUS_CANCELLED).order_by('-created_at').first()
+    can_choose = bool(latest and latest.status == ServiceRequestAssignment.STATUS_REJECTED)
+    handymen = User.objects.filter(role='handyman', is_active=True).exclude(
+        service_request_assignments__service_request=sr,
+    ).order_by('first_name', 'last_name', 'username') if can_choose else User.objects.none()
+    return render(request, 'bookings/my_request_detail.html', {
+        'service_request': sr, 'latest_assignment': latest, 'can_choose': can_choose,
+        'handymen': handymen, 'appointment': appointment,
+    })
+
+
+@require_POST
+@login_required
+@transaction.atomic
+def choose_another_handyman(request, pk):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    sr = get_object_or_404(ServiceRequest.objects.select_for_update(), pk=pk, customer=request.user)
+    latest = sr.handyman_responses.order_by('-sent_at', '-pk').first()
+    if not latest or latest.status != ServiceRequestAssignment.STATUS_REJECTED:
+        messages.error(request, 'You can choose another handyman after the current handyman declines.')
+        return redirect('bookings:my_request_detail', pk=pk)
+    handyman = get_object_or_404(User, pk=request.POST.get('handyman'), role='handyman', is_active=True)
+    if sr.handyman_responses.filter(handyman=handyman).exists():
+        messages.error(request, 'That handyman has already received this request. Choose another one.')
+        return redirect('bookings:my_request_detail', pk=pk)
+    sr.chosen_handyman = handyman
+    sr.status = ServiceRequest.STATUS_REVIEWING
+    sr.save(update_fields=['chosen_handyman', 'status', 'updated_at'])
+    messages.success(request, 'Your new handyman choice was saved. The administrator will forward your request.')
+    return redirect('bookings:my_request_detail', pk=pk)
+
+
+@login_required
+def handyman_requests(request):
+    if request.user.role != 'handyman':
+        raise PermissionDenied
+    assignments = ServiceRequestAssignment.objects.filter(
+        handyman=request.user,
+    ).select_related('service_request', 'service_request__customer').order_by('-sent_at')
+    return render(request, 'bookings/handyman_requests.html', {'assignments': assignments})
+
+
+@require_POST
+@login_required
+def handyman_respond(request, pk):
+    if request.user.role != 'handyman':
+        raise PermissionDenied
+    assignment = get_object_or_404(ServiceRequestAssignment, pk=pk, handyman=request.user)
+    action = request.POST.get('action')
+    if action not in ('accept', 'reject'):
+        messages.error(request, 'Choose accept or decline.')
+    else:
+        try:
+            respond_to_assignment(assignment, request.user, action == 'accept', request.POST.get('note', ''))
+            messages.success(request, 'Your response was sent.')
+        except ValidationError as error:
+            messages.error(request, ' '.join(error.messages))
+    return redirect('bookings:handyman_requests')
+
+
+@login_required
+def my_appointments(request):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    appointments = Appointment.objects.filter(
+        service_request__customer=request.user,
+    ).select_related('service_request', 'handyman').order_by('-created_at')
+    return render(request, 'bookings/my_appointments.html', {'appointments': appointments})
+
+
+@require_POST
+@login_required
+def appointment_respond(request, pk):
+    if request.user.role != 'customer':
+        raise PermissionDenied
+    appointment = get_object_or_404(Appointment, pk=pk, service_request__customer=request.user)
+    action = request.POST.get('action')
+    if action not in ('accept', 'reject'):
+        messages.error(request, 'Choose accept or decline.')
+    else:
+        try:
+            respond_to_appointment(appointment, request.user, action == 'accept')
+            messages.success(request, 'Your response was sent to HandyConnect.')
+        except ValidationError as error:
+            messages.error(request, ' '.join(error.messages))
+    return redirect('bookings:my_appointments')
