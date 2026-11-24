@@ -143,3 +143,5 @@ MAILERS = {
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# Redirect unauthenticated users to the existing login page.
+LOGIN_URL = "accounts:login"
