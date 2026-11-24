@@ -21,7 +21,8 @@ def assigned_jobs(request):
 
 @role_required('handyman')
 def job_requests(request):
-    return render(request, 'dashboard/handyman_job_requests.html')
+    from django.shortcuts import redirect
+    return redirect('bookings:handyman_requests')
 
 
 @role_required('handyman')
