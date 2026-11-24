@@ -9,44 +9,21 @@ from .services import (
 )
 
 
-@role_required('handyman')
-def handyman_dashboard(request):
-    return render(request, 'dashboard/handyman_dashboard.html')
+def _handyman_page(name, template):
+    @role_required('handyman')
+    def view(request):
+        return render(request, template)
+    view.__name__ = name
+    return view
 
 
-@role_required('handyman')
-def assigned_jobs(request):
-    return render(request, 'dashboard/handyman_assigned_jobs.html')
-
-
-@role_required('handyman')
-def job_requests(request):
-    return render(request, 'dashboard/handyman_job_requests.html')
-
-
-@role_required('handyman')
-def job_tracking(request):
-    return render(request, 'dashboard/handyman_job_tracking.html')
-
-
-@role_required('handyman')
-def job_in_progress(request):
-    return render(request, 'dashboard/handyman_job_in_progress.html')
-
-
-@role_required('handyman')
-def job_completed(request):
-    return render(request, 'dashboard/handyman_job_completed.html')
-
-
-@role_required('handyman')
-def report_customer(request):
-    return render(request, 'dashboard/handyman_report_customer.html')
-
-
-@role_required('handyman')
-def notifications(request):
-    return render(request, 'dashboard/handyman_notifs.html')
+handyman_dashboard = _handyman_page('handyman_dashboard', 'dashboard/handyman_dashboard.html')
+assigned_jobs = _handyman_page('assigned_jobs', 'dashboard/handyman_assigned_jobs.html')
+job_requests = _handyman_page('job_requests', 'dashboard/handyman_job_requests.html')
+job_in_progress = _handyman_page('job_in_progress', 'dashboard/handyman_job_in_progress.html')
+job_completed = _handyman_page('job_completed', 'dashboard/handyman_job_completed.html')
+report_customer = _handyman_page('report_customer', 'dashboard/handyman_report_customer.html')
+notifications = _handyman_page('notifications', 'dashboard/handyman_notifs.html')
 
 
 @role_required('customer')
@@ -56,18 +33,13 @@ def customer_dashboard(request):
 
 @role_required('admin')
 def admin_dashboard(request):
-    stats = get_admin_dashboard_stats()
-    activities = get_recent_activities()
-    pending = get_admin_pending_tasks()
-    payment_details = get_admin_payment_details()
-
     return render(
         request,
         'dashboard/admin_dashboard.html',
         {
-            'stats': stats,
-            'activities': activities,
-            **pending,
-            **payment_details,
-        }
+            'stats': get_admin_dashboard_stats(),
+            'activities': get_recent_activities(),
+            **get_admin_pending_tasks(),
+            **get_admin_payment_details(),
+        },
     )

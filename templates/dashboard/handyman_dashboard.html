@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Handyman Dashboard | HandyConnect</title>
-    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_dashboard' %}">
 </head>
 <body data-page="dashboard" data-uid="{{ hc_uid|default:'guest' }}">
 <div class="layout">
@@ -17,11 +17,11 @@
         <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
 
         <nav class="nav" aria-label="Main">
-            <a class="active" aria-current="page" href="{% url 'dashboard:handyman_dashboard' %}">Dashboard</a>
-            <a href="{% url 'dashboard:assigned_jobs' %}">Assigned Jobs</a>
-            <a href="{% url 'dashboard:job_requests' %}">Job Requests</a>
-            <a href="{% url 'dashboard:job_in_progress' %}">Job Tracking</a>
-            <a href="{% url 'dashboard:job_completed' %}">Job Completion</a>
+            <a class="active" aria-current="page" href="{% url 'dashboard:handyman_dashboard' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="{% url 'dashboard:assigned_jobs' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Job In Progress</a>
+            <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
         </nav>
 
         <a class="help-card" href="{% url 'dashboard:report_customer' %}">
@@ -34,7 +34,7 @@
 
     <div class="main">
         <header class="topbar">
-            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a></div>
+            <div class="crumbs">Handyman workspace</div>
             <div class="topbar-right">
                 <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
@@ -45,39 +45,45 @@
         </header>
 
         <main class="content">
-<h1 class="page-title">Welcome back, {{ hc_first|default:"there" }}.</h1>
-<p class="page-sub">Here&rsquo;s a quick look at your work.</p>
-
-<div class="stats">
-    <a class="stat" href="{% url 'dashboard:assigned_jobs' %}"><span>Assigned jobs</span><strong id="s-assigned">0</strong><small>Scheduled and waiting</small></a>
-    <a class="stat" href="{% url 'dashboard:job_requests' %}"><span>Pending requests</span><strong id="s-requests">0</strong><small>Waiting for your answer</small></a>
-    <a class="stat" href="{% url 'dashboard:job_in_progress' %}"><span>In progress</span><strong id="s-progress">0</strong><small>Currently on site</small></a>
-    <a class="stat" href="{% url 'dashboard:job_completed' %}"><span>Completed</span><strong id="s-completed">0</strong><small>Finished jobs</small></a>
-</div>
-
-<div class="grid2">
-    <section class="card" id="next-job">
-        <h2>Up next</h2>
-        <p class="muted" id="next-empty" hidden>No scheduled jobs. Check your job requests.</p>
-        <div id="next-body" hidden>
-            <p class="muted small" id="n-id"></p>
-            <h3 id="n-service" style="margin:4px 0 6px;font-size:20px"></h3>
-            <p class="muted" id="n-meta"></p>
-            <p style="margin:14px 0"><a class="btn" href="{% url 'dashboard:job_in_progress' %}">Open job</a></p>
-        </div>
-    </section>
-
-    <section class="card">
-        <h2>Materials request</h2>
-        <div class="notice ok" id="m-ok" hidden><strong>Request sent</strong><p>The administrator has been notified.</p></div>
-        <form id="mat-form">
-            <label class="field" for="m-text">What do you need? <i>*</i></label>
-            <textarea id="m-text" rows="4" required placeholder="e.g. Pipe fittings and a seal kit for MJO-1042"></textarea>
-            <button class="btn" type="submit">Send request</button>
-        </form>
-    </section>
-</div>
-</main>
+            <h1 class="page-title" id="hello" data-first="{{ hc_first|default:'there' }}">Good morning, {{ hc_first|default:"there" }}.</h1>
+            <p class="page-sub">Saturday, October 24 | Here&rsquo;s what&rsquo;s on your schedule.</p>
+            <div class="stats">
+                <section class="stat"><div class="stat-top"><span>Assigned jobs</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg></div><strong id="st-a">0</strong><small id="st-an"></small></section>
+                <section class="stat"><div class="stat-top"><span>This week&rsquo;s completed jobs</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg></div><strong id="st-w">0</strong><small>3 more than last week</small></section>
+                <section class="stat"><div class="stat-top"><span>This month&rsquo;s earnings</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><strong id="st-e">MUR 0</strong><small>+MUR 6,000 from last month</small></section>
+                <section class="stat"><div class="stat-top"><span>Listing status</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3 6.9 7.5.7-5.7 5 1.7 7.4L12 18l-6.5 4 1.7-7.4-5.7-5 7.5-.7z"/></svg></div><strong>Active</strong><small>Your profile is visible &middot; Top rated</small></section>
+            </div>
+            <div class="grid2">
+                <div class="stack">
+                    <div class="tabs" role="group" aria-label="Job groups">
+                        <button type="button" class="tab active" data-p="p-today" id="tab-today">Today</button>
+                        <button type="button" class="tab" data-p="p-up" id="tab-up">Upcoming</button>
+                        <button type="button" class="tab" data-p="p-done">Completed</button>
+                        <button type="button" class="tab" data-p="p-hist">Work history</button>
+                    </div>
+                    <section class="card panel" id="p-today"></section>
+                    <section class="card panel" id="p-up" hidden></section>
+                    <section class="card panel" id="p-done" hidden></section>
+                    <section class="card panel" id="p-hist" hidden><h2>Work history</h2><p class="muted small">See every finished job, work summary and photo in one place.</p>
+                        <a class="btn-o" href="{% url 'dashboard:job_completed' %}">Open Job Completion</a></section>
+                    <section class="card"><h2>Your assigned work</h2><div class="tw"><table>
+                        <thead><tr><th>Job / customer</th><th>Service</th><th>Appointment</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div>
+                        <p class="empty" id="no-rows" hidden>No jobs yet. Approve a request to get started.</p></section>
+                </div>
+                <div class="stack">
+                    <section class="card cal">
+                        <div class="cal-head"><div><h2 id="cal-month">October 2026</h2><p class="muted small">Appointment calendar &middot; Mauritius Time</p></div>
+                            <div class="cal-nav"><button type="button" id="cal-prev" aria-label="Previous week">&lsaquo;</button><button type="button" id="cal-next" aria-label="Next week">&rsaquo;</button></div></div>
+                        <div class="week" id="week" role="group" aria-label="Week"></div>
+                        <h3 class="day-title" id="day-title"></h3>
+                        <div id="day-list"></div>
+                        <a class="btn-o block" href="{% url 'dashboard:assigned_jobs' %}">View all appointments</a>
+                    </section>
+                    <section class="card ready"><h2>Ready for the day?</h2>
+                        <p class="muted small">Bring the right tools and let customers know if you&rsquo;re running late. A little preparation goes a long way.</p></section>
+                </div>
+            </div>
+        </main>
     </div>
 </div>
 
@@ -154,30 +160,105 @@
 </script>
 <script>
 (function () {
-    var jobs = HC.get('jobs'), reqs = HC.get('requests');
-    function n(s) { return jobs.filter(function (j) { return j.status === s; }).length; }
-    document.getElementById('s-assigned').textContent = n('scheduled');
-    document.getElementById('s-progress').textContent = n('in_progress');
-    document.getElementById('s-completed').textContent = n('completed');
-    document.getElementById('s-requests').textContent = reqs.filter(function (r) { return r.state === 'pending'; }).length;
-
-    var next = jobs.filter(function (j) { return j.status === 'in_progress'; })[0] || jobs.filter(function (j) { return j.status === 'scheduled'; })[0];
-    document.getElementById(next ? 'next-body' : 'next-empty').hidden = false;
-    if (next) {
-        document.getElementById('n-id').textContent = next.id;
-        document.getElementById('n-service').textContent = next.service;
-        document.getElementById('n-meta').textContent = next.customer + ' \u00b7 ' + next.slot + ' \u00b7 MUR ' + next.amount;
+    function $(id) { return document.getElementById(id); }
+    var CITY = { 'MJO-1042': 'Port Louis', 'MJO-1043': 'La Louise' };
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    function greet() {
+        var h = parseInt(new Date().toLocaleString('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Indian/Mauritius' }), 10);
+        var el = $('hello'); el.textContent = (h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening') + ', ' + el.dataset.first + '.';
     }
+    function stats() {
+        var jobs = HC.get('jobs'), done = jobs.filter(function (j) { return j.completedAt; });
+        $('st-a').textContent = jobs.filter(function (j) { return j.status !== 'completed'; }).length;
+        $('st-an').textContent = jobs.filter(function (j) { return j.status === 'scheduled'; }).length + ' scheduled \u00b7 ' + jobs.filter(function (j) { return j.status === 'in_progress'; }).length + ' in progress';
+        $('st-w').textContent = 12 + done.length;
+        $('st-e').textContent = 'MUR ' + (42800 + done.reduce(function (s, j) { return s + (+j.amount || 0); }, 0));
+    }
+    /* calendar: built from the shared job list (sample month: October 2026) */
+    var DAYMS = 86400000, weekStart = Date.UTC(2026, 9, 19), selected = Date.UTC(2026, 9, 24);
+    function appts() {
+        var map = {};
+        HC.get('jobs').forEach(function (j) {
+            var m = /Oct\s+(\d+)/.exec(j.slot); if (!m) return;
+            var tm = /(\d\d:\d\d)\s*[\u2013-]\s*(\d\d:\d\d)/.exec(j.slot), morning = /Morning/.test(j.slot) || (tm && parseInt(tm[1], 10) < 12);
+            var when = (morning ? 'Morning' : 'Afternoon') + ' \u00b7 ' + (tm ? tm[1] + '\u2013' + tm[2] : (morning ? '09:00\u201312:00' : '13:00\u201317:00'));
+            var k = '2026-10-' + ('0' + m[1]).slice(-2);
+            (map[k] = map[k] || []).push({ when: when, title: j.service, who: j.customer + (CITY[j.id] ? ' \u00b7 ' + CITY[j.id] : ''), morning: !!morning });
+        });
+        return map;
+    }
+    function calList() {
+        var d = new Date(selected), items = appts()[new Date(selected).toISOString().slice(0, 10)] || [], box = $('day-list');
+        $('day-title').textContent = DAYS[d.getUTCDay()] + ', ' + MONTHS[d.getUTCMonth()] + ' ' + d.getUTCDate();
+        box.innerHTML = '';
+        if (!items.length) box.appendChild(HC.el('p', 'muted small no-appt', 'No appointments on this day.'));
+        items.forEach(function (a) {
+            var b = HC.el('div', 'slot ' + (a.morning ? 'morning' : 'afternoon'));
+            b.appendChild(HC.el('span', 'slot-when', a.when)); b.appendChild(HC.el('strong', '', a.title)); b.appendChild(HC.el('span', 'slot-who', a.who)); box.appendChild(b);
+        });
+    }
+    function calWeek() {
+        var w = $('week'); w.innerHTML = ''; var d0 = new Date(selected);
+        $('cal-month').textContent = MONTHS[d0.getUTCMonth()] + ' ' + d0.getUTCFullYear();
+        for (var i = 0; i < 7; i++) (function (i) {
+            var ms = weekStart + i * DAYMS, d = new Date(ms), b = HC.el('button', 'dayb' + (ms === selected ? ' on' : '')); b.type = 'button';
+            b.setAttribute('aria-pressed', ms === selected); b.setAttribute('aria-label', DAYS[d.getUTCDay()] + ' ' + d.getUTCDate());
+            b.appendChild(HC.el('small', '', 'MTWTFSS'[i])); b.appendChild(HC.el('span', '', d.getUTCDate()));
+            b.onclick = function () { selected = ms; calWeek(); calList(); }; w.appendChild(b);
+        })(i);
+    }
+    function shift(n) { weekStart += n * DAYMS; selected += n * DAYMS; calWeek(); calList(); }
+    $('cal-prev').onclick = function () { shift(-7); }; $('cal-next').onclick = function () { shift(7); };
+    function refreshAll() { stats(); calWeek(); calList(); }
 
-    document.getElementById('mat-form').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var t = document.getElementById('m-text');
-        HC.notify('job', 'Materials request sent', t.value.trim().slice(0, 80));
-        t.value = '';
-        document.getElementById('m-ok').hidden = false;
+    var ADDR = { 'MJO-1042': '123 Maple Street, Port Louis, Mauritius' };
+    function slotInfo(j) {
+        var tm = /(\d\d:\d\d)\s*[\u2013-]\s*(\d\d:\d\d)/.exec(j.slot), morning = /Morning/.test(j.slot) || (tm && parseInt(tm[1], 10) < 12);
+        return (morning ? 'Morning' : 'Afternoon') + ' \u00b7 ' + (tm ? tm[1] + '\u2013' + tm[2] : (morning ? '09:00\u201312:00' : '13:00\u201317:00'));
+    }
+    function pill(s) { return HC.el('span', 'pill ' + s, s === 'completed' ? 'Completed' : s === 'in_progress' ? 'In progress' : 'Scheduled'); }
+    function mini(list, empty) {
+        var ul = HC.el('ul', 'mini');
+        if (!list.length) return HC.el('p', 'muted small', empty);
+        list.forEach(function (j) { var li = HC.el('li'); li.appendChild(HC.el('strong', '', j.id + ' \u00b7 ' + j.customer)); li.appendChild(HC.el('span', '', j.service + ' \u00b7 ' + j.slot)); ul.appendChild(li); });
+        return ul;
+    }
+    function render() {
+        var jobs = HC.get('jobs'), open = jobs.filter(function (j) { return j.status !== 'completed'; });
+        var next = jobs.filter(function (j) { return j.status === 'in_progress'; })[0] || jobs.filter(function (j) { return j.status === 'scheduled'; })[0];
+        $('tab-today').textContent = 'Today \u00b7 ' + Math.min(open.length, 2); $('tab-up').textContent = 'Upcoming \u00b7 ' + Math.max(open.length - 1, 0);
+        var t = $('p-today'); t.innerHTML = '';
+        if (!next) t.appendChild(HC.el('p', 'muted', 'No jobs to do right now. Check your job requests.'));
+        else {
+            var top = HC.el('div', 'job-top'); top.appendChild(HC.el('span', 'chip', (next.status === 'in_progress' ? 'In progress' : 'Up next') + ' \u00b7 ' + (/Afternoon/.test(slotInfo(next)) ? 'Afternoon' : 'Morning')));
+            top.appendChild(HC.el('span', 'job-id', next.id)); t.appendChild(top);
+            t.appendChild(HC.el('h2', 'job-name', next.service));
+            var c = HC.el('div', 'cust'), inits = next.customer.split(' ').map(function (w) { return w[0]; }).slice(0, 2).join('');
+            c.appendChild(HC.el('span', 'avatar big', inits)); var cd = HC.el('div'); cd.appendChild(HC.el('strong', '', next.customer)); cd.appendChild(HC.el('span', 'muted small', ADDR[next.id] || 'Address shared with the service team')); c.appendChild(cd); t.appendChild(c);
+            var f = HC.el('dl', 'facts');
+            [['Service slot', slotInfo(next)], ['Work duration', '1.5 hours'], ['Amount payable', 'MUR ' + next.amount]].forEach(function (x) { var d = HC.el('div'); d.appendChild(HC.el('dt', '', x[0])); d.appendChild(HC.el('dd', '', x[1])); f.appendChild(d); });
+            t.appendChild(f);
+            var b = HC.el('div', 'btns'), a1 = HC.el('a', 'btn', 'View job details'); a1.href = "{% url 'dashboard:job_in_progress' %}?job=" + next.id; b.appendChild(a1);
+            var a2 = HC.el('a', 'btn-o', 'View directions'); a2.target = '_blank'; a2.rel = 'noopener';
+            a2.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ADDR[next.id] || next.customer + ' Mauritius'); b.appendChild(a2); t.appendChild(b);
+        }
+        var up = $('p-up'); up.innerHTML = '<h2>Upcoming jobs</h2>'; up.appendChild(mini(open.filter(function (j) { return j !== next; }), 'Nothing else is scheduled.'));
+        var dn = $('p-done'); dn.innerHTML = '<h2>Completed jobs</h2>'; dn.appendChild(mini(jobs.filter(function (j) { return j.status === 'completed'; }), 'No completed jobs yet.'));
+        var body = $('rows'); body.innerHTML = ''; $('no-rows').hidden = jobs.length > 0;
+        jobs.forEach(function (j) {
+            var tr = HC.el('tr'); tr.appendChild(HC.el('th', '', j.id + ' · ' + j.customer)); tr.appendChild(HC.el('td', '', j.service)); tr.appendChild(HC.el('td', '', j.slot));
+            var s = HC.el('td'); s.appendChild(pill(j.status)); tr.appendChild(s); body.appendChild(tr);
+        });
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (tb) {
+        tb.onclick = function () {
+            Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.remove('active'); $(x.dataset.p).hidden = true; });
+            tb.classList.add('active'); $(tb.dataset.p).hidden = false;
+        };
     });
+    greet(); render(); refreshAll();
 })();
 </script>
-
 </body>
 </html>
