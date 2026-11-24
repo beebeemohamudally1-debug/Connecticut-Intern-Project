@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 class ServiceRequest(models.Model):
     SLOT_MORNING = 'morning'
@@ -30,6 +31,10 @@ class ServiceRequest(models.Model):
 
     reference = models.CharField(max_length=20, unique=True, editable=False, blank=True)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='service_requests', limit_choices_to={'role': 'customer'})
+    chosen_handyman = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='chosen_for_requests', limit_choices_to={'role': 'handyman'},
+    )
     service_category = models.CharField(max_length=100, blank=True)
     problem_description = models.TextField(blank=True)
     service_address = models.CharField(max_length=255, blank=True)
@@ -51,8 +56,15 @@ class ServiceRequest(models.Model):
         return f'{self.reference} {self.service_category}'
 
     def clean(self):
+        errors = {}
         if self.customer_id and self.customer.role != 'customer':
-            raise ValidationError({'customer': 'The selected user is not a customer.'})
+            errors['customer'] = 'The selected user is not a customer.'
+        if self.chosen_handyman_id and self.chosen_handyman.role != 'handyman':
+            errors['chosen_handyman'] = 'Choose an active handyman.'
+        elif self.chosen_handyman_id and not self.chosen_handyman.is_active:
+            errors['chosen_handyman'] = 'This handyman is not active.'
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         creating = self.pk is None
@@ -135,6 +147,15 @@ class Appointment(models.Model):
         (STATUS_COMPLETED, 'Completed'),
     ]
 
+    CUSTOMER_PENDING = 'pending'
+    CUSTOMER_ACCEPTED = 'accepted'
+    CUSTOMER_REJECTED = 'rejected'
+    CUSTOMER_RESPONSE_CHOICES = [
+        (CUSTOMER_PENDING, 'Waiting for customer'),
+        (CUSTOMER_ACCEPTED, 'Accepted'),
+        (CUSTOMER_REJECTED, 'Declined'),
+    ]
+
     service_request = models.ForeignKey(
         ServiceRequest,
         on_delete=models.PROTECT,
@@ -150,7 +171,11 @@ class Appointment(models.Model):
     appointment_date = models.DateField()
     time_slot = models.CharField(max_length=10, choices=SLOT_CHOICES)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    customer_response = models.CharField(
+        max_length=10, choices=CUSTOMER_RESPONSE_CHOICES, default=CUSTOMER_PENDING,
+    )
     notes = models.TextField(blank=True)
+    cancellation_reason = models.CharField(max_length=300, blank=True)
     confirmed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -169,6 +194,11 @@ class Appointment(models.Model):
                 fields=['handyman', 'appointment_date', 'time_slot'],
                 condition=Q(status='confirmed'),
                 name='no_overlapping_confirmed_handyman_slots',
+            ),
+            models.UniqueConstraint(
+                fields=['service_request', 'appointment_type'],
+                condition=Q(status__in=['pending', 'confirmed']),
+                name='one_active_appointment_per_request_type',
             ),
         ]
 
@@ -190,15 +220,12 @@ class Appointment(models.Model):
                 errors['handyman'] = 'The handyman must accept this service request first.'
 
         if self.status == self.STATUS_CONFIRMED and self.service_request_id:
-            from payments.models import Quotation
-
-            paid_accepted_quotation = Quotation.objects.filter(
-                request_id=self.service_request_id,
-                status=Quotation.ACCEPTED,
-                payment__isnull=False,
-            ).exists()
-            if not paid_accepted_quotation:
-                errors['status'] = 'An accepted quotation must be fully paid before confirming this appointment.'
+            if self.customer_response != self.CUSTOMER_ACCEPTED:
+                errors['status'] = 'The customer must accept the appointment proposal before confirmation.'
+            if self.appointment_type == self.TYPE_SERVICE:
+                from .services import service_payment_readiness
+                if not service_payment_readiness(self.service_request)['ready']:
+                    errors['status'] = 'The service and any material quotation must be accepted and paid before confirmation.'
 
         if self.status == self.STATUS_CONFIRMED and self.handyman_id and self.appointment_date:
             overlapping = Appointment.objects.filter(
@@ -214,6 +241,39 @@ class Appointment(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+
+class AppointmentEvent(models.Model):
+    """Append-only history for appointment proposals and status changes."""
+
+    CREATED = 'created'
+    RESCHEDULED = 'rescheduled'
+    CUSTOMER_ACCEPTED = 'customer_accepted'
+    CUSTOMER_REJECTED = 'customer_rejected'
+    CONFIRMED = 'confirmed'
+    COMPLETED = 'completed'
+    CANCELLED = 'cancelled'
+    EVENT_CHOICES = [
+        (CREATED, 'Proposal sent'),
+        (RESCHEDULED, 'Alternative proposed'),
+        (CUSTOMER_ACCEPTED, 'Customer accepted'),
+        (CUSTOMER_REJECTED, 'Customer declined'),
+        (CONFIRMED, 'Appointment confirmed'),
+        (COMPLETED, 'Appointment completed'),
+        (CANCELLED, 'Appointment cancelled'),
+    ]
+
+    appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=24, choices=EVENT_CHOICES)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='appointment_events',
+    )
+    detail = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['created_at', 'pk']
 
 
 class HandymanProfileRequest(models.Model):
