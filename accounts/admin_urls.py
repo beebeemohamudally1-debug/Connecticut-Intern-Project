@@ -2,7 +2,8 @@ from django.urls import path
 from . import admin_appointments as appointments
 from . import admin_skills as skills
 from . import admin_views as views
-
+from django.views.generic import TemplateView
+from dashboard.permissions import role_required
 app_name = 'accounts_admin'
 
 urlpatterns = [
@@ -20,6 +21,15 @@ urlpatterns = [
     path('work-progress/<int:pk>/evidence/', views.work_evidence, name='work_progress_evidence'),
     path('work-progress/<int:pk>/evidence/<int:report_pk>/', views.work_evidence, name='work_progress_report_evidence'),
     path('complaints/', views.complaint_queue, name='complaints'),
+
+    # TODO: BACKEND INTEGRATION
+    # Temporary admin-only frontend routes.
+    path('services/', role_required('admin')(TemplateView.as_view(template_name='services/manage_services.html')), name='manage_services'),
+    path('services/add/', role_required('admin')(TemplateView.as_view(template_name='services/add_service.html')), name='add_service'),
+    path('services/<int:service_id>/edit/', role_required('admin')(TemplateView.as_view(template_name='services/edit_service.html')), name='edit_service'),
+    path('services/<int:service_id>/view/', role_required('admin')(TemplateView.as_view(template_name='services/view_service.html')), name='view_service'),
+    path('services/handyman-requests/', role_required('admin')(TemplateView.as_view(template_name='services/handyman_requests.html')), name='handyman_requests'),
+    path('services/handyman-requests/<int:request_id>/review/', role_required('admin')(TemplateView.as_view(template_name='services/review_request.html')), name='review_service_request'),
     path('complaints/<int:pk>/', views.complaint_case, name='complaint_case'),
     path('complaints/<int:pk>/customer/', views.complaint_conversation, {'who': 'customer'}, name='complaint_customer'),
     path('complaints/<int:pk>/handyman/', views.complaint_conversation, {'who': 'handyman'}, name='complaint_handyman'),

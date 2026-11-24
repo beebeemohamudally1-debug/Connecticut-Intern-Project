@@ -1,0 +1,246 @@
+
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Manage Services | HandyConnect{% endblock %}
+{% block page %}services{% endblock %}
+{% block crumb %}Services{% endblock %}
+
+{% block content %}
+
+
+
+<div class="bar">
+    <div>
+        <h1>Services</h1>
+        <p class="sub">
+            Manage available services and review handyman requests.
+        </p>
+    </div>
+
+    <div class="service-actions">
+        <a href="{% url 'accounts_admin:handyman_requests' %}"
+            class="btn o">
+            Handyman Requests (2)
+        </a>
+
+        <a href="{% url 'accounts_admin:add_service' %}" class="btn">
+            + Add Service
+        </a>
+    </div>
+</div>
+
+<section class="card">
+
+    <!-- Search and filters -->
+    <div class="service-filters">
+        <input
+            type="search"
+            id="service-search"
+            placeholder="Search services..."
+            aria-label="Search services"
+        >
+
+        <select id="category-filter"
+                aria-label="Filter by category">
+            <option value="all">All categories</option>
+            <option value="plumbing">Plumbing</option>
+            <option value="electrical">Electrical</option>
+            <option value="carpentry">Carpentry</option>
+            <option value="painting">Painting</option>
+            <option value="cleaning">Cleaning</option>
+            <option value="gardening">Gardening</option>
+            <option value="air-conditioning">Air conditioning</option>
+            <option value="appliance-repair">Appliance repair</option>
+        </select>
+
+        <select id="status-filter"
+                aria-label="Filter by status">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+        </select>
+
+        <button type="button" class="btn o s"
+                id="clear-service-filters">
+            Clear Filters
+        </button>
+    </div>
+
+    <!-- Services table -->
+    <div class="table-wrap">
+        <table class="tb" id="services-table">
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Handymen</th>
+                    <th>Updated</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <!-- TODO: Replace sample data with Django loop -->
+
+                <tr data-category="plumbing" data-status="active">
+                    <td>Pipe leak repair</td>
+                    <td>Plumbing</td>
+                    <td><span class="b green">Active</span></td>
+                    <td>10</td>
+                    <td>03 Nov 2026</td>
+                    <td>
+                        <a href="{% url 'accounts_admin:view_service' 1 %}" class="btn o s">
+                            View
+                        </a>
+                        <a href="{% url 'accounts_admin:edit_service' 1 %}" class="btn o s">
+                            Edit
+                        </a>
+                        
+                    </td>
+                </tr>
+
+                <tr data-category="electrical" data-status="active">
+                    <td>Electrical repair</td>
+                    <td>Electrical</td>
+                    <td><span class="b green">Active</span></td>
+                    <td>8</td>
+                    <td>05 Nov 2026</td>
+                    <td>
+                        <a href="{% url 'accounts_admin:view_service' 2 %}" class="btn o s">
+                            View
+                        </a>
+                        <a href="{% url 'accounts_admin:edit_service' 2 %}" class="btn o s">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+
+                <tr data-category="cleaning" data-status="inactive">
+                    <td>Home deep cleaning</td>
+                    <td>Cleaning</td>
+                    <td><span class="b red">Inactive</span></td>
+                    <td>4</td>
+                    <td>02 Nov 2026</td>
+                    <td>
+                        <a href="{% url 'accounts_admin:view_service' 3 %}" class="btn o s">
+                            View
+                        </a>
+                        <a href="{% url 'accounts_admin:edit_service' 3 %}" class="btn o s">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p id="services-empty" hidden>
+        No services match your search.
+    </p>
+
+    <!-- TODO: BACKEND INTEGRATION
+         Implement server-side pagination when real
+         service records are available.
+    -->
+    <div class="service-pagination">
+        <button class="btn o s" disabled>Previous</button>
+        <span>Page 1</span>
+        <button class="btn o s" disabled>Next</button>
+    </div>
+
+</section>
+
+<style>
+    .service-actions,
+    .service-filters,
+    .service-pagination {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .service-filters {
+        margin-bottom: 20px;
+    }
+
+    .service-filters input,
+    .service-filters select {
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #111827;
+        font: inherit;
+    }
+
+    .service-filters input {
+        flex: 1 1 220px;
+        min-width: 160px;
+    }
+
+    .service-pagination {
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+
+    #services-empty {
+        padding: 20px;
+        text-align: center;
+    }
+</style>
+
+{% endblock %}
+
+{% block page_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const search = document.getElementById("service-search");
+    const category = document.getElementById("category-filter");
+    const status = document.getElementById("status-filter");
+    const clear = document.getElementById("clear-service-filters");
+    const rows = document.querySelectorAll("#services-table tbody tr");
+    const empty = document.getElementById("services-empty");
+
+    function filterServices() {
+        const query = search.value.trim().toLowerCase();
+        let visible = 0;
+
+        rows.forEach(function (row) {
+            const matchesSearch =
+                row.textContent.toLowerCase().includes(query);
+
+            const matchesCategory =
+                category.value === "all" ||
+                row.dataset.category === category.value;
+
+            const matchesStatus =
+                status.value === "all" ||
+                row.dataset.status === status.value;
+
+            const show = matchesSearch &&
+                         matchesCategory &&
+                         matchesStatus;
+
+            row.hidden = !show;
+            if (show) visible++;
+        });
+
+        empty.hidden = visible !== 0;
+    }
+
+    search.addEventListener("input", filterServices);
+    category.addEventListener("change", filterServices);
+    status.addEventListener("change", filterServices);
+
+    clear.addEventListener("click", function () {
+        search.value = "";
+        category.value = "all";
+        status.value = "all";
+        filterServices();
+    });
+});
+</script>
+{% endblock %}

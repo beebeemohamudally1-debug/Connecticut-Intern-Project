@@ -1,0 +1,320 @@
+
+{% extends "base_admin.html" %}
+{% load static %}
+
+{% block title %}Edit Service | HandyConnect{% endblock %}
+{% block page %}services{% endblock %}
+{% block crumb %}Edit Service{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom: 20px;">
+    <a href="{% url 'accounts_admin:manage_services' %}"
+       style="color: #2563eb; font-weight: 600; text-decoration: underline;">
+        &larr; Back to Manage Services
+    </a>
+</div>
+
+<div class="bar">
+    <div>
+        <h1>Edit Service</h1>
+        <p class="sub">Update the details of an existing service.</p>
+    </div>
+</div>
+
+<section class="card edit-service-card">
+    
+    {% comment %}
+    TODO: BACKEND INTEGRATION
+    Load the selected Service record from the database.
+    Replace demo values with the actual service fields.
+    Connect form submission to the update view.
+    {% endcomment %}
+
+    <form id="edit-service-form" enctype="multipart/form-data">
+        <h2>Service Details</h2>
+
+        <div class="service-form-grid">
+
+            <div class="service-field">
+                <label for="service-name">Service Name *</label>
+                <input type="text" id="service-name"
+                    name="name" value="Pipe leak repair"
+                    required maxlength="120">
+            </div>
+
+            <div class="service-field">
+                <label for="service-category">Category *</label>
+                <select id="service-category" name="category" required>
+                    <option value="plumbing" selected>Plumbing</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="carpentry">Carpentry</option>
+                    <option value="painting">Painting</option>
+                    <option value="cleaning">Cleaning</option>
+                    <option value="gardening">Gardening</option>
+                    <option value="air-conditioning">Air conditioning</option>
+                    <option value="appliance-repair">Appliance repair</option>
+                </select>
+            </div>
+
+            <div class="service-field full-width">
+                <label for="service-description">Description *</label>
+                <textarea id="service-description"
+                    name="description" rows="4"
+                    required>Identify and repair leaking water pipes.</textarea>
+            </div>
+
+            <div class="service-field">
+                <label for="service-availability">Availability *</label>
+                <select id="service-availability"
+                        name="availability" required>
+                    <option value="active" selected>Available</option>
+                    <option value="inactive">Unavailable</option>
+                </select>
+            </div>
+
+            <div class="service-field">
+                <label for="service-image">Replace Service Image</label>
+                <input type="file" id="service-image"
+                       name="image" accept="image/*">
+                <small>Leave empty to keep the current image.</small>
+            </div>
+
+        </div>
+
+        <div class="service-record-info">
+            <h3>Record Information</h3>
+            <p><strong>Created:</strong> 01 Nov 2026</p>
+            <p><strong>Last Updated:</strong> 03 Nov 2026</p>
+            <p><strong>Status:</strong> <span class="b green">Active</span></p>
+        </div>
+
+        <div class="service-form-actions">
+            <button type="button" class="btn o"
+                    style="color: #dc2626;"
+                    onclick="document.getElementById('deactivateModal').showModal()">
+                Deactivate Service
+            </button>
+            <a href="{% url 'accounts_admin:manage_services' %}"
+               class="btn o">Cancel</a>
+            <button type="submit" class="btn">Save Changes</button>
+        </div>
+    </form>
+</section>
+
+<dialog id="deactivateModal"
+        style="border: none; border-radius: 12px;
+               padding: 28px; width: 420px;
+               max-width: 90%;">
+
+    <h2>Deactivate Service?</h2>
+
+    <p style="margin: 16px 0;">
+        Are you sure you want to deactivate this service?
+        Customers will no longer be able to request it.
+    </p>
+
+    <p><strong>Service Name:</strong> Pipe leak repair</p>
+
+    <div style="display: flex; justify-content: flex-end;
+                gap: 12px; margin-top: 24px;">
+
+        <button type="button" class="btn o"
+                onclick="document.getElementById('deactivateModal').close()">
+            Keep Active
+        </button>
+
+        <button type="button" class="btn"
+                style="background: #dc2626; color: white;"
+                onclick="alert('Demo only: Deactivation is not connected to the backend yet.'); document.getElementById('deactivateModal').close();">
+            Deactivate
+        </button>
+
+    </div>
+
+</dialog>
+
+<style>
+    .edit-service-card {
+        padding: 28px;
+        max-width: 950px;
+    }
+
+    .service-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+        margin-top: 24px;
+    }
+
+    .service-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .service-field label {
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .service-field input,
+    .service-field select,
+    .service-field textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font: inherit;
+        background: #fff;
+        color: #1e293b;
+    }
+
+    .service-field textarea {
+        resize: vertical;
+    }
+
+    .service-field small {
+        color: #64748b;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .service-record-info {
+        margin-top: 28px;
+        padding: 20px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+    }
+
+    .service-record-info h3 {
+        margin-bottom: 12px;
+    }
+
+    .service-record-info p {
+        margin: 8px 0;
+    }
+
+    .service-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 30px;
+    }
+
+    @media (max-width: 650px) {
+        .service-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .edit-service-card {
+            padding: 18px;
+        }
+    }
+</style>
+
+{% endblock %}
+
+
+{% block page_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.getElementById("edit-service-form");
+    const serviceId = "{{ view.kwargs.service_id }}";
+
+    // TODO: BACKEND INTEGRATION
+    // Replace temporary service data with database records.
+
+    const services = {
+        "1": {
+            name: "Pipe leak repair",
+            category: "plumbing",
+            description: "Identify and repair leaking water pipes.",
+            availability: "active",
+            updated: "03 Nov 2026"
+        },
+        "2": {
+            name: "Electrical repair",
+            category: "electrical",
+            description: "Identify and repair electrical faults in residential and commercial buildings.",
+            availability: "active",
+            updated: "05 Nov 2026"
+        },
+        "3": {
+            name: "Home deep cleaning",
+            category: "cleaning",
+            description: "Thorough cleaning of residential rooms, kitchens, bathrooms and other living areas.",
+            availability: "inactive",
+            updated: "02 Nov 2026"
+        }
+    };
+
+    const service = services[serviceId];
+
+    if (service) {
+
+        document.getElementById("service-name").value =
+            service.name;
+
+        document.getElementById("service-category").value =
+            service.category;
+
+        document.getElementById("service-description").value =
+            service.description;
+
+        document.getElementById("service-availability").value =
+            service.availability;
+
+        const recordInfo = document.querySelectorAll(
+            ".service-record-info p"
+        );
+
+        recordInfo[1].innerHTML =
+            "<strong>Last Updated:</strong> " + service.updated;
+
+        const statusBadge = recordInfo[2].querySelector("span");
+
+        const isActive = service.availability === "active";
+
+        statusBadge.textContent = isActive ? "Active" : "Inactive";
+
+        statusBadge.style.background =
+            isActive ? "#dcfce7" : "#fee2e2";
+
+        statusBadge.style.color =
+            isActive ? "#166534" : "#991b1b";
+
+        document.querySelector(
+            "#deactivateModal p:nth-of-type(2)"
+        ).innerHTML =
+            "<strong>Service Name:</strong> " + service.name;
+
+        const deactivateButton = document.querySelector(
+            ".service-form-actions button[type='button']"
+        );
+
+        if (!isActive) {
+            deactivateButton.disabled = true;
+            deactivateButton.style.opacity = "0.5";
+            deactivateButton.textContent = "Already Inactive";
+        }
+    }
+
+    form.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        if (!form.reportValidity()) return;
+
+        // TODO: BACKEND INTEGRATION
+        // Send changes to the Django Service update view.
+
+        alert("Demo only: Service editing is not connected to the backend yet.");
+    });
+});
+</script>
+{% endblock %}
+
