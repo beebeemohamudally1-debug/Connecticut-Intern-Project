@@ -1,0 +1,17 @@
+{% extends "base_customer.html" %}
+{% block content %}
+<section class="card" style="margin:28px auto;padding:24px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+    <div><p class="mut">HandyConnect · Customer</p><h1>My service requests</h1></div>
+    <a class="btn" href="{% url 'bookings:create_request' %}">Request a service</a>
+  </div>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  {% for item in requests %}
+    <article style="padding:16px 0;border-top:1px solid #ddd">
+      <h2><a href="{% url 'bookings:my_request_detail' item.pk %}">{{ item.reference }} · {{ item.service_category|default:"Service request" }}</a></h2>
+      <p>{{ item.get_status_display }} · Submitted {{ item.created_at|date:"d M Y" }}</p>
+      {% with answer=item.handyman_responses.first %}{% if answer %}<p>Handyman: {{ answer.handyman.get_full_name|default:answer.handyman.username }} · {{ answer.get_status_display }}</p>{% endif %}{% endwith %}
+    </article>
+  {% empty %}<p>You have not submitted a service request yet.</p>{% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base_customer.html" %}
+{% block content %}
+<section class="card" style="max-width:850px;margin:28px auto;padding:24px">
+  <p class="mut"><a href="{% url 'bookings:my_requests' %}">My requests</a> · {{ service_request.reference }}</p>
+  <h1>{{ service_request.service_category|default:"Service request" }}</h1>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  <dl>
+    <dt>Status</dt><dd>{{ service_request.get_status_display }}</dd>
+    <dt>Description</dt><dd>{{ service_request.problem_description }}</dd>
+    <dt>Address</dt><dd>{{ service_request.service_address }}</dd>
+    <dt>Preferred date</dt><dd>{{ service_request.preferred_date|date:"d M Y"|default:"Not specified" }}{% if service_request.preferred_slot %} · {{ service_request.get_preferred_slot_display }}{% endif %}</dd>
+    <dt>Preferred handyman</dt><dd>{% if service_request.chosen_handyman %}{{ service_request.chosen_handyman.get_full_name|default:service_request.chosen_handyman.username }}{% else %}Not selected{% endif %}</dd>
+  </dl>
+  {% if latest_assignment %}
+    <h2>Handyman response</h2>
+    <p>{{ latest_assignment.handyman.get_full_name|default:latest_assignment.handyman.username }} · {{ latest_assignment.get_status_display }}</p>
+    {% if latest_assignment.response_note %}<p>{{ latest_assignment.response_note }}</p>{% endif %}
+  {% endif %}
+  {% if can_choose %}
+    <h2>Choose another handyman</h2>
+    <form method="post" action="{% url 'bookings:choose_handyman' service_request.pk %}">
+      {% csrf_token %}<label for="handyman">Available handyman</label>
+      <select id="handyman" name="handyman" required>
+        {% for handyman in handymen %}<option value="{{ handyman.pk }}">{{ handyman.get_full_name|default:handyman.username }}</option>{% endfor %}
+      </select>
+      <button type="submit" {% if not handymen %}disabled{% endif %}>Save choice</button>
+      {% if not handymen %}<p>No other active handymen are available to choose.</p>{% endif %}
+    </form>
+  {% endif %}
+  {% if appointment %}<p><a href="{% url 'bookings:my_appointments' %}">View appointment proposal and appointments</a></p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base_customer.html" %}
+{% block content %}
+<section class="card" style="max-width:760px;margin:28px auto;padding:28px">
+  <p class="mut">HandyConnect · New request</p>
+  <h1>Request a service</h1>
+  <p>Describe the work and choose a preferred handyman if you have one.</p>
+  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p role="alert">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    {% for field in form %}
+      <p>{{ field.label_tag }}<br>{{ field }}{% for error in field.errors %}<br><span role="alert">{{ error }}</span>{% endfor %}</p>
+    {% endfor %}
+    <button type="submit">Submit request</button>
+    <a href="{% url 'bookings:my_requests' %}">Cancel</a>
+  </form>
+</section>
+{% endblock %}
