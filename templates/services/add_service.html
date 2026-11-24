@@ -35,17 +35,22 @@
             <div class="service-field">
                 <label for="service-name">Service Name *</label>
                 <input type="text" id="service-name"
-                       name="name" required
-                       placeholder="Enter service name">
+                    name="name" required maxlength="120"
+                    placeholder="e.g. Pipe leak repair">
             </div>
 
             <div class="service-field">
                 <label for="service-category">Category *</label>
                 <select id="service-category" name="category" required>
                     <option value="">Select Category</option>
-                    <option value="home">Home Maintenance</option>
+                    <option value="plumbing">Plumbing</option>
                     <option value="electrical">Electrical</option>
+                    <option value="carpentry">Carpentry</option>
+                    <option value="painting">Painting</option>
                     <option value="cleaning">Cleaning</option>
+                    <option value="gardening">Gardening</option>
+                    <option value="air-conditioning">Air conditioning</option>
+                    <option value="appliance-repair">Appliance repair</option>
                 </select>
             </div>
 

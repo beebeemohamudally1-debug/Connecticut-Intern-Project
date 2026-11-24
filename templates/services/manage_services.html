@@ -44,9 +44,14 @@
         <select id="category-filter"
                 aria-label="Filter by category">
             <option value="all">All categories</option>
-            <option value="home">Home Maintenance</option>
-            <option value="cleaning">Cleaning</option>
+            <option value="plumbing">Plumbing</option>
             <option value="electrical">Electrical</option>
+            <option value="carpentry">Carpentry</option>
+            <option value="painting">Painting</option>
+            <option value="cleaning">Cleaning</option>
+            <option value="gardening">Gardening</option>
+            <option value="air-conditioning">Air conditioning</option>
+            <option value="appliance-repair">Appliance repair</option>
         </select>
 
         <select id="status-filter"
@@ -79,9 +84,9 @@
             <tbody>
                 <!-- TODO: Replace sample data with Django loop -->
 
-                <tr data-category="home" data-status="active">
+                <tr data-category="plumbing" data-status="active">
+                    <td>Pipe leak repair</td>
                     <td>Plumbing</td>
-                    <td>Home Maintenance</td>
                     <td><span class="b green">Active</span></td>
                     <td>10</td>
                     <td>03 Nov 2026</td>
@@ -97,7 +102,7 @@
                 </tr>
 
                 <tr data-category="electrical" data-status="active">
-                    <td>Electrical Repairs</td>
+                    <td>Electrical repair</td>
                     <td>Electrical</td>
                     <td><span class="b green">Active</span></td>
                     <td>8</td>
@@ -113,7 +118,7 @@
                 </tr>
 
                 <tr data-category="cleaning" data-status="inactive">
-                    <td>Deep Cleaning</td>
+                    <td>Home deep cleaning</td>
                     <td>Cleaning</td>
                     <td><span class="b red">Inactive</span></td>
                     <td>4</td>

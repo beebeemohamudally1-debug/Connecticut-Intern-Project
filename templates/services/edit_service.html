@@ -39,23 +39,29 @@
             <div class="service-field">
                 <label for="service-name">Service Name *</label>
                 <input type="text" id="service-name"
-                       name="name" value="Plumbing" required>
+                    name="name" value="Pipe leak repair"
+                    required maxlength="120">
             </div>
 
             <div class="service-field">
                 <label for="service-category">Category *</label>
                 <select id="service-category" name="category" required>
-                    <option value="home" selected>Home Maintenance</option>
+                    <option value="plumbing" selected>Plumbing</option>
                     <option value="electrical">Electrical</option>
+                    <option value="carpentry">Carpentry</option>
+                    <option value="painting">Painting</option>
                     <option value="cleaning">Cleaning</option>
+                    <option value="gardening">Gardening</option>
+                    <option value="air-conditioning">Air conditioning</option>
+                    <option value="appliance-repair">Appliance repair</option>
                 </select>
             </div>
 
             <div class="service-field full-width">
                 <label for="service-description">Description *</label>
                 <textarea id="service-description"
-                          name="description" rows="4"
-                          required>Pipe repairs and installation</textarea>
+                    name="description" rows="4"
+                    required>Identify and repair leaking water pipes.</textarea>
             </div>
 
             <div class="service-field">
@@ -108,7 +114,7 @@
         Customers will no longer be able to request it.
     </p>
 
-    <p><strong>Service Name:</strong> Plumbing</p>
+    <p><strong>Service Name:</strong> Pipe leak repair</p>
 
     <div style="display: flex; justify-content: flex-end;
                 gap: 12px; margin-top: 24px;">
@@ -225,23 +231,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const services = {
         "1": {
-            name: "Plumbing",
-            category: "home",
-            description: "Pipe repairs and installation",
+            name: "Pipe leak repair",
+            category: "plumbing",
+            description: "Identify and repair leaking water pipes.",
             availability: "active",
             updated: "03 Nov 2026"
         },
         "2": {
-            name: "Electrical Repairs",
+            name: "Electrical repair",
             category: "electrical",
-            description: "Electrical repairs and installation",
+            description: "Identify and repair electrical faults in residential and commercial buildings.",
             availability: "active",
             updated: "05 Nov 2026"
         },
         "3": {
-            name: "Deep Cleaning",
+            name: "Home deep cleaning",
             category: "cleaning",
-            description: "Residential and commercial deep cleaning",
+            description: "Thorough cleaning of residential rooms, kitchens, bathrooms and other living areas.",
             availability: "inactive",
             updated: "02 Nov 2026"
         }

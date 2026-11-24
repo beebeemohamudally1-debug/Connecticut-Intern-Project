@@ -52,11 +52,11 @@ with data from the Services backend.
         <dl class="service-details">
             <div>
                 <dt>Service Name</dt>
-                <dd>Plumbing</dd>
+                <dd>Pipe leak repair</dd>
             </div>
             <div>
                 <dt>Category</dt>
-                <dd>Home Maintenance</dd>
+                <dd>Plumbing</dd>
             </div>
             <div>
                 <dt>Availability</dt>
@@ -65,7 +65,7 @@ with data from the Services backend.
         </dl>
 
         <h3>Description</h3>
-        <p>Pipe repairs and installation.</p>
+        <p>Identify and repair leaking water pipes.</p>
     </section>
 
     <section class="card view-service-metrics">
@@ -149,7 +149,7 @@ Validate administrator permissions on the server.
         Customers will no longer be able to request it.
     </p>
 
-    <p><strong>Service Name:</strong> Plumbing</p>
+    <p><strong>Service Name:</strong> Pipe leak repair</p>
 
     <div style="display: flex; justify-content: flex-end;
                 gap: 12px; margin-top: 24px;">
@@ -253,20 +253,21 @@ Validate administrator permissions on the server.
 
     const serviceData = {
         "2": {
-            "Plumbing": "Electrical Repairs",
-            "Home Maintenance": "Electrical",
-            "Pipe repairs and installation.": "Electrical repairs and installation.",
+            "Pipe leak repair": "Electrical repair",
+            "Plumbing": "Electrical",
+            "Identify and repair leaking water pipes.": 
+                "Identify and repair electrical faults in residential and commercial buildings.",
             "10": "8",
             "03 Nov 2026": "05 Nov 2026",
             "Marcus Reed": "Sofia Martinez",
             "Daniel Morgan": "Oliver Brown"
         },
         "3": {
-            "Plumbing": "Deep Cleaning",
-            "Home Maintenance": "Cleaning",
-            "Pipe repairs and installation.": "Residential and commercial deep cleaning.",
+            "Pipe leak repair": "Home deep cleaning",
+            "Plumbing": "Cleaning",
+            "Identify and repair leaking water pipes.": 
+                "Thorough cleaning of residential rooms, kitchens, bathrooms and other living areas.",
             "10": "4",
-            "Active": "Inactive",
             "03 Nov 2026": "02 Nov 2026",
             "Marcus Reed": "Lucas Wilson",
             "Daniel Morgan": "Emma Davis"
@@ -292,13 +293,26 @@ Validate administrator permissions on the server.
 
         document.querySelector(
             '#deactivateModal p:nth-of-type(2)'
-        ).textContent =
-            'Service Name: ' + selectedService["Plumbing"];
+        ).innerHTML =
+            '<strong>Service Name:</strong> ' +
+            selectedService["Pipe leak repair"];
 
         if (serviceId === "3") {
-            document.querySelector(
+            const statusBadge = document.querySelector(
+                '.view-service-profile .service-details .b'
+            );
+
+            statusBadge.textContent = "Inactive";
+            statusBadge.classList.remove("green");
+            statusBadge.classList.add("red");
+
+            const deactivateButton = document.querySelector(
                 '.view-service-actions button'
-            ).disabled = true;
+            );
+
+            deactivateButton.disabled = true;
+            deactivateButton.style.opacity = "0.5";
+            deactivateButton.textContent = "Already Inactive";
         }
     }
 </script>
