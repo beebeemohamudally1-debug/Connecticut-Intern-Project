@@ -18,6 +18,7 @@ urlpatterns = [
     path('quotations/<int:quotation_id>/pay/', views.payment_record, name='payment_record'),
     # administrator: materials
     path('materials/', views.admin_materials, name='admin_materials'),
+    path('materials/quotations/', views.material_quotation_list, name='material_quotation_list'),
     path('materials/<int:pk>/action/', views.material_request_action, name='material_request_action'),
     path('receipts/<int:pk>/action/', views.receipt_action, name='receipt_action'),
     # handyman

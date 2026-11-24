@@ -1,0 +1,131 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Service Requests (FR-A-4) - list page. View: bookings.views.admin_requests (admin only).
+
+  Data comes from the view as `page`:
+    page.stats    -> all, review, forwarded, accepted
+    page.rows     -> ref, customer, service, handyman, sample, state, label, created (YYYY-MM-DD),
+                     created_label, url
+    page.services -> service names for the Service filter
+  state is worked out from ServiceRequest.status and the handyman's answer
+  (ServiceRequestAssignment): review (not sent yet), forwarded (sent, no answer), accepted,
+  rejected, booked, completed, cancelled. The handyman is the one the customer chose (once sent,
+  the one it was sent to); sample is True when that choice is SAMPLE data (no backend field yet).
+  Search, the service / status / date filters and the page buttons work in the browser on the
+  rows sent (5 per page).
+{% endcomment %}
+
+{% block title %}Service Requests | HandyConnect{% endblock %}
+{% block page %}requests{% endblock %}
+{% block crumb %}Service Requests{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_service_requests.css' %}?v=2">
+
+<div class="bar">
+  <div>
+    <h1>Manage Service Requests</h1>
+    <p class="sub">Review, filter and forward customer service requests.</p>
+  </div>
+</div>
+
+<section class="lq-stats" aria-label="Request totals">
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">All requests</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.all|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">From customers</p>
+  </div>
+  <div class="card lq-stat lq-s-review">
+    <div class="lq-stat-top"><p class="lq-stat-label">Needs review</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.review|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Not sent to a handyman yet</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Forwarded</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.forwarded|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Waiting for the handyman</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Accepted</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.accepted|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Ready for assessment</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-requests data-page-size="5">
+  <h2 class="sr-title">Customer Requests</h2>
+  <div class="lq-tools sr-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search by request, customer or handyman</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search ID, customer or handyman..." data-search>
+    </label>
+    <label><span class="sr-only">Service</span>
+      <select class="in" data-service>
+        <option value="">All services</option>
+        {% for s in page.services %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+      </select>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        {% for key, label in page.states.items %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label><span class="sr-only">Date</span>
+      <select class="in" data-date>
+        <option value="">All dates</option>
+        <option value="7">Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="old">Older than 30 days</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table sr-table">
+    <thead>
+      <tr>
+        <th scope="col">Request ID</th>
+        <th scope="col">Customer</th>
+        <th scope="col">Service</th>
+        <th scope="col">Handyman selected</th>
+        <th scope="col">Received</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in page.rows %}
+      <tr data-row data-status="{{ r.state }}" data-service="{{ r.service }}" data-date="{{ r.created }}"
+          data-text="{{ r.ref|lower }} {{ r.customer|lower }} {{ r.handyman|lower }} {{ r.service|lower }}">
+        <td data-label="Request ID"><span class="lq-id">{{ r.ref }}</span></td>
+        <td data-label="Customer">{{ r.customer }}</td>
+        <td data-label="Service">{{ r.service }}</td>
+        <td data-label="Handyman selected">{% if r.handyman %}{{ r.handyman }}{% if r.sample %} <span class="sr-sample" title="Sample: the backend does not store the customer's choice yet">Sample</span>{% endif %}{% else %}<span class="mut">Not chosen</span>{% endif %}</td>
+        <td data-label="Received">{{ r.created_label }}</td>
+        <td data-label="Status"><span class="b sr-st is-{{ r.state }}">{{ r.label }}</span></td>
+        <td data-label=""><a class="btn o s" href="{{ r.url }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty hidden>{% if page.rows %}Nothing matches that search. Try clearing the filters.{% else %}No service requests yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'bookings/js/admin_service_requests.js' %}"></script>
+{% endblock %}

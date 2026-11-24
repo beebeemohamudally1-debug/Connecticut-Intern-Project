@@ -2,6 +2,7 @@ import os
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import filesizeformat
@@ -49,6 +50,54 @@ def _user_url(u):
 
 def _local_date(dt):
     return timezone.localtime(dt).strftime('%d %B %Y') if dt else '-'
+
+
+SEARCH_LIMIT = 6   # results shown per group; the rest is counted
+
+
+def _match(qs, text, fields):
+    """Every word of the search text must be found in one of the fields ("alex smith" finds Alex Smith)."""
+    for word in text.split():
+        cond = Q()
+        for f in fields:
+            cond |= Q(**{f + '__icontains': word})
+        qs = qs.filter(cond)
+    return qs.distinct()
+
+
+@role_required('admin')
+def search(request):
+    """Navbar search: users, jobs and service requests matching ?q= (read only)."""
+    q = request.GET.get('q', '').strip()
+    groups = []
+    if q:
+        people = _match(User.objects.filter(role__in=['customer', 'handyman']), q,
+                        ['username', 'first_name', 'last_name', 'email', 'phone']).order_by('first_name', 'last_name')
+        jobs = _match(Job.objects.select_related('customer', 'handyman'), q,
+                      ['reference', 'service_name', 'address', 'customer__first_name', 'customer__last_name',
+                       'handyman__first_name', 'handyman__last_name']).order_by('-created_at')
+        requests_ = _match(ServiceRequest.objects.select_related('customer'), q,
+                           ['reference', 'service_category', 'service_address', 'contact_name',
+                            'customer__first_name', 'customer__last_name']).order_by('-created_at')
+        groups = [
+            {'key': 'users', 'title': 'Users', 'count': people.count(), 'rows': [{
+                'title': _person_name(u), 'sub': f'{u.get_role_display()} · {u.email or u.username}',
+                'tag': _account_status(u), 'tone': 'ok' if u.is_active else 'bad', 'url': _user_url(u),
+            } for u in people[:SEARCH_LIMIT]]},
+            {'key': 'jobs', 'title': 'Jobs', 'count': jobs.count(), 'rows': [{
+                'title': f'{j.reference} · {j.service_name}',
+                'sub': f'{_person_name(j.customer)} → {_person_name(j.handyman)}',
+                'tag': _job_state(j)[1], 'tone': 'info',
+                'url': reverse('accounts_admin:work_progress_job', args=[j.pk]),
+            } for j in jobs[:SEARCH_LIMIT]]},
+            {'key': 'requests', 'title': 'Service requests', 'count': requests_.count(), 'rows': [{
+                'title': f'{r.reference} · {r.service_category or "Service request"}',
+                'sub': _person_name(r.customer), 'tag': r.get_status_display(), 'tone': 'info',
+                'url': reverse('bookings:admin_request_detail', args=[r.pk]),
+            } for r in requests_[:SEARCH_LIMIT]]},
+        ]
+    page = {'q': q, 'groups': groups, 'total': sum(g['count'] for g in groups), 'limit': SEARCH_LIMIT}
+    return render(request, 'accounts/admin_search.html', {'page': page})
 
 
 @role_required('admin')

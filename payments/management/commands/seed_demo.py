@@ -1,5 +1,5 @@
 """Fill the local database with demo data for the admin pages (Service Quotations, payments,
-materials, Private Feedback, Job Summary, Complaints, Work Progress and Manage Users).
+materials, Private Feedback, Job Summary, Complaints, Work Progress, Manage Users and Appointments).
 
 Run:      python manage.py seed_demo
 Start over: python manage.py seed_demo --reset
@@ -17,11 +17,11 @@ from django.db import transaction
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from bookings.models import HandymanProfileRequest, ServiceRequest, ServiceRequestAssignment
+from bookings.models import Appointment, HandymanProfileRequest, ServiceRequest, ServiceRequestAssignment
 from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
 from jobs.models import Job, ProgressReport, TimeLog, WorkEvidence
 from reviews.models import Review
-from payments.models import LabourEstimate, MaterialPurchaseRequest, Payment, Quotation
+from payments.models import LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation
 
 User = get_user_model()
 BASE = 'http://127.0.0.1:8000'
@@ -60,6 +60,7 @@ class Command(BaseCommand):
     def reset(self):
         demo = {'request__customer__username__startswith': 'demo_'}
         Payment.objects.filter(quotation__request__customer__username__startswith='demo_').delete()
+        MaterialReceipt.objects.filter(purchase_request__request__customer__username__startswith='demo_').delete()
         MaterialPurchaseRequest.objects.filter(**demo).delete()
         Quotation.objects.filter(**demo).delete()
         LabourEstimate.objects.filter(**demo).delete()
@@ -70,6 +71,7 @@ class Command(BaseCommand):
         demo_complaints.delete()
         Review.objects.filter(customer__username__startswith='demo_').delete()
         Job.objects.filter(customer__username__startswith='demo_').delete()
+        Appointment.objects.filter(service_request__customer__username__startswith='demo_').delete()
         ServiceRequestAssignment.objects.filter(service_request__customer__username__startswith='demo_').delete()
         HandymanProfileRequest.objects.filter(handyman__username__startswith='demo_').delete()
         ServiceRequest.objects.filter(customer__username__startswith='demo_').delete()
@@ -150,9 +152,25 @@ class Command(BaseCommand):
             request_id=self.ids['accepted_waiting']['request'], handyman=handymen[0],
             items='2 gate hinges\n1 padlock', estimated_cost=Decimal('900'))
         # Garden fence: labour and material quotations both accepted, not paid yet (ready to pay).
-        self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False)
+        # One receipt approved, one waiting for review.
+        self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False,
+                      receipts=[('1850', 'approved'), ('1250', 'submitted')])
         # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
-        self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True)
+        self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True,
+                      receipts=[('1150', 'approved'), ('690', 'approved')])
+        # Material Quotations: one request in every other stage
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['changes_requested']['request'], handyman=handymen[1],
+            items='3 tins of wall paint (5 L)\n2 paint rollers\n1 roll of masking tape', estimated_cost=Decimal('2150'))
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['needs_quote']['request'], handyman=handymen[1], items='1 pressure pump\n4 m copper pipe',
+            estimated_cost=Decimal('6500'), status=MaterialPurchaseRequest.REJECTED, reviewed_by=admin,
+            reviewed_at=timezone.now(), admin_note='A new pump is not needed for this repair. Please send the pipe only.')
+        self.material(admin, handymen[0], 'changes_requested_2', '2 tins of deck stain (4 L)\n1 sanding pack', '2400', status='sent')
+        self.material(admin, handymen[1], 'changes_requested_3', '1 bathroom extractor fan\n1 m vent duct\n1 wall grille', '1750',
+                      status='revision_requested', note='The fan looks expensive. Is there a cheaper model?')
+        self.material(admin, handymen[0], 'declined', '2 gutter brackets\n1 tube of sealant', '780', status='declined')
+        self.material(admin, handymen[0], 'sent', '1 ceiling fan\n1 mounting bracket', '3400')
 
         # Private feedback: completed jobs with customer reviews (pending, approved, rejected)
         reviews = [
@@ -199,6 +217,33 @@ class Command(BaseCommand):
 
         self.complaints(admin, review_jobs)
         self.work_progress(admin, customers, handymen, report_jobs)
+        self.appointments(admin, handymen)
+        self.service_requests(admin, customers, handymen)
+
+    def service_requests(self, admin, customers, handymen):
+        """Manage Service Requests: requests in every stage (new, forwarded, rejected, cancelled)."""
+        rows = [
+            # (service, customer, handyman or None, request status, answer, handyman's note, date, slot, address, problem)
+            ('Bathroom plumbing', 3, None, 'submitted', None, '', 27, 'morning', 'Quatre Bornes',
+             'Leaking tap and damaged pipe connection beneath the bathroom sink.'),
+            ('Tap replacement', 0, None, 'reviewing', None, '', 28, 'afternoon', 'Rose Hill',
+             'Kitchen mixer tap is loose and drips constantly.'),
+            ('Electrical repair', 1, 0, 'assigned', 'sent', '', 29, 'morning', 'Curepipe',
+             'Two sockets in the living room stopped working.'),
+            ('Carpentry', 2, 1, 'assigned', 'rejected', 'Unavailable on the requested date.', 26, 'afternoon', 'Vacoas',
+             'Wardrobe door hinge is broken and the door does not close.'),
+            ('Curtain rail fitting', 1, None, 'cancelled', None, '', 24, 'morning', 'Moka',
+             'Fit two curtain rails in the bedroom.'),
+        ]
+        for service, c, h, status, answer, note, day, slot, town, problem in rows:
+            req = ServiceRequest.objects.create(
+                customer=customers[c], service_category=service, problem_description=problem,
+                service_address=f'{town}, Mauritius', contact_name=customers[c].get_full_name(),
+                contact_phone=customers[c].phone, preferred_date=date(2026, 11, day), preferred_slot=slot, status=status)
+            if h is not None:
+                ServiceRequestAssignment.objects.create(
+                    service_request=req, handyman=handymen[h], status=answer, sent_by=admin, response_note=note,
+                    responded_at=timezone.now() if answer != 'sent' else None)
 
     def complaints(self, admin, jobs):
         """Demo complaints in every status, with private messages, a photo and a status log."""
@@ -261,6 +306,29 @@ class Command(BaseCommand):
             when + timedelta(hours=8))
         move(c, Complaint.RESOLVED, when + timedelta(days=2), 'Outcome recorded',
              outcome='The handyman returned at no charge and removed the paint marks. The customer confirmed the floor is clean.')
+
+    def appointments(self, admin, handymen):
+        """Inspection and service appointments in every status, around today, with one booking clash."""
+        today = timezone.localdate()
+        A = Appointment
+        rows = [
+            # key, type, handyman, days from today, slot, status, note
+            ('paid', A.TYPE_SERVICE, 1, 2, 'morning', A.STATUS_CONFIRMED, 'The handyman will call 30 minutes before arriving.'),
+            ('needs_review_3', A.TYPE_INSPECTION, 1, 2, 'morning', A.STATUS_PENDING, ''),          # clashes with the one above
+            ('needs_review', A.TYPE_INSPECTION, 0, 1, 'afternoon', A.STATUS_PENDING, ''),
+            ('estimate_revision', A.TYPE_INSPECTION, 0, 5, 'morning', A.STATUS_CONFIRMED, ''),
+            ('sent', A.TYPE_INSPECTION, 1, 8, 'afternoon', A.STATUS_CONFIRMED, ''),
+            ('needs_review_2', A.TYPE_INSPECTION, 1, 0, 'afternoon', A.STATUS_CONFIRMED, ''),
+            ('accepted_waiting', A.TYPE_INSPECTION, 0, -6, 'morning', A.STATUS_COMPLETED, ''),
+            ('needs_quote', A.TYPE_INSPECTION, 1, -3, 'afternoon', A.STATUS_COMPLETED, ''),
+            ('declined', A.TYPE_INSPECTION, 0, -1, 'morning', A.STATUS_CANCELLED, 'Customer was away.'),
+            ('changes_requested', A.TYPE_INSPECTION, 1, -2, 'morning', A.STATUS_PENDING, ''),  # date passed, never confirmed
+        ]
+        for key, kind, h, days, slot, status, note in rows:
+            done = status in (A.STATUS_CONFIRMED, A.STATUS_COMPLETED)
+            A.objects.create(service_request_id=self.ids[key]['request'], handyman=handymen[h], appointment_type=kind,
+                             appointment_date=today + timedelta(days=days), time_slot=slot, status=status, notes=note,
+                             confirmed_by=admin if done else None, confirmed_at=timezone.now() if done else None)
 
     def profile_requests(self, admin, handymen):
         """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""
@@ -360,6 +428,21 @@ class Command(BaseCommand):
         for key, days in [('accepted', 4), ('accepted_waiting', 6)]:
             Job.objects.filter(pk=report_jobs[key].pk).update(due_date=today + timedelta(days=days))
 
+    def receipt_image(self, name, amount):
+        """A small image that looks like a shop receipt."""
+        from PIL import Image, ImageDraw
+        img = Image.new('RGB', (300, 420), (255, 255, 255))
+        d = ImageDraw.Draw(img)
+        d.text((24, 22), 'HARDWARE STORE LTD', fill=(40, 50, 70))
+        for y in range(70, 300, 28):
+            d.line([24, y, 200, y], fill=(170, 180, 195), width=3)
+            d.line([230, y, 276, y], fill=(170, 180, 195), width=3)
+        d.line([24, 330, 276, 330], fill=(40, 50, 70), width=2)
+        d.text((24, 350), f'TOTAL  MUR {amount}', fill=(40, 50, 70))
+        buf = BytesIO()
+        img.save(buf, 'PNG')
+        return ContentFile(buf.getvalue(), name=name)
+
     def photo(self, name, n):
         """A small plain image to stand in for a site photograph."""
         from PIL import Image, ImageDraw
@@ -373,12 +456,20 @@ class Command(BaseCommand):
         img.save(buf, 'PNG')
         return ContentFile(buf.getvalue(), name=name)
 
-    def material(self, admin, handyman, key, items, cost, paid):
+    def material(self, admin, handyman, key, items, cost, paid=False, status='accepted', note='', receipts=()):
+        """A purchase request forwarded as a material quotation, then answered by the customer."""
         mat = MaterialPurchaseRequest.objects.create(
             request_id=self.ids[key]['request'], handyman=handyman, items=items, estimated_cost=Decimal(cost))
         q = mat.forward(admin)
-        q.status, q.responded_at = 'accepted', timezone.now()
-        q.save()
+        if status != 'sent':
+            q.status, q.responded_at, q.customer_note = status, timezone.now(), note
+            q.save()
+        for i, (amount, state) in enumerate(receipts, 1):
+            MaterialReceipt.objects.create(
+                purchase_request=mat, uploaded_by=handyman, amount_spent=Decimal(amount), status=state,
+                image=self.receipt_image(f'demo_receipt_{mat.pk}_{i}.png', amount),
+                reviewed_by=admin if state != 'submitted' else None,
+                reviewed_at=timezone.now() if state != 'submitted' else None)
         if paid:
             Payment.objects.create(quotation=q, amount=q.total_amount, date_received=date(2026, 11, 15),
                                    method='bank_transfer', reference='DEMO-PAY-002', recorded_by=admin)
@@ -405,6 +496,8 @@ class Command(BaseCommand):
         out(f'  Private feedback:  {BASE}/reviews/admin/')
         out(f'  Work progress:     {BASE}/admin-portal/work-progress/')
         out(f'  Manage users:      {BASE}/admin-portal/users/')
+        out(f'  Appointments:      {BASE}/admin-portal/appointments/')
+        out(f'  Service requests:  {BASE}/bookings/admin/requests/')
         if 'needs_quote' in ids:
             i = ids['needs_quote']
             out('\nCreate quotation (from an approved estimate)')

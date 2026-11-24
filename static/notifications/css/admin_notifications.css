@@ -78,6 +78,9 @@
 .nt-body { flex: 1; min-width: 0; }
 .nt-body p { margin: 0; }
 .nt-title { font-size: 15px; font-weight: 700; color: var(--text); }
+/* A notification with a page opens it (the item is marked as read on the way) */
+.nt-link { color: inherit; text-decoration: none; }
+.nt-link:hover { color: var(--blue); text-decoration: underline; }
 .nt-text { margin-top: 2px; font-size: 14px; }
 .nt-time { margin-top: 4px; font-size: 12px; }
 

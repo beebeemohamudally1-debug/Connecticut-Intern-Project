@@ -1,4 +1,5 @@
 from django.urls import path
+from . import admin_appointments as appointments
 from . import admin_views as views
 
 app_name = 'accounts_admin'
@@ -6,6 +7,7 @@ app_name = 'accounts_admin'
 urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('users/', views.users, name='users'),
+    path('search/', views.search, name='search'),
     path('users/customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('users/handyman/<int:pk>/', views.handyman_profile, name='handyman_profile'),
     path('users/handyman/documents/', views.handyman_documents, name='handyman_documents'),
@@ -21,4 +23,9 @@ urlpatterns = [
     path('complaints/<int:pk>/customer/', views.complaint_conversation, {'who': 'customer'}, name='complaint_customer'),
     path('complaints/<int:pk>/handyman/', views.complaint_conversation, {'who': 'handyman'}, name='complaint_handyman'),
     path('complaints/<int:pk>/resolve/', views.complaint_resolve, name='complaint_resolve'),
+    path('appointments/', appointments.appointments, name='appointments'),
+    path('appointments/calendar/', appointments.appointment_calendar, name='appointment_calendar'),
+    path('appointments/schedule/<str:kind>/', appointments.appointment_schedule, name='appointment_schedule'),
+    path('appointments/<int:pk>/', appointments.appointment_detail, name='appointment_detail'),
+    path('appointments/<int:pk>/reschedule/', appointments.appointment_reschedule, name='appointment_reschedule'),
 ]
