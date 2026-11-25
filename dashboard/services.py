@@ -1,7 +1,7 @@
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-
+from django.urls import reverse
 from jobs.models import Job
 from complaints.models import Complaint
 from django.utils import timezone
@@ -97,6 +97,16 @@ def get_admin_dashboard_stats():
         # Handyman profile requests
         'pending_profile_requests': HandymanProfileRequest.objects.filter(
             status=HandymanProfileRequest.STATUS_PENDING
+        ).count(),
+
+        'pending_handyman_service_requests': HandymanProfileRequest.objects.filter(
+            status=HandymanProfileRequest.STATUS_PENDING,
+            request_type=HandymanProfileRequest.TYPE_SERVICE
+        ).count(),
+
+        'pending_handyman_skill_requests': HandymanProfileRequest.objects.filter(
+            status=HandymanProfileRequest.STATUS_PENDING,
+            request_type=HandymanProfileRequest.TYPE_SKILL
         ).count(),
 
 
@@ -217,7 +227,7 @@ def get_admin_pending_tasks():
             'title': 'New Service Requests',
             'text': 'Service requests waiting for review',
             'count': stats['new_service_requests'],
-            'url': '#',
+            'url': reverse('bookings:admin_requests'),
         },
         {
             'key': 'appointments',
@@ -225,7 +235,7 @@ def get_admin_pending_tasks():
             'title': 'Pending Appointments',
             'text': 'Appointments waiting for confirmation',
             'count': stats['pending_appointments'],
-            'url': '#',
+            'url': reverse('accounts_admin:appointments'),
         },
         {
             'key': 'payments',
@@ -233,7 +243,7 @@ def get_admin_pending_tasks():
             'title': 'Payments Awaiting Collection',
             'text': 'Accepted quotations without recorded payment',
             'count': stats['awaiting_payment'],
-            'url': '/payments/admin-record-payment/',
+            'url': reverse('payments:quotation_list'),
         },
         {
             'key': 'complaints',
@@ -241,23 +251,32 @@ def get_admin_pending_tasks():
             'title': 'Pending Complaints',
             'text': 'Complaints waiting for administrator action',
             'count': stats['pending_complaints'],
-            'url': '/complaints/',
+            'url': reverse('accounts_admin:complaints'),
+        },
+        {
+            'key': 'services',
+            'cat': 'handyman_services',
+            'title': 'Handyman Service Requests',
+            'text': 'Service changes waiting for approval',
+            'count': stats['pending_handyman_service_requests'],
+            'url': reverse('accounts_admin:handyman_requests'),
         },
         {
             'key': 'skills',
             'cat': 'skills',
-            'title': 'Handyman Profile Requests',
-            'text': 'Profile changes waiting for approval',
-            'count': stats['pending_profile_requests'],
-            'url': '#',
+            'title': 'Handyman Skill Requests',
+            'text': 'Skill changes waiting for approval',
+            'count': stats['pending_handyman_skill_requests'],
+            'url': reverse('accounts_admin:skill_requests'),
         },
+        
         {
             'key': 'requests',
             'cat': 'quotations',
             'title': 'Draft Quotations',
             'text': 'Quotations that have not been sent',
             'count': stats['draft_quotations'],
-            'url': '#',
+            'url': reverse('payments:quotation_list'),
         },
     ]
 
@@ -329,5 +348,5 @@ def get_admin_payment_details(limit=10):
             },
         ],
         'payment_actions': payment_actions,
-        'payments_url': '/payments/admin-record-payment/',
+        'payments_url': reverse('payments:quotation_list'),
     }
