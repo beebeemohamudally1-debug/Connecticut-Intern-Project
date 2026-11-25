@@ -411,7 +411,10 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
 1. **Final material quotation:** an accepted material quotation cannot be changed or sent again. A view that sets its total to the approved receipts total and sends it to the customer, then set the pop-up form's `action` and remove `data-demo`.
 2. **Invoice check:** `Invoice.issue_job` does not check the receipts or the actual cost, so the invoice is only held back on this page.
 3. **Come back after saving:** `invoice_issue`, `inspection_invoice_issue` and `invoice_record_payment` go to the Invoices list. Redirecting to a safe `next` (like `receipt_action`) would bring the admin back to Payment Status or Schedule Inspection.
-4. **No materials:** `LabourEstimate.materials_needed` does not exist yet, so no material request (or a rejected one) counts as "no materials needed".
+4. **No materials needed (team rule, no backend change):** the handyman sends a material request for every job with the existing form; **estimated cost 0** means "no materials needed". The rule is `materials_state` in `accounts/admin_payments.py` (template filter in `accounts/templatetags/admin_materials.py`):
+   - Cost 0: Material Quotations shows "No materials needed" (no Review / Forward), and Service Quotation Details, Payment Status and Schedule Service treat the job as labour only (Check Payment Status, invoice and Schedule on the labour quotation alone).
+   - No request yet (or the last one rejected): "Waiting for the handyman's material request", and payment waits.
+   - `Invoice.issue_job` does not know this rule, so a labour-only invoice is only held back on the admin pages.
 
 ## Back links
 `static/js/admin_back.js` (loaded by `base_admin.html`) makes the "← Back" link of every admin page go back to the admin page the admin came from, with its name ("Back to Skill Details", "Back to search results"). The pages and labels are the `PAGES` list at the top of the file: add a new admin page there.
