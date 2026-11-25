@@ -1,6 +1,7 @@
 from django import forms
 
-from .models import LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation
+from .models import (InvoicePayment, LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation,
+                     default_due_date, default_payment_instructions)
 
 
 class StyledMixin:
@@ -67,3 +68,46 @@ class MaterialReceiptForm(StyledModelForm):
         model = MaterialReceipt
         fields = ['image', 'amount_spent']
         labels = {'image': 'Receipt photo', 'amount_spent': 'Amount spent (MUR)'}
+
+
+# ---------------------------------------------------------- invoices
+def _date_widget():
+    return forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
+
+
+class InvoiceIssueForm(StyledMixin, forms.Form):
+    """Admin: issue a job invoice. The amounts come from the accepted quotations."""
+
+    due_date = forms.DateField(label='Payment deadline', widget=_date_widget(), initial=default_due_date)
+    payment_instructions = forms.CharField(label='Payment instructions', widget=forms.Textarea(attrs={'rows': 3}),
+                                           initial=default_payment_instructions)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.style_fields()
+
+
+class InspectionInvoiceForm(StyledMixin, forms.Form):
+    """Admin: issue the fixed inspection fee. The fee itself is set in settings, not typed in."""
+
+    reason = forms.CharField(label='Reason given by handyman', widget=forms.Textarea(attrs={'rows': 3}))
+    due_date = forms.DateField(label='Payment deadline', widget=_date_widget(), initial=default_due_date)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.style_fields()
+
+
+class InvoicePaymentForm(StyledModelForm):
+    received = forms.ChoiceField(label='Payment status', choices=[('yes', 'Received'), ('no', 'Not received')])
+
+    class Meta:
+        model = InvoicePayment
+        fields = ['amount', 'date_received', 'method', 'reference']
+        labels = {
+            'amount': 'Amount received (MUR)',
+            'date_received': 'Date received',
+            'method': 'Payment method',
+            'reference': 'Reference number (optional)',
+        }
+        widgets = {'date_received': _date_widget()}
