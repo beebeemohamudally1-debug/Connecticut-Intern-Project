@@ -2,6 +2,7 @@ from django.urls import path
 from . import admin_appointments as appointments
 from . import admin_skills as skills
 from . import admin_views as views
+from . import admin_actions as actions
 from django.views.generic import TemplateView
 from dashboard.permissions import role_required
 app_name = 'accounts_admin'
@@ -9,6 +10,9 @@ app_name = 'accounts_admin'
 urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('users/', views.users, name='users'),
+    path('users/<int:pk>/suspend/', actions.suspend_user, name='suspend_user'),
+    path('users/<int:pk>/reactivate/', actions.reactivate_user, name='reactivate_user'),
+    path('users/<int:pk>/delete/', actions.delete_user, name='delete_user'),
     path('search/', views.search, name='search'),
     path('users/customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('users/handyman/<int:pk>/', views.handyman_profile, name='handyman_profile'),

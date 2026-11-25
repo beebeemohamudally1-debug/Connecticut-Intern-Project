@@ -3,6 +3,8 @@ from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import filesizeformat
@@ -20,12 +22,30 @@ User = get_user_model()
 
 @role_required('admin')
 def profile(request):
-    """Admin Profile: the logged-in administrator.
-
-    Saving is not connected yet: the accounts app has no profile update view
-    (the form keeps data-demo until one exists).
-    """
+    """Admin Profile: the logged-in administrator. A POST saves the full name and email."""
     u = request.user
+    error = ''
+    if request.method == 'POST':
+        full_name = ' '.join(request.POST.get('full_name', '').split())
+        email = request.POST.get('email', '').strip().lower()
+        try:
+            validate_email(email)
+            email_ok = True
+        except ValidationError:
+            email_ok = False
+        if not full_name:
+            error = 'Enter your full name.'
+        elif len(full_name) > 150:
+            error = 'The full name is too long.'
+        elif not email_ok:
+            error = 'Enter a valid email address.'
+        elif User.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
+            error = 'That email address is already used by another account.'
+        else:
+            u.first_name, _, u.last_name = full_name.partition(' ')
+            u.email = email
+            u.save(update_fields=['first_name', 'last_name', 'email'])
+            return redirect(reverse('accounts_admin:profile') + '?saved=1')
     admin = {
         'name': _person_name(u),
         'initials': _initials(u),
@@ -33,7 +53,8 @@ def profile(request):
         'role': 'Administrator',
         'status': 'Active' if u.is_active else 'Inactive',
     }
-    return render(request, 'accounts/admin_profile.html', {'admin': admin})
+    return render(request, 'accounts/admin_profile.html', {
+        'admin': admin, 'error': error, 'saved': request.GET.get('saved') == '1'})
 
 # ---------- Manage Users (section 3): real accounts.User and accounts.HandymanProfile data ----------
 # Not in the backend yet: suspend / reactivate / delete views, registration documents and
@@ -65,6 +86,13 @@ def _user_url(u):
     name = 'accounts_admin:handyman_profile' if u.role == 'handyman' else 'accounts_admin:customer_detail'
     return reverse(name, args=[u.pk])
 
+def _action_urls(u):
+    """Addresses of the Suspend / Reactivate / Delete actions for the pop-ups."""
+    return {
+        'suspend_url': reverse('accounts_admin:suspend_user', args=[u.pk]),
+        'reactivate_url': reverse('accounts_admin:reactivate_user', args=[u.pk]),
+        'delete_url': reverse('accounts_admin:delete_user', args=[u.pk]),
+    }
 
 def _local_date(dt):
     return timezone.localtime(dt).strftime('%d %B %Y') if dt else '-'
@@ -143,6 +171,7 @@ def customer_detail(request, pk):
     reqs = list(ServiceRequest.objects.filter(customer=u).order_by('-created_at'))
     done, cancelled = ServiceRequest.STATUS_COMPLETED, ServiceRequest.STATUS_CANCELLED
     customer = {
+                **_action_urls(u),
         'kind': 'customer', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'registered': _local_date(u.date_joined),
         'email': u.email or '-', 'phone': u.phone or '-',
@@ -197,6 +226,7 @@ def handyman_profile(request, pk):
         services = _approved_values(u, HandymanProfileRequest.TYPE_SERVICE)
         areas, verified = '', None
     handyman = {
+                **_action_urls(u),
         'kind': 'handyman', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'verified': verified,
         'status': _account_status(u), 'email': u.email or '-', 'phone': u.phone or '-',

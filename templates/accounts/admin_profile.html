@@ -33,8 +33,7 @@
 </div>
 
 {# BACKEND: remove data-demo when the profile update view exists (see the comment at the top). #}
-<form class="card profile" method="post" action="" novalidate data-profile-form
-      data-demo="Profile changes are not saved yet (frontend demo only).">
+<form class="card profile" method="post" action="" novalidate data-profile-form>
   {% csrf_token %}
 
   <div class="profile-head">
@@ -111,4 +110,10 @@
 </form>
 {% endblock %}
 
-{% block page_js %}<script src="{% static 'accounts/js/admin_profile.js' %}" defer></script>{% endblock %}
+{% block page_js %}<script src="{% static 'accounts/js/admin_profile.js' %}" defer></script>
+{% if saved %}<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var toast = document.querySelector('[data-toast]');
+  if (toast) { toast.textContent = 'Profile updated.'; toast.hidden = false; setTimeout(function () { toast.hidden = true; }, 3500); }
+});
+</script>{% endif %}{% endblock %}

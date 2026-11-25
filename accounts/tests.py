@@ -18,6 +18,8 @@ import io
 import shutil
 import tempfile
 
+from django.contrib.sessions.models import Session
+from django.test import Client
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from PIL import Image
@@ -404,4 +406,107 @@ class ProviderStatusTests(TestCase):
         r = self.client.get(reverse('accounts:provider_status'))
         self.assertContains(r, 'mine1@example.com')
         self.assertNotContains(r, 'other1@example.com')
+        
+class AdminProfileTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='adm1', email='adm1@example.com', password=PASSWORD,
+            role='admin', is_staff=True, first_name='Ada', last_name='Lovelace')
+        self.other = User.objects.create_user(username='oth1', email='oth1@example.com', password=PASSWORD)
+        self.url = reverse('accounts_admin:profile')
+        self.client.force_login(self.admin)
+
+    def test_saves_name_and_email(self):
+        r = self.client.post(self.url, {'full_name': 'Grace Hopper', 'email': 'Grace@Example.com'})
+        self.assertEqual(r.status_code, 302)
+        self.admin.refresh_from_db()
+        self.assertEqual((self.admin.first_name, self.admin.last_name), ('Grace', 'Hopper'))
+        self.assertEqual(self.admin.email, 'grace@example.com')
+
+    def test_email_used_by_someone_else_is_refused(self):
+        r = self.client.post(self.url, {'full_name': 'Ada Lovelace', 'email': 'oth1@example.com'})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('already used', r.context['error'])
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.email, 'adm1@example.com')
+
+    def test_invalid_email_is_refused(self):
+        r = self.client.post(self.url, {'full_name': 'Ada Lovelace', 'email': 'not-an-email'})
+        self.assertIn('valid email', r.context['error'])
+
+    def test_empty_name_is_refused(self):
+        r = self.client.post(self.url, {'full_name': '   ', 'email': 'adm1@example.com'})
+        self.assertIn('full name', r.context['error'])
+
+    def test_non_admin_cannot_open_the_page(self):
+        self.client.force_login(self.other)
+        r = self.client.get(self.url)
+        self.assertIn(r.status_code, (302, 403, 404))
+        
+class AdminUserActionTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='adm2', email='adm2@example.com', password=PASSWORD, role='admin', is_staff=True)
+        self.customer = User.objects.create_user(
+            username='cus2', email='cus2@example.com', password=PASSWORD, role='customer')
+        self.handyman = User.objects.create_user(
+            username='han2', email='han2@example.com', password=PASSWORD, role='handyman')
+        self.client.force_login(self.admin)
+
+    def act(self, name, user):
+        return self.client.post(reverse('accounts_admin:' + name, args=[user.pk]))
+
+    def sessions_of(self, user):
+        return sum(1 for s in Session.objects.all() if s.get_decoded().get('_auth_user_id') == str(user.pk))
+
+    def test_suspend_then_reactivate_a_customer(self):
+        r = self.act('suspend_user', self.customer)
+        self.assertRedirects(r, reverse('accounts_admin:customer_detail', args=[self.customer.pk]),
+                             fetch_redirect_response=False)
+        self.customer.refresh_from_db()
+        self.assertTrue(self.customer.is_suspended)
+        self.act('reactivate_user', self.customer)
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_suspended)
+        self.assertTrue(self.customer.is_active)
+
+    def test_suspend_a_handyman_goes_back_to_the_handyman_page(self):
+        r = self.act('suspend_user', self.handyman)
+        self.assertRedirects(r, reverse('accounts_admin:handyman_profile', args=[self.handyman.pk]),
+                             fetch_redirect_response=False)
+
+    def test_delete_deactivates_the_account(self):
+        self.act('delete_user', self.customer)
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_active)
+        self.assertTrue(User.objects.filter(pk=self.customer.pk).exists())   # soft delete: the row stays
+
+    def test_suspending_ends_the_users_open_sessions(self):
+        Client().force_login(self.customer)
+        self.assertEqual(self.sessions_of(self.customer), 1)
+        self.act('suspend_user', self.customer)
+        self.assertEqual(self.sessions_of(self.customer), 0)
+
+    def test_get_request_is_refused(self):
+        r = self.client.get(reverse('accounts_admin:suspend_user', args=[self.customer.pk]))
+        self.assertEqual(r.status_code, 405)
+
+    def test_non_admin_cannot_suspend(self):
+        self.client.force_login(self.handyman)
+        self.act('suspend_user', self.customer)
+        self.customer.refresh_from_db()
+        self.assertFalse(self.customer.is_suspended)
+
+    def test_admin_cannot_act_on_themselves(self):
+        r = self.act('suspend_user', self.admin)
+        self.assertEqual(r.status_code, 404)
+        self.admin.refresh_from_db()
+        self.assertFalse(self.admin.is_suspended)
+
+    def test_detail_pages_post_to_the_real_actions(self):
+        r = self.client.get(reverse('accounts_admin:customer_detail', args=[self.customer.pk]))
+        self.assertContains(r, reverse('accounts_admin:suspend_user', args=[self.customer.pk]))
+        r = self.client.get(reverse('accounts_admin:handyman_profile', args=[self.handyman.pk]))
+        self.assertContains(r, reverse('accounts_admin:delete_user', args=[self.handyman.pk]))
+        
 # Create your tests here.
