@@ -1,6 +1,16 @@
 {% extends "base_customer.html" %}
-{% block title %}Customer · My penalties | HandyConnect{% endblock %}
+{% comment %}
+  OPTIONAL context: penalties -> each: date, job_reference, reason, amount, status_label, paid (bool)
+  No penalty model/view exists yet in the codebase, so this renders the empty state until the backend provides the list.
+{% endcomment %}
+{% block title %}My penalties | HandyConnect{% endblock %}
 {% block page %}penalties{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Your account</div><h1>My penalties</h1><p class="sub">Fixed penalties charged for missed visits or appointments.</p></div></div><div class="card"><table class="tb"><thead><tr><th>Date</th><th>Job</th><th>Reason</th><th>Amount (MUR)</th><th>Status</th></tr></thead><tbody><tr><td>02/11/2026</td><td>JOB-1033</td><td>Missed appointment</td><td>500.00</td><td><span class="b ye">Unpaid</span></td></tr><tr><td>18/10/2026</td><td>JOB-1021</td><td>Missed inspection</td><td>500.00</td><td><span class="b gr">Paid</span></td></tr></tbody></table></div><p class="sub" style="margin-top:16px">Penalty amounts are set in the terms and conditions.</p>
+<div class="cp-head"><div><h1>My penalties</h1><p>Fixed penalties charged for missed visits or appointments.</p></div></div>
+<section class="cp-panel"><div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="penalty-table">
+  <thead><tr><th scope="col">Date</th><th scope="col">Job</th><th scope="col">Reason</th><th scope="col" class="is-num">Amount (MUR)</th><th scope="col">Status</th></tr></thead>
+  <tbody>{% for p in penalties %}<tr><td data-label="Date">{{ p.date }}</td><td data-label="Job">{{ p.job_reference }}</td><td data-label="Reason">{{ p.reason }}</td><td class="is-num is-strong" data-label="Amount">{{ p.amount }}</td>
+    <td data-label="Status">{% if p.paid %}{% include "customer/_badge.html" with tone="ok" label=p.status_label|default:"Paid" %}{% else %}{% include "customer/_badge.html" with tone="warn" label=p.status_label|default:"Unpaid" %}{% endif %}</td></tr>
+  {% empty %}<tr class="cp-empty-row"><td colspan="5">You have no penalties. Thank you for keeping your appointments.</td></tr>{% endfor %}</tbody></table></div>
+  <p class="cp-small">Penalty amounts are set in the terms and conditions.</p></section>
 {% endblock %}

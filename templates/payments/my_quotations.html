@@ -1,28 +1,26 @@
 {% extends "base_customer.html" %}
+{% comment %} REQUIRED (unchanged): quotations (each: request.reference, get_quotation_type_display, total_amount, status, get_status_display, is_paid, pk). {% endcomment %}
 {% block title %}My quotations | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div class="lab">Your account</div>
-<h1>My quotations</h1>
-<p class="sub">Labour and material quotations sent to you.</p>
-{% include "payments/_messages.html" %}
-<div class="card">
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Type</th><th>Total (MUR)</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+<div class="cp-head"><div><h1>Quotations</h1><p>Labour and material quotations sent to you. Nothing starts until you approve.</p></div></div>
+<section class="cp-panel" aria-label="Your quotations">
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="quotation-table">
+    <thead><tr><th scope="col">Request</th><th scope="col">Type</th><th scope="col" class="is-num">Total (MUR)</th><th scope="col">Status</th><th scope="col">Payment</th><th scope="col"><span class="cp-sr">Action</span></th></tr></thead>
     <tbody>
     {% for q in quotations %}
       <tr>
-        <td>{{ q.request.reference }}</td>
-        <td>{{ q.get_quotation_type_display }}</td>
-        <td>{{ q.total_amount }}</td>
-        <td><span class="b {% if q.status == 'accepted' %}gr{% elif q.status == 'declined' or q.status == 'cancelled' %}re{% else %}ye{% endif %}">{{ q.get_status_display }}</span></td>
-        <td><span class="b {% if q.is_paid %}gr{% else %}ye{% endif %}">{% if q.is_paid %}Paid{% else %}Unpaid{% endif %}</span></td>
-        <td><a href="{% url 'payments:quotation_detail' q.pk %}">View</a></td>
+        <td data-label="Request">{{ q.request.reference }}</td>
+        <td data-label="Type">{{ q.get_quotation_type_display }}</td>
+        <td class="is-num is-strong" data-label="Total">{{ q.total_amount }}</td>
+        <td data-label="Status">{% if q.status == 'accepted' %}{% include "customer/_badge.html" with tone="ok" label=q.get_status_display %}{% elif q.status == 'declined' or q.status == 'cancelled' %}{% include "customer/_badge.html" with tone="bad" label=q.get_status_display %}{% elif q.status == 'sent' %}{% include "customer/_badge.html" with tone="warn" label="Pending approval" %}{% else %}{% include "customer/_badge.html" with tone="info" label=q.get_status_display %}{% endif %}</td>
+        <td data-label="Payment">{% if q.is_paid %}{% include "customer/_badge.html" with tone="ok" label="Paid" %}{% else %}{% include "customer/_badge.html" with tone="warn" label="Unpaid" %}{% endif %}</td>
+        <td data-label=""><a class="cp-link" href="{% url 'payments:quotation_detail' q.pk %}">{% if q.status == 'sent' %}Review{% else %}View{% endif %}</a></td>
       </tr>
     {% empty %}
-      <tr><td colspan="6" class="mut">You have no quotations yet.</td></tr>
+      <tr class="cp-empty-row"><td colspan="6">You have no quotations yet. When an administrator prepares one it will appear here.</td></tr>
     {% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div>
+</section>
 {% endblock %}

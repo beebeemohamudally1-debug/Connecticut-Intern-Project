@@ -1,0 +1,74 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  NEW SERVICE REQUEST (3-step feel on one page; the step bar fills as sections are completed).
+  URL name expected:  customer_portal:new_request   (POST here, enctype multipart)
+  POST field names (map 1:1 to bookings.ServiceRequest where a column exists):
+    service_category*   -> ServiceRequest.service_category      service_type -> (new column or folded into the description)
+    title*              -> (new column or first line of problem_description)
+    problem_description* -> ServiceRequest.problem_description
+    attachments (multiple files, jpg/png/pdf <= 10 MB, optional)
+    service_address*    -> service_address      contact_name* -> contact_name      contact_phone* -> contact_phone
+    preferred_date*     -> preferred_date (YYYY-MM-DD)   preferred_slot* -> preferred_slot  ('morning' | 'afternoon')
+    access_notes        -> (new column)
+  CONTEXT (all optional):
+    values  dict of previously posted values (repopulates the form after a validation error)
+    errors  dict {field_name: "message"}  and  form_error "message"
+    categories  list of strings (default: Plumbing, Electrical, Painting, Cleaning, Carpentry)
+    service_types  list of strings (otherwise the field is a free text input)
+    initial_category   string; the page also reads ?category=Plumbing from the dashboard shortcuts
+    support_phone, service_areas
+{% endcomment %}
+{% block title %}New service request | HandyConnect{% endblock %}
+{% block page %}customer-new-request{% endblock %}
+{% block content %}
+{% firstof values.service_category initial_category request.GET.category as sel %}
+{% url 'customer_portal:requests' as u_requests %}
+<div class="cp-head"><div><h1>Let’s take care of that.</h1><p>New service request · Tell us a little about the job.</p></div></div>
+<ol class="cp-steps" aria-label="Request steps" style="padding:0">
+  <li class="cp-step is-current">01 &nbsp;Service &amp; details</li><li class="cp-step">02 &nbsp;Address &amp; timing</li><li class="cp-step">03 &nbsp;Review &amp; submit</li>
+</ol>
+{% if form_error %}<div class="cp-notice is-bad" role="alert"><svg class="cp-ic" aria-hidden="true"><use href="#i-alert"/></svg><div><strong>We couldn’t send your request</strong><p>{{ form_error }}</p></div></div>{% endif %}
+<div class="cp-cols is-form-side">
+  <form method="post" enctype="multipart/form-data" action="" class="cp-stack" novalidate data-cp-form-steps data-hook="request-form">
+    {% csrf_token %}
+    <section class="cp-panel" aria-labelledby="cp-s1"><h2 id="cp-s1">What needs a helping hand?</h2>
+      <div class="cp-form-row">
+        <div class="cp-field"><label for="f-cat">Service category <span class="cp-req" aria-hidden="true">*</span></label>
+          <select class="cp-select" id="f-cat" name="service_category" required data-step="1"{% if errors.service_category %} aria-invalid="true"{% endif %}><option value="">Choose a category</option>
+            {% for c in categories %}<option{% if sel == c %} selected{% endif %}>{{ c }}</option>{% empty %}
+            <option{% if sel == 'Plumbing' %} selected{% endif %}>Plumbing</option><option{% if sel == 'Electrical' %} selected{% endif %}>Electrical</option><option{% if sel == 'Painting' %} selected{% endif %}>Painting</option><option{% if sel == 'Cleaning' %} selected{% endif %}>Cleaning</option><option{% if sel == 'Carpentry' %} selected{% endif %}>Carpentry</option>{% endfor %}</select>
+          {% if errors.service_category %}<p class="cp-error">{{ errors.service_category }}</p>{% endif %}</div>
+        <div class="cp-field"><label for="f-type">Service type</label>
+          {% if service_types %}<select class="cp-select" id="f-type" name="service_type"><option value="">Choose a type</option>{% for t in service_types %}<option{% if values.service_type == t %} selected{% endif %}>{{ t }}</option>{% endfor %}</select>
+          {% else %}<input class="cp-input" id="f-type" name="service_type" value="{{ values.service_type }}" placeholder="e.g. Leak repair">{% endif %}</div>
+      </div>
+      <div class="cp-field"><label for="f-title">Request title <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="f-title" name="title" value="{{ values.title }}" placeholder="Kitchen sink leak repair" maxlength="120" required data-step="1"{% if errors.title %} aria-invalid="true"{% endif %}>{% if errors.title %}<p class="cp-error">{{ errors.title }}</p>{% endif %}</div>
+      <div class="cp-field"><label for="f-desc">Describe the issue <span class="cp-req" aria-hidden="true">*</span></label><textarea class="cp-textarea" id="f-desc" name="problem_description" rows="5" maxlength="1500" required data-step="1" data-cp-count="f-desc-n" placeholder="What’s happening, when did it start, and anything we should know?"{% if errors.problem_description %} aria-invalid="true"{% endif %}>{{ values.problem_description }}</textarea><span class="cp-count" id="f-desc-n"></span>{% if errors.problem_description %}<p class="cp-error">{{ errors.problem_description }}</p>{% endif %}</div>
+      <div class="cp-field"><span class="cp-label">Photos</span>
+        <label class="cp-upload" data-cp-upload data-max-mb="10"><svg class="cp-ic" aria-hidden="true"><use href="#i-image"/></svg><span>Add photos · JPG, PNG or PDF up to 10 MB</span><span class="cp-upload-names"></span><input type="file" name="attachments" accept=".jpg,.jpeg,.png,.pdf" multiple></label>
+        {% if errors.attachments %}<p class="cp-error">{{ errors.attachments }}</p>{% endif %}</div>
+    </section>
+    <section class="cp-panel" aria-labelledby="cp-s2"><h2 id="cp-s2">Where and when?</h2>
+      <div class="cp-field"><label for="f-addr">Service address <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="f-addr" name="service_address" value="{{ values.service_address }}" autocomplete="street-address" required data-step="2" placeholder="Street, town"{% if errors.service_address %} aria-invalid="true"{% endif %}>{% if errors.service_address %}<p class="cp-error">{{ errors.service_address }}</p>{% endif %}</div>
+      <div class="cp-form-row">
+        <div class="cp-field"><label for="f-name">Contact name <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="f-name" name="contact_name" value="{{ values.contact_name|default:request.user.get_full_name }}" autocomplete="name" required data-step="2"{% if errors.contact_name %} aria-invalid="true"{% endif %}>{% if errors.contact_name %}<p class="cp-error">{{ errors.contact_name }}</p>{% endif %}</div>
+        <div class="cp-field"><label for="f-phone">Contact number <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="f-phone" name="contact_phone" type="tel" value="{{ values.contact_phone|default:request.user.phone }}" autocomplete="tel" required data-step="2" placeholder="+230 5xxx xxxx"{% if errors.contact_phone %} aria-invalid="true"{% endif %}>{% if errors.contact_phone %}<p class="cp-error">{{ errors.contact_phone }}</p>{% endif %}</div>
+      </div>
+      <div class="cp-form-row">
+        <div class="cp-field"><label for="f-date">Preferred date <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="f-date" name="preferred_date" type="date" value="{{ values.preferred_date }}" required data-step="2"{% if errors.preferred_date %} aria-invalid="true"{% endif %}>{% if errors.preferred_date %}<p class="cp-error">{{ errors.preferred_date }}</p>{% endif %}</div>
+        <div class="cp-field"><label for="f-slot">Preferred session <span class="cp-req" aria-hidden="true">*</span></label><select class="cp-select" id="f-slot" name="preferred_slot" required data-step="2"{% if errors.preferred_slot %} aria-invalid="true"{% endif %}><option value="">Choose a session</option><option value="morning"{% if values.preferred_slot == 'morning' %} selected{% endif %}>Morning · 09:00–12:00</option><option value="afternoon"{% if values.preferred_slot == 'afternoon' %} selected{% endif %}>Afternoon · 13:00–17:00</option></select>{% if errors.preferred_slot %}<p class="cp-error">{{ errors.preferred_slot }}</p>{% endif %}</div>
+      </div>
+      <div class="cp-field"><label for="f-access">Access notes</label><input class="cp-input" id="f-access" name="access_notes" value="{{ values.access_notes }}" placeholder="Parking, gate code, who to ask for"></div>
+    </section>
+    <div class="cp-form-foot" data-step="3"><p class="cp-tiny">Pay offline after acceptance; admin confirms after full verification.</p>
+      <div class="cp-actions"><a class="cp-btn is-light" href="{{ u_requests }}">Cancel</a><button class="cp-btn is-primary" type="submit">Submit request</button></div></div>
+  </form>
+  <aside class="cp-stack" aria-label="Guidance">
+    <section class="cp-panel"><h2>Skill-matched service team</h2>
+      <p class="cp-text-muted">An administrator reviews your request and assigns a qualified, verified professional only after full offline payment has been verified.</p>
+      <dl class="cp-details"><div class="cp-detail"><dt>Verified</dt><dd>Skills checked</dd></div><div class="cp-detail"><dt>Service areas</dt><dd>{{ service_areas|default:"Across Mauritius" }}</dd></div></dl></section>
+    <div class="cp-notice"><svg class="cp-ic" aria-hidden="true"><use href="#i-info"/></svg><div><strong>You’re in control</strong><p>Admin reviews the request and sends a fixed MUR quotation. Accept or decline before paying offline.</p></div></div>
+    <section class="cp-panel"><h2>Need urgent help?</h2><p class="cp-small">For an active flood, shut off your water supply first. This platform is not an emergency response service.</p>{% if support_phone %}<strong>Support: {{ support_phone }}</strong>{% endif %}</section>
+  </aside>
+</div>
+{% endblock %}

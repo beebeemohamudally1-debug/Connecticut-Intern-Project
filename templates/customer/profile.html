@@ -1,0 +1,57 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  PROFILE & SECURITY.  URL name expected: customer_portal:profile
+  Three separate POST forms, told apart by the hidden `action` field:
+    action=profile      first_name*, last_name*, email*, phone*, default_address*, service_area*
+    action=password     current_password, new_password, confirm_password
+    action=preferences  pref_requests, pref_payments, pref_progress (checkboxes), pref_email, pref_sms, pref_news
+  CONTEXT (all optional):
+    profile {first_name,last_name,email,phone,default_address,service_area}  (falls back to request.user fields)
+    errors {"first_name": "...", "current_password": "...", ...}      profile_saved (bool/str)   password_changed (bool)
+    last_saved "Oct 23, 2026 at 8:45 AM"     prefs {requests,payments,progress,email,sms,news}     service_areas [str]
+{% endcomment %}
+{% block title %}Profile & security | HandyConnect{% endblock %}
+{% block page %}customer-profile{% endblock %}
+{% block content %}
+{% url 'accounts:logout' as u_logout %}
+<div class="cp-head"><div><h1>Your account, your details.</h1><p>Free customer account · Private profile{% if last_saved %} · Last saved {{ last_saved }}{% endif %}</p></div></div>
+<div class="cp-cols is-even">
+  <form method="post" class="cp-panel" novalidate data-hook="profile-form" aria-labelledby="cp-pi-h">{% csrf_token %}<input type="hidden" name="action" value="profile">
+    <h2 id="cp-pi-h">Personal information</h2>
+    <div class="cp-form-row">
+      <div class="cp-field"><label for="p-fn">First name <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="p-fn" name="first_name" autocomplete="given-name" required value="{{ profile.first_name|default:request.user.first_name }}"{% if errors.first_name %} aria-invalid="true"{% endif %}>{% if errors.first_name %}<p class="cp-error">{{ errors.first_name }}</p>{% endif %}</div>
+      <div class="cp-field"><label for="p-ln">Last name <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="p-ln" name="last_name" autocomplete="family-name" required value="{{ profile.last_name|default:request.user.last_name }}"{% if errors.last_name %} aria-invalid="true"{% endif %}>{% if errors.last_name %}<p class="cp-error">{{ errors.last_name }}</p>{% endif %}</div></div>
+    <div class="cp-field"><label for="p-em">Email address <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="p-em" name="email" type="email" autocomplete="email" required value="{{ profile.email|default:request.user.email }}"{% if errors.email %} aria-invalid="true"{% endif %}>{% if errors.email %}<p class="cp-error">{{ errors.email }}</p>{% endif %}</div>
+    <div class="cp-field"><label for="p-ph">Phone number <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="p-ph" name="phone" type="tel" autocomplete="tel" required value="{{ profile.phone|default:request.user.phone }}"{% if errors.phone %} aria-invalid="true"{% endif %}><span class="cp-help">Contact details are visible only to you and authorised administrators.</span>{% if errors.phone %}<p class="cp-error">{{ errors.phone }}</p>{% endif %}</div>
+    <div class="cp-field"><label for="p-ad">Default service address <span class="cp-req" aria-hidden="true">*</span></label><input class="cp-input" id="p-ad" name="default_address" autocomplete="street-address" required value="{{ profile.default_address }}"{% if errors.default_address %} aria-invalid="true"{% endif %}>{% if errors.default_address %}<p class="cp-error">{{ errors.default_address }}</p>{% endif %}</div>
+    <div class="cp-field"><label for="p-ar">Service area <span class="cp-req" aria-hidden="true">*</span></label><select class="cp-select" id="p-ar" name="service_area" required>{% for a in service_areas %}<option{% if profile.service_area == a %} selected{% endif %}>{{ a }}</option>{% empty %}<option{% if profile.service_area == 'Port Louis' %} selected{% endif %}>Port Louis</option><option{% if profile.service_area == 'Curepipe' %} selected{% endif %}>Curepipe</option><option{% if profile.service_area == 'Quatre Bornes' %} selected{% endif %}>Quatre Bornes</option><option{% if profile.service_area == 'Rose Hill' %} selected{% endif %}>Rose Hill</option><option{% if profile.service_area == 'Vacoas' %} selected{% endif %}>Vacoas</option>{% endfor %}</select></div>
+    <div><button class="cp-btn is-primary" type="submit">Save profile</button></div>
+    {% if profile_saved %}<div class="cp-notice is-ok" role="status"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Profile saved</strong><p>{% if profile_saved != True %}{{ profile_saved }}{% else %}Updates apply to future requests.{% endif %}</p></div></div>{% endif %}
+  </form>
+  <form method="post" class="cp-panel" novalidate data-hook="password-form" aria-labelledby="cp-sec-h">{% csrf_token %}<input type="hidden" name="action" value="password">
+    <h2 id="cp-sec-h">Security &amp; account access</h2>
+    <div><span class="cp-badge is-ok"><svg class="cp-ic" aria-hidden="true"><use href="#i-shield"/></svg>Customer role · Active</span></div>
+    <p class="cp-text-muted">Your account can view only your own requests, quotations, payments, complaints and feedback.</p>
+    <div class="cp-field"><label for="p-cur">Current password</label><input class="cp-input" id="p-cur" name="current_password" type="password" autocomplete="current-password"{% if errors.current_password %} aria-invalid="true"{% endif %}>{% if errors.current_password %}<p class="cp-error">{{ errors.current_password }}</p>{% endif %}</div>
+    <div class="cp-field"><label for="p-new">New password</label><input class="cp-input" id="p-new" name="new_password" type="password" autocomplete="new-password"{% if errors.new_password %} aria-invalid="true"{% endif %}><span class="cp-help">At least 8 characters.</span>{% if errors.new_password %}<p class="cp-error">{{ errors.new_password }}</p>{% endif %}</div>
+    <div class="cp-field"><label for="p-cf">Confirm new password</label><input class="cp-input" id="p-cf" name="confirm_password" type="password" autocomplete="new-password"{% if errors.confirm_password %} aria-invalid="true"{% endif %}>{% if errors.confirm_password %}<p class="cp-error">{{ errors.confirm_password }}</p>{% endif %}</div>
+    <div class="cp-actions"><button class="cp-btn is-light" type="submit">Update password</button><button class="cp-btn is-light" type="submit" form="cp-signout" data-cp-keep>Sign out</button></div>
+    {% if password_changed %}<div class="cp-notice is-ok" role="status"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Password updated</strong></div></div>{% endif %}
+    <p class="cp-small">Provider and administrator screens require separate account permissions. Choosing a portal does not grant access.</p>
+  </form>
+</div>
+<form id="cp-signout" method="post" action="{{ u_logout }}" hidden>{% csrf_token %}</form>
+<form method="post" class="cp-panel" id="preferences" data-hook="preferences-form" aria-labelledby="cp-pref-h">{% csrf_token %}<input type="hidden" name="action" value="preferences">
+  <h2 id="cp-pref-h">Communication preferences</h2>
+  <div class="cp-form-row">
+    <label class="cp-check"><input type="checkbox" name="pref_requests" value="1"{% if prefs.requests|default_if_none:True %} checked{% endif %}><span>Request and quotation updates</span></label>
+    <label class="cp-check"><input type="checkbox" name="pref_payments" value="1"{% if prefs.payments|default_if_none:True %} checked{% endif %}><span>Offline payment and appointment updates</span></label>
+    <label class="cp-check"><input type="checkbox" name="pref_progress" value="1"{% if prefs.progress|default_if_none:True %} checked{% endif %}><span>Job progress, complaint enquiries and resolutions</span></label>
+    <label class="cp-check"><input type="checkbox" name="pref_email" value="1"{% if prefs.email %} checked{% endif %}><span>Email notifications</span></label>
+    <label class="cp-check"><input type="checkbox" name="pref_sms" value="1"{% if prefs.sms %} checked{% endif %}><span>SMS reminders</span></label>
+    <label class="cp-check"><input type="checkbox" name="pref_news" value="1"{% if prefs.news %} checked{% endif %}><span>Product news</span></label>
+  </div>
+  <p class="cp-small">No direct customer–handyman messaging. All scheduling and contact changes go through the service team.</p>
+  <div><button class="cp-btn is-light" type="submit">Save preferences</button></div>
+</form>
+{% endblock %}

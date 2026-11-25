@@ -1,30 +1,34 @@
 {% extends "base_customer.html" %}
-{% block title %}Customer · Receipt | HandyConnect{% endblock %}
+{% comment %}
+  REQUIRED (unchanged): receipt, invoice. Prints cleanly (sidebar/top bar hidden by @media print).
+  OPTIONAL: feedback_url (link to the private feedback form for this job), shown after the receipt.
+{% endcomment %}
+{% block title %}Receipt | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
 {% with customer=invoice.request.customer handyman=invoice.handyman %}
-<div style="max-width:560px;margin:0 auto">
-  <div class="card">
-    <div class="lab">Receipt</div>
-    <h1>{{ receipt.number }}</h1>
-    <p class="sub">Payment cleared on {{ receipt.payment.cleared_at|date:"d/m/Y" }} · for {{ invoice.number }}</p>
-    <div class="row"><span class="mut">Customer</span><span>{{ customer.get_full_name|default:customer.username }}</span></div>
-    {% if handyman %}<div class="row"><span class="mut">Handyman</span><span>{{ handyman.get_full_name|default:handyman.username }}</span></div>{% endif %}
-    <div class="row"><span class="mut">Job</span><span>{{ invoice.request.reference }}</span></div>
-    {% if invoice.is_inspection %}
-    <div class="row"><span class="mut">Inspection fee</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
-    {% else %}
-    <div class="row"><span class="mut">Included work</span><span>MUR {{ invoice.labour_amount|floatformat:"2g" }}</span></div>
-    {% if invoice.material_quotation %}<div class="row"><span class="mut">Materials</span><span>MUR {{ invoice.materials_amount|floatformat:"2g" }}</span></div>{% endif %}
-    {% endif %}
-    <div class="row"><span class="mut">Payment method</span><span>{{ receipt.payment.get_method_display }}</span></div>
-    {% if receipt.payment.reference %}<div class="row"><span class="mut">Payment reference</span><span>{{ receipt.payment.reference }}</span></div>{% endif %}
-    <div class="row t"><span>Total paid</span><span>MUR {{ receipt.payment.amount|floatformat:"2g" }}</span></div>
-    <div style="display:flex;gap:12px;margin-top:24px">
-      <button class="btn" type="button" onclick="window.print()">Print receipt</button>
-      <a class="btn o" href="{% url 'payments:my_invoices' %}">Back to my invoices</a>
-    </div>
-  </div>
+<div class="cp-banner cp-no-print"><span class="cp-banner-ic"><svg class="cp-ic" aria-hidden="true"><use href="#i-check"/></svg></span>
+  <div class="cp-banner-text"><strong>Payment received · thank you</strong><p>Your receipt {{ receipt.number }} is ready.</p></div>
+  <button type="button" class="cp-btn is-light" data-cp-print><svg class="cp-ic" aria-hidden="true"><use href="#i-printer"/></svg>Print receipt</button></div>
+<div class="cp-cols is-main-side">
+  <section class="cp-panel" aria-labelledby="cp-rc-h"><h2 id="cp-rc-h">Receipt {{ receipt.number }}</h2>
+    <p class="cp-small" style="margin-top:-10px">Payment cleared on {{ receipt.payment.cleared_at|date:"d/m/Y" }} · for {{ invoice.number }}</p>
+    <dl class="cp-details" data-hook="receipt-lines">
+      <div class="cp-detail"><dt>Customer</dt><dd>{{ customer.get_full_name|default:customer.username }}</dd></div>
+      {% if handyman %}<div class="cp-detail"><dt>Handyman</dt><dd>{{ handyman.get_full_name|default:handyman.username }}</dd></div>{% endif %}
+      <div class="cp-detail"><dt>Job</dt><dd>{{ invoice.request.reference }}</dd></div>
+      {% if invoice.is_inspection %}<div class="cp-detail"><dt>Inspection fee</dt><dd>MUR {{ invoice.total_amount|floatformat:"2g" }}</dd></div>
+      {% else %}<div class="cp-detail"><dt>Included work</dt><dd>MUR {{ invoice.labour_amount|floatformat:"2g" }}</dd></div>
+      {% if invoice.material_quotation %}<div class="cp-detail"><dt>Materials</dt><dd>MUR {{ invoice.materials_amount|floatformat:"2g" }}</dd></div>{% endif %}{% endif %}
+      <div class="cp-detail"><dt>Payment method</dt><dd>{{ receipt.payment.get_method_display }}</dd></div>
+      {% if receipt.payment.reference %}<div class="cp-detail"><dt>Payment reference</dt><dd>{{ receipt.payment.reference }}</dd></div>{% endif %}
+    </dl>
+    <hr class="cp-divider"><div class="cp-total"><span>Total paid</span><strong>MUR {{ receipt.payment.amount|floatformat:"2g" }}</strong></div>
+    <div class="cp-actions cp-no-print"><a class="cp-btn is-light" href="{% url 'payments:my_invoices' %}">Back to my invoices</a></div></section>
+  <aside class="cp-stack cp-no-print">
+    <section class="cp-panel"><h2>Tell us how it went</h2><p class="cp-text-muted">Your feedback is private. Only you and administrators can see it.</p>
+      {% if feedback_url %}<a class="cp-btn is-primary is-block" href="{{ feedback_url }}">Leave private feedback</a>{% else %}{% url 'reviews:my_reviews' as u_fb %}<a class="cp-btn is-light is-block" href="{{ u_fb }}">Open private feedback</a>{% endif %}</section>
+  </aside>
 </div>
 {% endwith %}
 {% endblock %}

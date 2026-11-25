@@ -1,0 +1,40 @@
+{% comment %} Customer view of jobs/job_detail.html ("Job in progress"). Same context as the shared view:
+   job, reports, evidence, time_logs, role.  OPTIONAL extras: quote {reference, total}, paid_summary {amount_text, note, status}, access_notes, eta_text, steps_text {% endcomment %}
+{% url 'jobs:list' as u_list %}{% url 'complaints:create' as u_complaint %}
+<div class="cp-head"><div><h1>{% if job.status == 'completed' %}All done. Thank you for trusting us.{% elif job.status == 'cancelled' %}This job was cancelled.{% else %}A lasting fix is underway.{% endif %}</h1>
+  <p>{{ job.reference }} · {{ job.service_name }}{% if job.scheduled_start %} · {{ job.scheduled_start|date:"l, F j, Y" }}{% endif %}</p></div>
+  <div class="cp-head-actions"><a class="cp-btn is-light" href="{{ u_list }}"><svg class="cp-ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>All jobs</a></div></div>
+{% if job.status == 'in_progress' %}<div class="cp-notice" data-hook="state-in-progress"><svg class="cp-ic" aria-hidden="true"><use href="#i-wrench"/></svg><div><strong>{{ job.handyman.get_full_name|default:"Your professional" }} is on site</strong><p>{% if eta_text %}{{ eta_text }}{% else %}Your professional is working on your request. You’ll receive a completion summary.{% endif %}</p></div></div>
+{% elif job.status == 'completed' %}<div class="cp-notice is-ok"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Completed {{ job.completed_at|date:"M d, g:i A" }}</strong><p>{{ job.completion_notes }}</p></div></div>{% endif %}
+<div class="cp-cols is-main-side">
+  <div class="cp-stack">
+    <section class="cp-panel" aria-labelledby="cp-jd-h">
+      <div class="cp-panel-row"><h3 id="cp-jd-h">{{ job.service_name }}</h3>{% include "customer/_badge.html" with code=job.badge label=job.get_status_display %}</div>
+      {% with last=reports|first %}{% if last %}<div class="cp-summary"><svg class="cp-ic" aria-hidden="true"><use href="#i-wrench"/></svg><div style="flex:1"><strong>{{ last.percent_complete }}% complete</strong><span>{{ last.details|truncatechars:140 }}</span><div class="cp-bar" style="margin-top:10px" role="progressbar" aria-valuenow="{{ last.percent_complete }}" aria-valuemin="0" aria-valuemax="100"><i style="width:{{ last.percent_complete }}%"></i></div></div></div>{% endif %}{% endwith %}
+      <div class="cp-timeline" data-hook="job-timeline">
+        <div class="cp-mile{% if job.scheduled_start %} is-done{% endif %}"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Appointment scheduled</strong><span>{{ job.scheduled_start|date:"M d, g:i A"|default:"To be confirmed" }}</span></div></div>
+        {% with first_log=time_logs|last %}<div class="cp-mile{% if first_log %} is-done{% endif %}"><svg class="cp-ic" aria-hidden="true"><use href="#i-{% if first_log %}check-circle{% else %}circle{% endif %}"/></svg><div><strong>Professional arrived</strong><span>{% if first_log %}{{ first_log.arrived_at|date:"M d, g:i A" }} · Checked in on site{% else %}Waiting for arrival{% endif %}</span></div></div>{% endwith %}
+        <div class="cp-mile{% if reports %} is-done{% elif job.status == 'in_progress' %} is-now{% endif %}"><svg class="cp-ic" aria-hidden="true"><use href="#i-{% if reports %}check-circle{% else %}clock{% endif %}"/></svg><div><strong>Work in progress</strong><span>{% with r=reports|first %}{% if r %}{{ r.report_date|date:"M d" }} · {{ r.details|truncatechars:90 }}{% else %}Reports appear here{% endif %}{% endwith %}</span></div></div>
+        <div class="cp-mile{% if job.status == 'completed' %} is-done{% endif %}"><svg class="cp-ic" aria-hidden="true"><use href="#i-{% if job.status == 'completed' %}check-circle{% else %}circle{% endif %}"/></svg><div><strong>Completion &amp; feedback</strong><span>{% if job.status == 'completed' %}{{ job.completed_at|date:"M d, g:i A" }}{% else %}You’ll receive a completion summary.{% endif %}</span></div></div>
+      </div>
+    </section>
+    <section class="cp-panel"><h2>Your approved job brief</h2>
+      <p class="cp-text-muted">{{ job.description|linebreaksbr }}</p>
+      <dl class="cp-details">
+        {% if quote %}<div class="cp-detail"><dt>Approved quote</dt><dd>{{ quote.reference }} · MUR {{ quote.total }}</dd></div>{% endif %}
+        <div class="cp-detail"><dt>Address</dt><dd>{{ job.address }}</dd></div>
+        {% if access_notes %}<div class="cp-detail"><dt>Access notes</dt><dd>{{ access_notes }}</dd></div>{% endif %}
+        <div class="cp-detail"><dt>Due date</dt><dd>{{ job.due_date|date:"d/m/Y"|default:"-" }}</dd></div>
+      </dl>
+      <p class="cp-tiny">Any extra work needs a new quotation and your approval.</p></section>
+    {% if evidence %}<section class="cp-panel"><h2>Photos from the visit</h2><div class="cp-chips">{% for e in evidence %}<a href="{% url 'jobs:evidence_file' e.pk %}" title="{{ e.caption }}"><img src="{% url 'jobs:evidence_file' e.pk %}" alt="{{ e.caption|default:'Work photo' }}" width="120" height="90" style="object-fit:cover;border-radius:8px;border:1px solid var(--cp-line)"></a>{% endfor %}</div></section>{% endif %}
+    {% if reports|length > 1 %}<section class="cp-panel"><h2>Work reports</h2>{% for r in reports %}<div class="cp-update"><div><strong>{{ r.report_date|date:"M d" }} · {{ r.percent_complete }}% complete</strong><span>{{ r.details }}</span></div></div>{% if not forloop.last %}<hr class="cp-divider">{% endif %}{% endfor %}</section>{% endif %}
+  </div>
+  <aside class="cp-stack">
+    <section class="cp-panel"><h2>Your professional</h2>
+      <div class="cp-person"><span class="cp-avatar is-lg">{{ job.handyman.get_full_name|default:job.handyman.username|slice:":2" }}</span><div><strong>{{ job.handyman.get_full_name|default:job.handyman.username }}</strong><span>Verified professional · Skills checked</span></div></div>
+      <dl class="cp-details"><div class="cp-detail"><dt>Contact</dt><dd>{{ job.handyman.phone|default:"Via service team" }}</dd></div><div class="cp-detail"><dt>Visit date</dt><dd>{{ job.scheduled_start|date:"M d, Y"|default:"-" }}</dd></div><div class="cp-detail"><dt>Session</dt><dd>{{ job.scheduled_start|date:"g:i A"|default:"-" }}</dd></div></dl></section>
+    {% if paid_summary %}<section class="cp-panel"><h2>Offline payment {{ paid_summary.status|default:"verified" }}</h2><div class="cp-money-lg">MUR {{ paid_summary.amount_text }}</div><p class="cp-small">{{ paid_summary.note }}</p></section>{% endif %}
+    {% if u_complaint %}<a class="cp-btn is-light is-block" href="{{ u_complaint }}?job={{ job.pk }}">Get help with this job</a>{% endif %}
+  </aside>
+</div>
