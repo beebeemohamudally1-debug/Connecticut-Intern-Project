@@ -18,6 +18,8 @@ from accounts.permissions import role_required
 import io
 import shutil
 import tempfile
+import os
+from django.http import Http404
 
 from django.contrib.sessions.models import Session
 from django.test import Client
@@ -424,20 +426,26 @@ class AdminProfileTests(TestCase):
         self.assertEqual((self.admin.first_name, self.admin.last_name), ('Grace', 'Hopper'))
         self.assertEqual(self.admin.email, 'grace@example.com')
 
-    def test_email_used_by_someone_else_is_refused(self):
+    def test_email_used_by_someone_else_shows_a_message(self):
         r = self.client.post(self.url, {'full_name': 'Ada Lovelace', 'email': 'oth1@example.com'})
         self.assertEqual(r.status_code, 200)
-        self.assertIn('already used', r.context['error'])
+        self.assertContains(r, 'already used by another account')   # the message is in the page
+        self.assertContains(r, 'value="oth1@example.com"')         # what was typed is kept
         self.admin.refresh_from_db()
         self.assertEqual(self.admin.email, 'adm1@example.com')
 
-    def test_invalid_email_is_refused(self):
+    def test_invalid_email_shows_a_message(self):
         r = self.client.post(self.url, {'full_name': 'Ada Lovelace', 'email': 'not-an-email'})
-        self.assertIn('valid email', r.context['error'])
+        self.assertContains(r, 'Enter a valid email address.')
 
-    def test_empty_name_is_refused(self):
+    def test_empty_name_shows_a_message(self):
         r = self.client.post(self.url, {'full_name': '   ', 'email': 'adm1@example.com'})
-        self.assertIn('full name', r.context['error'])
+        self.assertContains(r, 'Enter your full name.')
+
+    def test_both_errors_show_together(self):
+        r = self.client.post(self.url, {'full_name': '', 'email': 'bad'})
+        self.assertContains(r, 'Enter your full name.')
+        self.assertContains(r, 'Enter a valid email address.')
 
     def test_non_admin_cannot_open_the_page(self):
         self.client.force_login(self.other)
@@ -587,5 +595,24 @@ class HandymanVerificationTests(TestCase):
         r = self.client.get(self.verify_url)
         self.assertNotContains(r, 'Approve Registration')
         self.assertContains(r, 'Decision Recorded')
-        
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA)
+class PrivateMediaTests(TestCase):
+    def fetch(self, path):
+        from config.urls import public_media
+        return public_media(RequestFactory().get('/media/' + path), path)
+
+    def test_handyman_documents_are_never_served_publicly(self):
+        for path in ('handyman_documents/2026/11/x.png', 'HANDYMAN_DOCUMENTS/x.png',
+                     'a/../handyman_documents/x.png', 'a\\..\\handyman_documents\\x.png',
+                     'handyman_documents./x.png'):
+            with self.assertRaises(Http404, msg=path):
+                self.fetch(path)
+
+    def test_other_media_is_still_served(self):
+        with open(os.path.join(TEMP_MEDIA, 'photo.txt'), 'w') as f:
+            f.write('ok')
+        response = self.fetch('photo.txt')
+        self.assertEqual(response.status_code, 200)
+        response.close()    
 # Create your tests here.

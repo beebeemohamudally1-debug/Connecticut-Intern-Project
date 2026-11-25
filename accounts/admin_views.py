@@ -24,24 +24,27 @@ User = get_user_model()
 def profile(request):
     """Admin Profile: the logged-in administrator. A POST saves the full name and email."""
     u = request.user
-    error = ''
+    errors = {}
+    values = {'full_name': _person_name(u), 'email': u.email}
     if request.method == 'POST':
         full_name = ' '.join(request.POST.get('full_name', '').split())
         email = request.POST.get('email', '').strip().lower()
-        try:
-            validate_email(email)
-            email_ok = True
-        except ValidationError:
-            email_ok = False
+        values = {'full_name': full_name, 'email': email}
         if not full_name:
-            error = 'Enter your full name.'
+            errors['full_name'] = 'Enter your full name.'
         elif len(full_name) > 150:
-            error = 'The full name is too long.'
-        elif not email_ok:
-            error = 'Enter a valid email address.'
-        elif User.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
-            error = 'That email address is already used by another account.'
+            errors['full_name'] = 'The full name is too long.'
+        if not email:
+            errors['email'] = 'Enter your email address.'
         else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errors['email'] = 'Enter a valid email address.'
+            else:
+                if User.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
+                    errors['email'] = 'That email address is already used by another account.'
+        if not errors:
             u.first_name, _, u.last_name = full_name.partition(' ')
             u.email = email
             u.save(update_fields=['first_name', 'last_name', 'email'])
@@ -54,8 +57,8 @@ def profile(request):
         'status': 'Active' if u.is_active else 'Inactive',
     }
     return render(request, 'accounts/admin_profile.html', {
-        'admin': admin, 'error': error, 'saved': request.GET.get('saved') == '1'})
-
+        'admin': admin, 'values': values, 'errors': errors,
+        'saved': request.GET.get('saved') == '1'})
 # ---------- Manage Users (section 3): real accounts.User and accounts.HandymanProfile data ----------
 # Not in the backend yet: suspend / reactivate / delete views, registration documents and
 # approve / reject, and availability. Those parts of the pages stay as before
