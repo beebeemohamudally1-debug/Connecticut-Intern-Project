@@ -366,4 +366,42 @@ class PasswordResetTests(TestCase):
         self.verify_code()
         self.client.post(reverse('accounts:reset_new'), {'password': self.NEW, 'confirm': self.NEW})
         self.assertIsNone(cache.get(_fail_key(self.EMAIL)))
+        
+class ProviderStatusTests(TestCase):
+    def make_handyman(self, username, status=HandymanProfile.STATUS_PENDING, reason=''):
+        user = User.objects.create_user(
+            username=username, email=username + '@example.com', password=PASSWORD, role='handyman')
+        HandymanProfile.objects.create(user=user, status=status, rejection_reason=reason)
+        return user
+
+    def test_login_is_required(self):
+        r = self.client.get(reverse('accounts:provider_status'))
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('login', r.url)
+
+    def test_pending_handyman_sees_pending(self):
+        self.client.force_login(self.make_handyman('pend1'))
+        r = self.client.get(reverse('accounts:provider_status'))
+        self.assertEqual(r.context['account_status'], 'PENDING_APPROVAL')
+        self.assertContains(r, 'under review')
+
+    def test_rejected_handyman_sees_the_reason(self):
+        self.client.force_login(self.make_handyman('rej1', HandymanProfile.STATUS_REJECTED, 'ID photo unreadable'))
+        r = self.client.get(reverse('accounts:provider_status'))
+        self.assertEqual(r.context['account_status'], 'REJECTED')
+        self.assertContains(r, 'ID photo unreadable')
+
+    def test_customer_is_refused(self):
+        customer = User.objects.create_user(username='cus9', email='cus9@example.com', password=PASSWORD)
+        self.client.force_login(customer)
+        r = self.client.get(reverse('accounts:provider_status'))
+        self.assertEqual(r.status_code, 403)
+
+    def test_handyman_sees_only_their_own_status(self):
+        mine = self.make_handyman('mine1')
+        self.make_handyman('other1')
+        self.client.force_login(mine)
+        r = self.client.get(reverse('accounts:provider_status'))
+        self.assertContains(r, 'mine1@example.com')
+        self.assertNotContains(r, 'other1@example.com')
 # Create your tests here.
