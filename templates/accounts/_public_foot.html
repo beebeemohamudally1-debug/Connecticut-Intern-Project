@@ -1,0 +1,32 @@
+{# Public footer, same markup as the landing page. #}
+  <footer class="hm-foot"><div class="hm-wrap">
+    <div class="hm-foot-cols">
+      <div class="hm-foot-brand">
+        <a class="hm-logo is-light" href="{% url 'accounts:home' %}" aria-label="HandyConnect home"><span class="hm-logo-mark"><svg class="hm-ic" aria-hidden="true"><use href="#hm-i-house"/></svg></span><span class="hm-logo-name">HandyConnect</span></a>
+        <p>Trusted local help, thoughtfully connected. A better way to care for your home.</p>
+      </div>
+      <nav class="hm-foot-col" aria-labelledby="hm-f1"><h2 id="hm-f1">Discover</h2><ul>
+        <li><a href="{% url 'accounts:home' %}#find">Find a service</a></li>
+        <li><a href="{% url 'accounts:home' %}#how-it-works">How it works</a></li>
+        <li><a href="{% url 'accounts:home' %}#professionals">Our professionals</a></li>
+      </ul></nav>
+      <nav class="hm-foot-col" aria-labelledby="hm-f2"><h2 id="hm-f2">For professionals</h2><ul>
+        <li>{% if request.user.is_authenticated %}<a href="{% url 'accounts:home' %}">Join HandyConnect</a>{% else %}{% include "accounts/_home_join_pro.html" with cls="hm-linklike" label="Join HandyConnect" %}{% endif %}</li>
+        <li><a href="#" data-hook="static-page" data-page="professional-resources">Professional resources</a></li>
+        <li><a href="#" data-hook="static-page" data-page="help-center">Help center</a></li>
+      </ul></nav>
+      <nav class="hm-foot-col" aria-labelledby="hm-f3"><h2 id="hm-f3">Company</h2><ul>
+        <li><a href="#" data-hook="static-page" data-page="about">About us</a></li>
+        <li><a href="#" data-hook="static-page" data-page="contact">Contact &amp; support</a></li>
+        <li><a href="#" data-hook="static-page" data-page="trust-safety">Trust &amp; safety</a></li>
+      </ul></nav>
+    </div>
+    <div class="hm-foot-legal">
+      <p>© 2026 HandyConnect. All rights reserved.</p>
+      <ul>
+        <li><a href="#" data-hook="static-page" data-page="privacy">Privacy policy</a></li>
+        <li><a href="#" data-hook="static-page" data-page="terms">Terms of service</a></li>
+        <li><a href="#" data-hook="static-page" data-page="accessibility">Accessibility</a></li>
+      </ul>
+    </div>
+  </div></footer>

@@ -34,6 +34,7 @@ urlpatterns = [
     path('', include('accounts.urls')),
     path('reviews/', include('reviews.urls')),
     path('services/', include('services.urls')),
+    path('customer/', include('customer_portal.urls')),
 ]
 
 # Uploaded files (for example material receipts) are served by Django only while DEBUG is on

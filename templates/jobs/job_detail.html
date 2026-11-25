@@ -2,6 +2,7 @@
 {% block title %}{{ job.reference }} | HandyConnect{% endblock %}
 {% block page %}jobs{% endblock %}
 {% block content %}
+{% if role == 'customer' %}{% include "customer/_job_detail.html" %}{% else %}
 {% include "jobs/_messages.html" %}
 <div class="bar"><div>
   <div class="lab"><a href="{% url 'jobs:list' %}">← Jobs</a></div>
@@ -78,4 +79,5 @@
   {% if role != 'admin' %}<div><a class="btn o" href="{% url 'complaints:create' %}?job={{ job.pk }}">Report a problem with this job</a></div>{% endif %}
 </div>
 </div>
+{% endif %}
 {% endblock %}
