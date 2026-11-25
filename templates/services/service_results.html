@@ -50,7 +50,7 @@
       {% for p in professionals %}
       <article class="sr-card sr-pro">
         <div class="sr-pro-info">
-          <div class="sr-person"><span class="sr-avatar" aria-hidden="true">{{ p.initials }}</span><div><strong>{{ p.name }}</strong><span>Verified skills · {{ p.years }} years of experience</span></div></div>
+          <div class="sr-person"><span class="sr-avatar" aria-hidden="true">{{ p.initials }}</span><div><strong>{{ p.name }}</strong><span>Verified skills{% if p.years %} · {{ p.years }} years of experience{% endif %}</span></div></div>
           <p class="sr-desc">{{ p.summary }}</p>
           <div class="sr-chips">{% if p.verified %}<span class="sr-pill is-ok">Verified</span>{% endif %}{% if p.available_label %}<span class="sr-pill is-ok">{{ p.available_label }}</span>{% endif %}</div>
         </div>

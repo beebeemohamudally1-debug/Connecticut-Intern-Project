@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'notifications',
     'reports',
     'reviews',
+    'customer_portal',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -79,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'customer_portal.context.unread',
             ],
         },
     },

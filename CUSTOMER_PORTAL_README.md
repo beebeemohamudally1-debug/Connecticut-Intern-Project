@@ -16,7 +16,7 @@ shared templates `complaints/complaint_{list,form,detail}.html` and `jobs/job_{l
 Not touched: admin-only `reports/job_summary.html` (the Figma "Print · Job summary" frame), all admin and handyman templates.
 
 ## URL names the templates look up (all optional)
-Sidebar and buttons use `{% url 'name' as var %}`, so a missing route becomes `#` instead of an error. Add these to a new `customer_portal` app (`app_name = 'customer_portal'`) and the links come alive:
+Sidebar and buttons use `{% url 'name' as var %}`, so a missing route becomes `#` instead of an error. These routes now exist: the `customer_portal` Django app (mounted at `/customer/`) provides them, with views reading real data. The public results page is `services:results` (`/services/results/`).
 
 | name | page | template |
 |---|---|---|
@@ -48,3 +48,10 @@ Existing routes used: `dashboard:customer_dashboard`, `payments:*`, `reviews:my_
 
 ## Checked
 Rendered through a throwaway Django harness (not included) at 1440, 820 and 390 px: no console errors, no horizontal scroll; drawer, confirm dialog, rating, tabs and form validation exercised; admin and handyman job/complaint pages confirmed unchanged.
+
+## Python wiring (customer_portal app)
+- New app `customer_portal/` (urls, views, context processor for the unread badge); registered in `config/settings.py`, mounted in `config/urls.py`.
+- `services/views.py` + `services/urls.py`: public `results/` page from approved `HandymanProfile`s.
+- `dashboard/views.py`: `customer_dashboard` now supplies counts, recent requests, updates, next appointment.
+- No models added, so no migration is needed for this app.
+- Not stored yet: photo uploads on the new-request form, penalties, quotation line items; notification preferences live in the session only.
