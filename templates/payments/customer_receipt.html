@@ -2,5 +2,29 @@
 {% block title %}Customer · Receipt | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div style="max-width:560px;margin:0 auto"><div class="card"><div class="lab">Receipt</div><h1>RCT-2026-0042</h1><p class="sub">Payment cleared on 03/11/2026</p><div class="row"><span class="mut">Customer</span><span>Anisha R.</span></div><div class="row"><span class="mut">Handyman</span><span>Kevin L.</span></div><div class="row"><span class="mut">Service</span><span>Plumbing</span></div><div class="row"><span class="mut">Appointment</span><span>08/11/2026, 09:00</span></div><div class="row"><span class="mut">Included work</span><span>MUR 11,000.00</span></div><div class="row"><span class="mut">Materials</span><span>MUR 1,500.00</span></div><div class="row"><span class="mut">Payment method</span><span>Bank transfer</span></div><div class="row t"><span>Total paid</span><span>MUR 12,500.00</span></div><div style="display:flex;gap:12px;margin-top:24px"><button class="btn">Print receipt</button><button class="btn o">Back to my bookings</button></div></div></div>
+{% with customer=invoice.request.customer handyman=invoice.handyman %}
+<div style="max-width:560px;margin:0 auto">
+  <div class="card">
+    <div class="lab">Receipt</div>
+    <h1>{{ receipt.number }}</h1>
+    <p class="sub">Payment cleared on {{ receipt.payment.cleared_at|date:"d/m/Y" }} · for {{ invoice.number }}</p>
+    <div class="row"><span class="mut">Customer</span><span>{{ customer.get_full_name|default:customer.username }}</span></div>
+    {% if handyman %}<div class="row"><span class="mut">Handyman</span><span>{{ handyman.get_full_name|default:handyman.username }}</span></div>{% endif %}
+    <div class="row"><span class="mut">Job</span><span>{{ invoice.request.reference }}</span></div>
+    {% if invoice.is_inspection %}
+    <div class="row"><span class="mut">Inspection fee</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
+    {% else %}
+    <div class="row"><span class="mut">Included work</span><span>MUR {{ invoice.labour_amount|floatformat:"2g" }}</span></div>
+    {% if invoice.material_quotation %}<div class="row"><span class="mut">Materials</span><span>MUR {{ invoice.materials_amount|floatformat:"2g" }}</span></div>{% endif %}
+    {% endif %}
+    <div class="row"><span class="mut">Payment method</span><span>{{ receipt.payment.get_method_display }}</span></div>
+    {% if receipt.payment.reference %}<div class="row"><span class="mut">Payment reference</span><span>{{ receipt.payment.reference }}</span></div>{% endif %}
+    <div class="row t"><span>Total paid</span><span>MUR {{ receipt.payment.amount|floatformat:"2g" }}</span></div>
+    <div style="display:flex;gap:12px;margin-top:24px">
+      <button class="btn" type="button" onclick="window.print()">Print receipt</button>
+      <a class="btn o" href="{% url 'payments:my_invoices' %}">Back to my invoices</a>
+    </div>
+  </div>
+</div>
+{% endwith %}
 {% endblock %}
