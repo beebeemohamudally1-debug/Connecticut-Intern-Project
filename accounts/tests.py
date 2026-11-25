@@ -13,6 +13,7 @@ from accounts import auth_messages as M
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
+
 import io
 import shutil
 import tempfile
@@ -20,6 +21,8 @@ import tempfile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from PIL import Image
+from django.core import mail
+from accounts.views import _fail_key
 
 User = get_user_model()
 PASSWORD = 'Str0ngPass!word'
@@ -295,4 +298,72 @@ class AdminStatusTests(TestCase):
         user = User.objects.create_user(
             username='d1', email='d1@example.com', password=PASSWORD, is_active=False)
         self.assertEqual(self.status(user), 'Suspended')
+        
+class PasswordResetTests(TestCase):
+    EMAIL = 'reset@example.com'
+    OLD = 'Str0ngPass!word'
+    NEW = 'N3wStrongPass!word'
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='rst', email=self.EMAIL, password=self.OLD)
+        self.send_code = patch('accounts.verification.send_code', return_value=True).start()
+        patch('accounts.verification.secrets.randbelow', return_value=123456).start()
+        self.addCleanup(patch.stopall)
+
+    def request_code(self, email=None):
+        return self.client.post(reverse('accounts:forgot_password'), {'email': email or self.EMAIL})
+
+    def verify_code(self, code='123456'):
+        return self.client.post(reverse('accounts:reset_verify'), {'code': code})
+
+    def test_full_reset_changes_password(self):
+        self.request_code()
+        r = self.verify_code()
+        self.assertRedirects(r, reverse('accounts:reset_new'), fetch_redirect_response=False)
+        r = self.client.post(reverse('accounts:reset_new'), {'password': self.NEW, 'confirm': self.NEW})
+        self.assertRedirects(r, reverse('accounts:reset_done'), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(self.NEW))
+        self.assertFalse(self.user.check_password(self.OLD))
+        self.assertEqual(len(mail.outbox), 1)   # the password changed email
+
+    def test_unknown_email_gets_same_answer_and_no_email(self):
+        r = self.request_code('nobody@example.com')
+        self.assertTrue(r.context['submitted'])
+        self.assertEqual(r.context['notice'], M.FORGOT_GENERIC)
+        self.send_code.assert_not_called()
+
+    def test_suspended_user_gets_no_code(self):
+        self.user.is_suspended = True
+        self.user.save()
+        r = self.request_code()
+        self.assertTrue(r.context['submitted'])
+        self.send_code.assert_not_called()
+
+    def test_wrong_code_is_refused(self):
+        self.request_code()
+        r = self.verify_code('000000')
+        self.assertEqual(r.context['state'], 'wrong')
+        self.assertEqual(r.context['attempts_left'], 2)
+
+    def test_cannot_skip_code_check(self):
+        self.request_code()
+        r = self.client.get(reverse('accounts:reset_new'))
+        self.assertRedirects(r, reverse('accounts:forgot_password'), fetch_redirect_response=False)
+
+    def test_weak_password_is_refused(self):
+        self.request_code()
+        self.verify_code()
+        r = self.client.post(reverse('accounts:reset_new'), {'password': 'abc', 'confirm': 'abc'})
+        self.assertIn('password', r.context['errors'])
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password(self.OLD))
+
+    def test_reset_clears_the_login_lock(self):
+        cache.set(_fail_key(self.EMAIL), 5, 900)
+        self.request_code()
+        self.verify_code()
+        self.client.post(reverse('accounts:reset_new'), {'password': self.NEW, 'confirm': self.NEW})
+        self.assertIsNone(cache.get(_fail_key(self.EMAIL)))
 # Create your tests here.
