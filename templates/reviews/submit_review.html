@@ -1,20 +1,63 @@
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Submit Review</title>
-</head>
-<body>
-    <h1>Submit Review</h1>
-
-    <p>Job: {{ job.reference }}</p>
-    <p>Service: {{ job.service_name }}</p>
-
-    <form method="post">
+{% extends "base_customer.html" %}
+{% comment %}
+  Private feedback form for a completed job.
+  REQUIRED (unchanged): job (reference, service_name), form (ReviewForm: fields `rating` 1-5 and `comment`).
+  The Select widget is replaced by 5 radio inputs with the SAME name/values, so the existing POST handling is untouched.
+  OPTIONAL: receipt_summary {number, payment_ref, paid_at_text, method, professional, appointment, lines:[{label, amount}], total, completed_at, completion_notes, cover_until}
+            provider {name, initials, role_line}
+{% endcomment %}
+{% load static %}
+{% block title %}Private feedback | HandyConnect{% endblock %}
+{% block page %}reviews{% endblock %}
+{% block content %}
+{% url 'complaints:create' as u_complaint %}
+{% url 'reviews:my_reviews' as u_mine %}
+<div class="cp-head"><div><h1>A job well done. A home well cared for.</h1><p>{{ job.reference }} · {{ job.service_name }}{% if receipt_summary.completed_at %} · Completed {{ receipt_summary.completed_at }}{% endif %}</p></div></div>
+{% if receipt_summary %}<div class="cp-notice is-ok"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Payment received. You’re all settled.</strong><p>{{ receipt_summary.number }} · {{ receipt_summary.paid_at_text }}</p></div></div>{% endif %}
+<div class="cp-cols is-form-side">
+  <div class="cp-stack">
+    {% if receipt_summary %}
+    <section class="cp-panel" data-hook="receipt"><div class="cp-panel-row"><div><h2>Payment receipt</h2><p class="cp-small">{{ receipt_summary.number }} · {{ receipt_summary.payment_ref }}</p></div>{% include "customer/_badge.html" with tone="ok" label="Paid" %}</div>
+      <hr class="cp-divider">
+      <dl class="cp-details">
+        {% if receipt_summary.professional %}<div class="cp-detail"><dt>Professional</dt><dd>{{ receipt_summary.professional }}</dd></div>{% endif %}
+        {% if receipt_summary.appointment %}<div class="cp-detail"><dt>Appointment</dt><dd>{{ receipt_summary.appointment }}</dd></div>{% endif %}
+        {% if receipt_summary.method %}<div class="cp-detail"><dt>Payment method</dt><dd>{{ receipt_summary.method }}</dd></div>{% endif %}
+      </dl>
+      {% if receipt_summary.lines %}<hr class="cp-divider"><dl class="cp-details">{% for l in receipt_summary.lines %}<div class="cp-detail"><dt>{{ l.label }}</dt><dd>MUR {{ l.amount }}</dd></div>{% endfor %}</dl>{% endif %}
+      <hr class="cp-divider"><div class="cp-total"><span>Total paid</span><strong>MUR {{ receipt_summary.total }}</strong></div>
+    </section>
+    {% if receipt_summary.completion_notes %}<section class="cp-panel"><h2>Completion summary</h2><p class="cp-text-muted">{{ receipt_summary.completion_notes }}</p>
+      <dl class="cp-details">{% if receipt_summary.completed_at %}<div class="cp-detail"><dt>Work completed</dt><dd>{{ receipt_summary.completed_at }}</dd></div>{% endif %}{% if receipt_summary.cover_until %}<div class="cp-detail"><dt>Workmanship cover</dt><dd>Through {{ receipt_summary.cover_until }}</dd></div>{% endif %}</dl>
+      {% if u_complaint %}<a class="cp-link is-orange" href="{{ u_complaint }}">Need help with this job? Report a concern →</a>{% endif %}</section>{% endif %}
+    {% endif %}
+  </div>
+  <aside class="cp-stack">
+    <section class="cp-panel" aria-labelledby="cp-fb-h"><h2 id="cp-fb-h">Share private feedback</h2><p class="cp-panel-sub">Available only after this job is completed.</p>
+      {% if provider %}<div class="cp-person"><span class="cp-avatar is-lg" data-keep="1">{{ provider.initials }}</span><div><strong>{{ provider.name }}</strong><span>{{ provider.role_line|default:"Verified professional · Skills checked" }}</span></div></div><hr class="cp-divider">{% endif %}
+      <form method="post" novalidate data-hook="feedback-form">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Submit Review</button>
-    </form>
-</body>
-</html>
+        {% if form.non_field_errors %}<div class="cp-notice is-bad"><svg class="cp-ic" aria-hidden="true"><use href="#i-alert"/></svg><div><p>{{ form.non_field_errors|join:" " }}</p></div></div>{% endif %}
+        <div class="cp-stack" style="gap:18px">
+          <div>
+            <fieldset class="cp-stars" data-cp-stars><legend>Rate your experience <span class="cp-req" aria-hidden="true">*</span></legend>
+              {% for n in "12345" %}<label class="cp-star"><input type="radio" name="rating" value="{{ n }}" required{% if form.rating.value|stringformat:"s" == n %} checked{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-star"/></svg><span>{{ n }}</span></label>{% endfor %}
+            </fieldset>
+            <p class="cp-rating-label" aria-live="polite"></p>
+            {% for e in form.rating.errors %}<p class="cp-error"><svg class="cp-ic" style="width:14px;height:14px" aria-hidden="true"><use href="#i-alert"/></svg>{{ e }}</p>{% endfor %}
+          </div>
+          <div class="cp-field"><label for="id_comment">Your private feedback <span class="cp-req" aria-hidden="true">*</span></label>
+            <textarea class="cp-textarea" id="id_comment" name="comment" rows="5" maxlength="1000" required data-cp-count="cp-fb-count" {% if form.comment.errors %}aria-invalid="true"{% endif %}>{{ form.comment.value|default_if_none:"" }}</textarea>
+            <span class="cp-count" id="cp-fb-count"></span>
+            {% for e in form.comment.errors %}<p class="cp-error"><svg class="cp-ic" style="width:14px;height:14px" aria-hidden="true"><use href="#i-alert"/></svg>{{ e }}</p>{% endfor %}
+          </div>
+          <p class="cp-tiny">Only you and authorised administrators can view this feedback. It is not published or shared with the handyman.</p>
+          <button type="submit" class="cp-btn is-primary is-block">Submit private feedback</button>
+        </div>
+      </form>
+    </section>
+    <section class="cp-panel"><h2>Here if you need us</h2><p class="cp-small">Complaints are handled separately and privately by administrators. Use a complaint for issues needing investigation.</p>
+      {% if u_complaint %}<a class="cp-btn is-light is-block" href="{{ u_complaint }}">Report a concern</a>{% endif %}</section>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% comment %}
+  "Join as a provider" control. Registration starts with a POST of the chosen role (same contract the
+  role picker on /register uses), so this is a one-button form rather than a link.
+  Params: cls (css classes for the button), label (button text), arrow (any value = show the arrow icon).
+{% endcomment %}
+<form class="hm-inline-form" method="post" action="{% url 'accounts:register' %}">{% csrf_token %}
+  <input type="hidden" name="role" value="provider">
+  <button class="{{ cls }}" type="submit" data-hook="join-provider">{{ label }}{% if arrow %}<svg class="hm-ic" aria-hidden="true"><use href="#hm-i-arrow-up-right"/></svg>{% endif %}</button>
+</form>

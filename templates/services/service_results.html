@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+  PUBLIC · SERVICE RESULTS (visitors and signed-in users).  URL name expected: services:results   e.g. /services/results/
+  Plain GET form: category, region, date, skill (repeatable), availability (repeatable), area (repeatable), sort.  No JavaScript needed.
+  CONTEXT (all optional; the page renders an empty state without it):
+    category, region, date, f (request.GET)
+    total (all matches), shown (on this page)
+    professionals [{name, initials, years, summary, verified(bool), available_label, url (profile), request_url}]
+    categories [str], regions [str], skills [{label, checked}], availabilities [{label, value, checked}], areas [{label, checked}]
+    sort_options [(value,label)]
+  "Request service": signed-in customers go to customer_portal:new_request?category=..., visitors go to accounts:register.
+  The quote itself is issued by an administrator after review; no price is shown here on purpose.
+{% endcomment %}
+{% block title %}{{ category|default:"Services" }} | HandyConnect{% endblock %}
+{% block page %}service-results{% endblock %}
+{% block body %}
+<link rel="stylesheet" href="{% static 'accounts/css/home.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/results.css' %}">
+{% include "accounts/_public_sprite.html" %}
+{% url 'customer_portal:new_request' as u_new %}{% url 'accounts:register' as u_reg %}
+<div class="hm">
+{% include "accounts/_public_nav.html" %}
+<main class="sr" id="main">
+<div class="sr-wrap">
+  <nav class="sr-crumb" aria-label="Breadcrumb"><a href="{% url 'accounts:home' %}">Home</a> / Services{% if category %} / {{ category }}{% endif %}</nav>
+  <div class="sr-head"><div><h1>{% if category %}Expert {{ category|lower }}. Without the guesswork.{% else %}Find the right professional.{% endif %}</h1>
+    <p>{% if total %}{{ total }} verified professional{{ total|pluralize }}{% else %}Verified professionals{% endif %} serving {{ region|default:"Mauritius" }}</p></div>
+    <span class="sr-pill"><svg class="hm-ic" style="width:12px;height:12px" aria-hidden="true"><use href="#hm-i-badge-check"/></svg>Background checked</span></div>
+  <form class="sr-bar" method="get" role="search" data-hook="results-search">
+    <div class="sr-field"><label for="sr-cat">Service</label><select class="sr-in" id="sr-cat" name="category"><option value="">All services</option>{% for c in categories %}<option{% if category == c %} selected{% endif %}>{{ c }}</option>{% empty %}<option{% if category == 'Plumbing' %} selected{% endif %}>Plumbing</option><option{% if category == 'Electrical' %} selected{% endif %}>Electrical</option><option{% if category == 'Painting' %} selected{% endif %}>Painting</option><option{% if category == 'Cleaning' %} selected{% endif %}>Cleaning</option><option{% if category == 'Carpentry' %} selected{% endif %}>Carpentry</option>{% endfor %}</select></div>
+    <div class="sr-field"><label for="sr-reg">Location</label><select class="sr-in" id="sr-reg" name="region">{% for r in regions %}<option{% if region == r %} selected{% endif %}>{{ r }}</option>{% empty %}<option{% if region == 'Port Louis' %} selected{% endif %}>Port Louis</option><option{% if region == 'Curepipe' %} selected{% endif %}>Curepipe</option><option{% if region == 'Quatre Bornes' %} selected{% endif %}>Quatre Bornes</option><option{% if region == 'Rose Hill' %} selected{% endif %}>Rose Hill</option><option{% if region == 'Vacoas' %} selected{% endif %}>Vacoas</option>{% endfor %}</select></div>
+    <div class="sr-field"><label for="sr-date">Preferred date</label><input class="sr-in" id="sr-date" name="date" type="date" value="{% firstof date f.date %}"></div>
+    <button class="sr-btn is-primary" type="submit">Update search</button>
+  </form>
+  <div class="sr-layout">
+    <form class="sr-filters" method="get" data-hook="results-filters" aria-label="Refine your search">
+      <h2>Refine your search</h2>
+      <input type="hidden" name="category" value="{{ category }}"><input type="hidden" name="region" value="{{ region }}">
+      {% if skills %}<fieldset class="sr-group"><legend>{{ category|default:"Service" }} skills</legend>{% for s in skills %}<label class="sr-check"><input type="checkbox" name="skill" value="{{ s.label }}"{% if s.checked %} checked{% endif %}>{{ s.label }}</label>{% endfor %}</fieldset>{% endif %}
+      <fieldset class="sr-group"><legend>Availability</legend>
+        {% for a in availabilities %}<label class="sr-check"><input type="checkbox" name="availability" value="{{ a.value }}"{% if a.checked %} checked{% endif %}>{{ a.label }}</label>{% empty %}<label class="sr-check"><input type="checkbox" name="availability" value="week"> This week</label><label class="sr-check"><input type="checkbox" name="availability" value="weekend"> Weekends</label>{% endfor %}</fieldset>
+      {% if areas %}<fieldset class="sr-group"><legend>Service area</legend>{% for a in areas %}<label class="sr-check"><input type="checkbox" name="area" value="{{ a.label }}"{% if a.checked %} checked{% endif %}>{{ a.label }}</label>{% endfor %}</fieldset>{% endif %}
+      <button class="sr-btn is-primary" type="submit">Apply filters</button>
+      <a class="sr-btn is-light" href="?category={{ category|urlencode }}&amp;region={{ region|urlencode }}">Reset filters</a>
+    </form>
+    <section class="sr-results" aria-label="Professional results" data-hook="results-list">
+      <div class="sr-sort"><span>Showing {% if shown %}{{ shown }}{% else %}{{ professionals|length }}{% endif %}{% if total %} of {{ total }}{% endif %} professionals</span>
+        <form method="get"><input type="hidden" name="category" value="{{ category }}"><input type="hidden" name="region" value="{{ region }}"><label class="hm-sr" for="sr-sort">Sort</label><select class="sr-in" id="sr-sort" name="sort" onchange="this.form.submit()">{% for v, l in sort_options %}<option value="{{ v }}"{% if f.sort == v %} selected{% endif %}>Sort: {{ l }}</option>{% empty %}<option value="recommended">Sort: Recommended</option><option value="experience"{% if f.sort == 'experience' %} selected{% endif %}>Sort: Experience</option><option value="availability"{% if f.sort == 'availability' %} selected{% endif %}>Sort: Soonest available</option>{% endfor %}</select></form></div>
+      {% for p in professionals %}
+      <article class="sr-card sr-pro">
+        <div class="sr-pro-info">
+          <div class="sr-person"><span class="sr-avatar" aria-hidden="true">{{ p.initials }}</span><div><strong>{{ p.name }}</strong><span>Verified skills{% if p.years %} · {{ p.years }} years of experience{% endif %}</span></div></div>
+          <p class="sr-desc">{{ p.summary }}</p>
+          <div class="sr-chips">{% if p.verified %}<span class="sr-pill is-ok">Verified</span>{% endif %}{% if p.available_label %}<span class="sr-pill is-ok">{{ p.available_label }}</span>{% endif %}</div>
+        </div>
+        <div class="sr-act"><strong>Fixed quote in MUR</strong><small>Issued by admin after review</small>
+          {% if request.user.is_authenticated %}<a class="sr-btn is-primary" href="{{ p.request_url|default:u_new }}{% if not p.request_url and category %}?category={{ category|urlencode }}{% endif %}">Request service</a>{% else %}<a class="sr-btn is-primary" href="{{ p.request_url|default:u_reg }}">Request service</a>{% endif %}
+          {% if p.url %}<a class="sr-link" href="{{ p.url }}">View profile →</a>{% endif %}</div>
+      </article>
+      {% empty %}
+      <div class="sr-card sr-empty"><strong>No professionals match yet</strong>Try a different date, area or service. New professionals join every week.</div>
+      {% endfor %}
+    </section>
+  </div>
+</div>
+</main>
+{% include "accounts/_public_foot.html" %}
+</div>
+<script src="{% static 'accounts/js/home.js' %}" defer></script>
+{% endblock %}

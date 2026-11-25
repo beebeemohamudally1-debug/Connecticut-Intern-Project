@@ -15,8 +15,9 @@
     form, conflict, slots, today, list_url
   Send to Customer posts handyman, date, slot and notes. The view checks them and the booking
   conflict, but saves nothing yet. BACKEND: create the Pending appointment in the view (marked there).
-  Not in the backend yet: the inspection fee (so an inspection cannot be blocked for it), sending
-  the proposal to the customer, and handyman working hours.
+  fee, fee_due            -> inspection only: the inspection fee invoice (row, issue_url, pay_url); the
+                               invoice pages come back here after saving. Scheduling is locked until it is paid.
+  Not in the backend yet: sending the proposal to the customer, and handyman working hours.
 {% endcomment %}
 
 {% block title %}Schedule {{ page.kind_label }} Appointment | HandyConnect{% endblock %}
@@ -70,11 +71,19 @@
     {% else %}<p class="mut ap-small">Choose a request to see its quotations and payments.</p>{% endif %}
     {% else %}
     <h2>Inspection Prerequisite</h2>
+    {% if page.fee %}
     <ul class="ap-checks">
-      <li class="no"><span>Inspection fee</span><strong>Not recorded in the system</strong></li>
-      <li class="ok"><span>Scheduling</span><strong>Permitted</strong></li>
+      <li class="{% if page.fee.row.ok %}ok{% else %}no{% endif %}"><span>{{ page.fee.row.label }}</span><strong>{{ page.fee.row.value }}</strong></li>
+      <li class="{% if page.fee_due %}no{% else %}ok{% endif %}"><span>Scheduling</span><strong>{% if page.fee_due %}After the fee is paid{% else %}Permitted{% endif %}</strong></li>
     </ul>
-    <p class="mut ap-small">The backend has no inspection fee yet. Check it has been paid offline before sending the appointment.</p>
+    {% if page.fee.issue_url or page.fee.pay_url %}
+    <div class="ap-fee">
+      <p class="mut ap-small">Issue the fee invoice and record the payment, then the visit can be scheduled.</p>
+      {% if page.fee.issue_url %}<a class="btn o ap-main" href="{{ page.fee.issue_url }}">Issue Inspection Invoice</a>{% endif %}
+      {% if page.fee.pay_url %}<a class="btn o ap-main" href="{{ page.fee.pay_url }}">Record Payment</a>{% endif %}
+    </div>
+    {% endif %}
+    {% else %}<p class="mut ap-small">Choose a request to see its inspection fee.</p>{% endif %}
     {% endif %}
   </section>
 </div>
@@ -120,8 +129,9 @@
       {% for c in page.checks.rows %}<li class="{% if c.ok %}ok{% else %}no{% endif %}"><span>{{ c.label }}</span><strong>{{ c.value }}</strong></li>{% endfor %}
     </ul>
     <div class="ql-btns">
-      {# Payments are recorded in the payments section (payments team), not from here #}
+      {# The invoice and payment start from the Payment Status page #}
       <button class="btn o" type="button" data-close>Close</button>
+      {% if page.request %}<a class="btn soft-green" href="{% url 'accounts_admin:payment_status' page.request.pk %}">View Payment Status</a>{% endif %}
     </div>
   </div>
 </dialog>
@@ -160,4 +170,4 @@
     if (change) change.addEventListener('click', function () { var f = document.querySelector('[name="date"]'); if (f) f.focus(); });
   })();
 </script>
-{% endblock %}
+{% endblock %}

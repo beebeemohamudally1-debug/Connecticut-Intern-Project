@@ -28,7 +28,8 @@ notifications = _handyman_page('notifications', 'dashboard/handyman_notifs.html'
 
 @role_required('customer')
 def customer_dashboard(request):
-    return render(request, 'dashboard/customer_dashboard.html')
+    from customer_portal.views import dashboard_context
+    return render(request, 'dashboard/customer_dashboard.html', dashboard_context(request.user))
 
 
 @role_required('admin')

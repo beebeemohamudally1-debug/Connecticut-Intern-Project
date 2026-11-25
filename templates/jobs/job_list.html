@@ -2,6 +2,7 @@
 {% block title %}Jobs | HandyConnect{% endblock %}
 {% block page %}jobs{% endblock %}
 {% block content %}
+{% if role == 'customer' %}{% include "customer/_job_list.html" %}{% else %}
 {% include "jobs/_messages.html" %}
 <div class="bar"><div>
   <div class="lab">{% if role == 'admin' %}Admin · Monitor work{% elif role == 'handyman' %}Handyman · Jobs{% else %}Customer · Jobs{% endif %}</div>
@@ -32,4 +33,5 @@
   <td><a class="btn s o" href="{% url 'jobs:detail' j.pk %}">Open</a></td>
 </tr>{% empty %}<tr><td colspan="7" class="mut">No jobs found.</td></tr>{% endfor %}
 </tbody></table></div>
+{% endif %}
 {% endblock %}

@@ -15,7 +15,9 @@ from django.utils import timezone
 
 from bookings.models import Appointment, ServiceRequest, ServiceRequestAssignment
 from dashboard.permissions import role_required
-from payments.models import Quotation, request_payment_state
+from urllib.parse import urlencode
+
+from payments.models import Invoice, Quotation, inspection_fee, request_payment_state
 
 from .admin_views import _initials, _person_name
 
@@ -196,6 +198,7 @@ def appointment_detail(request, pk):
         'can_change': a.status in (Appointment.STATUS_PENDING, Appointment.STATUS_CONFIRMED),
         'reschedule_url': reverse('accounts_admin:appointment_reschedule', args=[a.pk]),
         'list_url': reverse('accounts_admin:appointments'),
+        'fee': _inspection_fee(sr, request.get_full_path()) if a.appointment_type == Appointment.TYPE_INSPECTION else None,
     }
     return render(request, 'bookings/admin_appointment_detail.html', {'page': page})
 
@@ -241,6 +244,26 @@ def _busy(handymen):
                                                 appointment_date__gte=timezone.localdate())]
 
 
+def _inspection_fee(sr, back):
+    """The inspection fee invoice (payments team) of a request: one check row plus the buttons.
+    back = the page the invoice pages return to after saving (?next=)."""
+    fee = inspection_fee()
+    inv = (Invoice.objects.filter(request=sr, invoice_type=Invoice.INSPECTION).exclude(status=Invoice.CANCELLED)
+           .select_related('receipt').order_by('-pk').first()) if sr else None
+    nxt = '?' + urlencode({'next': back})
+    row = {'label': f'Inspection fee (MUR {fee:,.2f})', 'ok': False, 'value': 'No invoice yet'}
+    out = {'row': row, 'issue_url': '', 'pay_url': ''}
+    if not inv:
+        out['issue_url'] = reverse('payments:inspection_invoice_issue', args=[sr.pk]) + nxt if sr else ''
+    elif inv.status == Invoice.PAID:
+        receipt = getattr(inv, 'receipt', None)
+        row.update(ok=True, value=f'Paid · {receipt.number}' if receipt else 'Paid')
+    else:
+        row['value'] = f'{inv.number} issued · due {inv.due_date:%d %b %Y}'
+        out['pay_url'] = reverse('payments:invoice_record_payment', args=[inv.pk]) + nxt
+    return out
+
+
 @role_required('admin')
 def appointment_schedule(request, kind):
     """Schedule Inspection / Service Appointment (?request=<id> picks the service request)."""
@@ -251,10 +274,13 @@ def appointment_schedule(request, kind):
     checks = _payment_checks(sr) if sr and kind == Appointment.TYPE_SERVICE else None
     existing = _scheduled(kind).get(sr.pk) if sr else None
     blocked = bool(checks and not checks['ready'])
+    # Inspection: the visit is scheduled only once the inspection fee invoice is paid (payments team's rule)
+    fee = _inspection_fee(sr, request.get_full_path()) if sr and kind == Appointment.TYPE_INSPECTION else None
+    fee_due = bool(fee and not fee['row']['ok'])
     form = {'handyman': '', 'date': '', 'slot': '', 'notes': ''}
     conflict = None
 
-    if request.method == 'POST' and sr and not blocked and not existing:
+    if request.method == 'POST' and sr and not blocked and not fee_due and not existing:
         form = {k: request.POST.get(k, '').strip() for k in form}
         handyman = next((h for h in handymen if str(h.pk) == form['handyman']), None)
         try:
@@ -291,10 +317,12 @@ def appointment_schedule(request, kind):
         'busy': _busy(handymen),
         'existing': {'ref': _ref(existing), 'status': existing.get_status_display(),
                      'url': reverse('accounts_admin:appointment_detail', args=[existing.pk])} if existing else None,
-        'checks': checks, 'blocked': blocked and not existing, 'locked': blocked or bool(existing), 'form': form, 'conflict': conflict,
+        'checks': checks, 'blocked': blocked and not existing, 'locked': blocked or fee_due or bool(existing),
+        'form': form, 'conflict': conflict,
         'slots': [(k, f'{k.title()} ({v})') for k, v in SLOT_TIMES.items()],
         'today': timezone.localdate().isoformat(),
         'list_url': reverse('accounts_admin:appointments'),
+        'fee': fee, 'fee_due': fee_due,
     }
     return render(request, 'bookings/admin_appointment_schedule.html', {'page': page})
 
@@ -338,4 +366,4 @@ def appointment_reschedule(request, pk):
         'today': timezone.localdate().isoformat(),
         'detail_url': reverse('accounts_admin:appointment_detail', args=[a.pk]),
     }
-    return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})
+    return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})

@@ -53,3 +53,4 @@ urlpatterns = [
     path('skills/requests/', skills.skill_requests, name='skill_requests'),
     path('skills/requests/<int:pk>/', skills.skill_request_detail, name='skill_request_detail'),
 ]
+

@@ -2,5 +2,35 @@
 {% block title %}Admin · Inspection invoice | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Admin · Invoices</div><h1>Inspection invoice</h1><p class="sub">Issue the fixed inspection fee for a job the handyman cannot price from photos.</p></div></div><div class="g2"><div class="card"><h2>Inspection request</h2><div class="f2"><div><label for="j">Job reference</label><input class="in" id="j" value="JOB-1046"></div><div><label for="c">Customer</label><input class="in" id="c" value="Jason T."></div><div><label for="h">Handyman</label><input class="in" id="h" value="Marc D."></div><div><label for="f">Fixed inspection fee (MUR)</label><input class="in" id="f" value="500.00"></div></div><div style="height:14px"></div><div><label for="r">Reason given by handyman</label><textarea class="in" id="r">Possible hidden wall damage. Cannot be priced from the photos.</textarea></div><div style="height:14px"></div><div><label for="d">Payment deadline</label><input class="in" id="d" value="06/11/2026"></div><div style="display:flex;gap:12px;margin-top:24px"><button class="btn">Issue inspection invoice</button><button class="btn o">Decline request</button></div></div><div class="card"><h2>Fee status</h2><div class="row"><span class="mut">Invoice number</span><span>INS-2026-0009</span></div><div class="row"><span class="mut">Fee</span><span>MUR 500.00</span></div><div class="row"><span class="mut">Status</span><span><span class="b ye">Not issued</span></span></div><p class="sub" style="margin:16px 0 0">The visit can be scheduled only after the fee is cleared.</p></div></div>
+{% include "payments/_messages.html" %}
+<div class="bar"><div><div class="lab">Admin · Invoices</div><h1>Inspection invoice</h1><p class="sub">Issue the fixed inspection fee for a job the handyman cannot price from photos.</p></div></div>
+<form method="post">{% csrf_token %}
+<div class="g2">
+  <div class="card">
+    <h2>Inspection request</h2>
+    {{ form.non_field_errors }}
+    <div class="f2">
+      <div><label>Job reference</label><input class="in" value="{{ service_request.reference }}" readonly></div>
+      <div><label>Customer</label><input class="in" value="{{ service_request.customer.get_full_name|default:service_request.customer.username }}" readonly></div>
+      <div><label>Handyman</label><input class="in" value="{% if handyman %}{{ handyman.get_full_name|default:handyman.username }}{% else %}Not assigned{% endif %}" readonly></div>
+      <div><label>Fixed inspection fee (MUR)</label><input class="in" value="{{ fee|floatformat:'2g' }}" readonly></div>
+    </div>
+    <div style="height:14px"></div>
+    <div><label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>{{ form.reason }}{{ form.reason.errors }}</div>
+    <div style="height:14px"></div>
+    <div><label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }}</label>{{ form.due_date }}{{ form.due_date.errors }}</div>
+    <div style="display:flex;gap:12px;margin-top:24px">
+      <button class="btn" type="submit">Issue inspection invoice</button>
+      <a class="btn o" href="{% url 'payments:invoice_list' %}">Cancel</a>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Fee status</h2>
+    <div class="row"><span class="mut">Invoice number</span><span>Assigned when issued</span></div>
+    <div class="row"><span class="mut">Fee</span><span>MUR {{ fee|floatformat:"2g" }}</span></div>
+    <div class="row"><span class="mut">Status</span><span><span class="b ye">Not issued</span></span></div>
+    <p class="sub" style="margin:16px 0 0">The visit can be scheduled only after the fee is cleared.</p>
+  </div>
+</div>
+</form>
 {% endblock %}

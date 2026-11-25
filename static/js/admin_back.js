@@ -37,6 +37,8 @@
     [/^\/payments\/quotations\/$/, 'Service Quotations'],
     [/^\/payments\/quotations\/\d+\/$/, 'Quotation Details'],
     [/^\/payments\/materials\/(quotations\/)?$/, 'Material Quotations'],
+    [/^\/admin-portal\/payments\/\d+\/$/, 'Payment Status'],
+    [/^\/payments\/invoices\/$/, 'Invoices'],
     [/^\/admin-portal\/appointments\/$/, 'Appointments'],
     [/^\/admin-portal\/appointments\/calendar\/$/, 'Calendar'],
     [/^\/admin-portal\/appointments\/\d+\/$/, 'Appointment Details'],
@@ -92,4 +94,4 @@
       store.setItem('hc-back-nav', target.split('?')[0]);   // the page we go back to keeps its own back link
     });
   });
-})();
+})();
