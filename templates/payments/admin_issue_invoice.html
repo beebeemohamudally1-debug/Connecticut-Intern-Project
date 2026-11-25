@@ -2,5 +2,37 @@
 {% block title %}Admin · Issue job invoice | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Admin · Invoices</div><h1>Issue job invoice</h1><p class="sub">Create the invoice for an accepted quotation.</p></div></div><div class="g2"><div class="card"><h2>Invoice details</h2><div class="f2"><div><label for="j">Job reference</label><input class="in" id="j" value="JOB-1042"></div><div><label for="c">Customer</label><input class="in" id="c" value="Anisha R."></div><div><label for="q">Accepted quotation (MUR)</label><input class="in" id="q" value="11,000.00"></div><div><label for="m">Approved materials (MUR)</label><input class="in" id="m" value="1,500.00"></div><div><label for="d">Payment deadline</label><input class="in" id="d" value="06/11/2026"></div><div><label for="t">Total payable (MUR)</label><input class="in" id="t" value="12,500.00"></div></div><div style="height:14px"></div><div><label for="pi">Payment instructions</label><textarea class="in" id="pi">Pay by bank transfer to [BANK NAME], account [ACCOUNT NUMBER], using the invoice number as the reference.</textarea></div><div style="display:flex;gap:12px;margin-top:24px"><button class="btn">Issue invoice</button><button class="btn o">Cancel</button></div></div><div class="card"><h2>Summary</h2><div class="row"><span class="mut">Invoice number</span><span>INV-2026-0042</span></div><div class="row"><span class="mut">Quotation</span><span>Accepted 01/11/2026</span></div><div class="row"><span class="mut">Materials</span><span>2 approved items</span></div><div class="row"><span class="mut">Status</span><span><span class="b ye">Draft</span></span></div><p class="sub" style="margin:16px 0 0">The customer is notified when the invoice is issued.</p></div></div>
+{% include "payments/_messages.html" %}
+<div class="bar"><div><div class="lab">Admin · Invoices</div><h1>Issue job invoice</h1><p class="sub">Create the invoice for an accepted quotation.</p></div></div>
+<form method="post">{% csrf_token %}
+<div class="g2">
+  <div class="card">
+    <h2>Invoice details</h2>
+    {{ form.non_field_errors }}
+    {% if not labour %}<p class="sub">This request has no accepted labour quotation yet, so it cannot be invoiced.</p>{% endif %}
+    <div class="f2">
+      <div><label>Job reference</label><input class="in" value="{{ service_request.reference }}" readonly></div>
+      <div><label>Customer</label><input class="in" value="{{ service_request.customer.get_full_name|default:service_request.customer.username }}" readonly></div>
+      <div><label>Accepted quotation (MUR)</label><input class="in" value="{% if labour %}{{ labour.total_amount|floatformat:'2g' }}{% else %}-{% endif %}" readonly></div>
+      <div><label>Approved materials (MUR)</label><input class="in" value="{% if material %}{{ material.total_amount|floatformat:'2g' }}{% else %}0.00{% endif %}" readonly></div>
+      <div><label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }}</label>{{ form.due_date }}{{ form.due_date.errors }}</div>
+      <div><label>Total payable (MUR)</label><input class="in" value="{{ total|floatformat:'2g' }}" readonly></div>
+    </div>
+    <div style="height:14px"></div>
+    <div><label for="{{ form.payment_instructions.id_for_label }}">{{ form.payment_instructions.label }}</label>{{ form.payment_instructions }}{{ form.payment_instructions.errors }}</div>
+    <div style="display:flex;gap:12px;margin-top:24px">
+      <button class="btn" type="submit" {% if not labour %}disabled{% endif %}>Issue invoice</button>
+      <a class="btn o" href="{% url 'payments:invoice_list' %}">Cancel</a>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Summary</h2>
+    <div class="row"><span class="mut">Invoice number</span><span>Assigned when issued</span></div>
+    <div class="row"><span class="mut">Quotation</span><span>{% if labour %}Accepted {{ labour.responded_at|date:"d/m/Y" }}{% else %}Not accepted{% endif %}</span></div>
+    <div class="row"><span class="mut">Materials</span><span>{% if material %}{% if material.status == 'accepted' %}Accepted{% else %}Not yet accepted ({{ material.get_status_display }}){% endif %}{% else %}No material quotation{% endif %}</span></div>
+    <div class="row"><span class="mut">Status</span><span><span class="b ye">Not issued</span></span></div>
+    <p class="sub" style="margin:16px 0 0">The invoice appears in the customer's account once it is issued.</p>
+  </div>
+</div>
+</form>
 {% endblock %}

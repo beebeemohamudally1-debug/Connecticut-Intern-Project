@@ -1,0 +1,132 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Skills - list page. View: accounts.admin_skills.skills (admin only).
+
+  Data comes from the view as `page`:
+    page.stats      -> total, active, inactive, pending (handyman skill requests waiting)
+    page.rows       -> name, category, handymen (number of handyman profiles with the skill),
+                       active, view_url, edit_url
+    page.categories -> category names (the trades) for the Category filter
+  Skills have no description or dates in the backend (services.Skill): the Description column
+  is left out and Updated shows "—" until an updated date exists.
+  Search, the category / status filters and the page buttons work in the browser on
+  the rows sent (page.page_size per page).
+{% endcomment %}
+
+{% block title %}Manage Skills | HandyConnect{% endblock %}
+{% block page %}skills{% endblock %}
+{% block crumb %}Skills{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/admin_skills.css' %}">
+
+<div class="bar">
+  <div>
+    <h1>Manage Skills</h1>
+    <p class="sub">Manage the skills handymen can offer and review their skill requests.</p>
+  </div>
+  <div class="sk-head-btns">
+    <a class="btn soft-blue" href="{% url 'accounts_admin:skill_requests' %}">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Skill Requests{% if page.stats.pending %} <span class="sk-count">{{ page.stats.pending }}</span>{% endif %}
+    </a>
+    <a class="btn sk-main" href="{% url 'accounts_admin:skill_add' %}">+ Add Skill</a>
+  </div>
+</div>
+
+<section class="lq-stats" aria-label="Skill totals">
+  <div class="card lq-stat lq-s-pending">
+    <div class="lq-stat-top"><p class="lq-stat-label">All skills</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.total|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">In the skill catalogue</p>
+  </div>
+  <div class="card lq-stat lq-s-accepted">
+    <div class="lq-stat-top"><p class="lq-stat-label">Active skills</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.active|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Handymen can choose them</p>
+  </div>
+  <div class="card lq-stat sk-s-off">
+    <div class="lq-stat-top"><p class="lq-stat-label">Inactive skills</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.inactive|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">Hidden from new selections</p>
+  </div>
+  <div class="card lq-stat lq-s-revision">
+    <div class="lq-stat-top"><p class="lq-stat-label">Pending requests</p>
+      <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v5l3 2"/></svg></span></div>
+    <p class="lq-stat-num">{{ page.stats.pending|stringformat:"02d" }}</p>
+    <p class="lq-stat-hint">From handymen</p>
+  </div>
+</section>
+
+<section class="card lq-card" data-skills data-page-size="{{ page.page_size }}">
+  <h2 class="sk-title">Skills</h2>
+  <div class="lq-tools sk-tools">
+    <label class="lq-search">
+      <span class="sr-only">Search skills</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input class="in" type="search" placeholder="Search skills..." data-search>
+    </label>
+    <label><span class="sr-only">Category</span>
+      <select class="in" data-category>
+        <option value="">All categories</option>
+        {% for c in page.categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        <option value="-">No category</option>
+      </select>
+    </label>
+    <label><span class="sr-only">Status</span>
+      <select class="in" data-status>
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </label>
+    <button class="btn o s" type="button" data-clear>Clear Filters</button>
+  </div>
+
+  <table class="tb lq-table sk-table">
+    <thead>
+      <tr>
+        <th scope="col">Skill</th>
+        <th scope="col">Category</th>
+        <th scope="col">Handymen</th>
+        <th scope="col">Updated</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in page.rows %}
+      <tr data-row data-status="{% if s.active %}active{% else %}inactive{% endif %}" data-category="{{ s.category|default:'-' }}"
+          data-text="{{ s.name|lower }} {{ s.category|lower }}">
+        <td data-label="Skill"><strong>{{ s.name }}</strong></td>
+        <td data-label="Category">{% if s.category %}{{ s.category }}{% else %}<span class="mut">No category</span>{% endif %}</td>
+        <td data-label="Handymen">{{ s.handymen }}</td>
+        {# BACKEND (services): Skill has no updated date yet. Show it here once it exists (e.g. updated_at). #}
+        <td data-label="Updated"><span class="mut" title="Not recorded yet">—</span></td>
+        <td data-label="Status">{% if s.active %}<span class="b sk-st is-on">Active</span>{% else %}<span class="b sk-st is-off">Inactive</span>{% endif %}</td>
+        <td data-label="" class="sk-acts">
+          <a class="btn o s" href="{{ s.view_url }}">View</a>
+          <a class="btn s sk-edit" href="{{ s.edit_url }}">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="lq-empty" data-empty hidden>{% if page.rows %}Nothing matches that search. Try clearing the filters.{% else %}No skills yet.{% endif %}</p>
+
+  <div class="lq-foot">
+    <p class="mut" data-count aria-live="polite"></p>
+    <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
+  </div>
+</section>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'services/js/admin_skills.js' %}"></script>
+{% endblock %}

@@ -2,5 +2,43 @@
 {% block title %}Admin · Record payment | HandyConnect{% endblock %}
 {% block page %}payments{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Admin · Payments</div><h1>Record customer payment</h1><p class="sub">Record an offline payment for an accepted quotation. No online payment is processed.</p></div></div><div class="g2"><div class="card"><h2>Payment details</h2><div class="f2"><div><label for="job">Job reference</label><input class="in" id="job" value="JOB-1042"></div><div><label for="cust">Customer</label><input class="in" id="cust" value="Anisha R."></div><div><label for="amt">Amount received (MUR)</label><input class="in" id="amt" value="12,500.00"></div><div><label for="dt">Date received</label><input class="in" id="dt" value="03/11/2026"></div><div><label for="meth">Payment method</label><select class="in" id="meth"><option>Bank transfer</option><option>Cash</option></select></div><div><label for="ref">Reference number</label><input class="in" id="ref" value="TRF-88213"></div></div><div style="margin-top:16px"><label for="rcv">Payment status</label><select class="in" id="rcv"><option>Received</option><option>Not received</option></select></div><div style="display:flex;gap:12px;margin-top:24px"><button class="btn">Mark as cleared</button><button class="btn o">Save without clearing</button></div><p class="sub" style="margin:12px 0 0">Cleared is available only when the full quotation total is received.</p></div><div class="card"><h2>Invoice INV-2026-0042</h2><div class="row"><span class="mut">Quoted work</span><span>MUR 11,000.00</span></div><div class="row"><span class="mut">Approved materials</span><span>MUR 1,500.00</span></div><div class="row t"><span>Total payable</span><span>MUR 12,500.00</span></div><div class="row"><span class="mut">Deadline</span><span>06/11/2026</span></div><div class="row"><span class="mut">Status</span><span class="b ye">Awaiting payment</span></div></div></div>
+{% include "payments/_messages.html" %}
+<div class="bar"><div><div class="lab">Admin · Payments</div><h1>Record customer payment</h1><p class="sub">Record an offline payment for an issued invoice. No online payment is processed.</p></div></div>
+<div class="g2">
+  <div class="card">
+    <h2>Payment details</h2>
+    <form method="post">{% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="f2">
+        <div><label>Job reference</label><input class="in" value="{{ invoice.request.reference }}" readonly></div>
+        <div><label>Customer</label><input class="in" value="{{ invoice.request.customer.get_full_name|default:invoice.request.customer.username }}" readonly></div>
+        <div><label for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>{{ form.amount }}{{ form.amount.errors }}</div>
+        <div><label for="{{ form.date_received.id_for_label }}">{{ form.date_received.label }}</label>{{ form.date_received }}{{ form.date_received.errors }}</div>
+        <div><label for="{{ form.method.id_for_label }}">{{ form.method.label }}</label>{{ form.method }}{{ form.method.errors }}</div>
+        <div><label for="{{ form.reference.id_for_label }}">{{ form.reference.label }}</label>{{ form.reference }}{{ form.reference.errors }}</div>
+      </div>
+      <div style="margin-top:16px"><label for="{{ form.received.id_for_label }}">{{ form.received.label }}</label>{{ form.received }}{{ form.received.errors }}</div>
+      <div style="display:flex;gap:12px;margin-top:24px">
+        <button class="btn" type="submit" name="action" value="clear">Mark as cleared</button>
+        <button class="btn o" type="submit" name="action" value="save">Save without clearing</button>
+      </div>
+      <p class="sub" style="margin:12px 0 0">Cleared is available only when the full invoice total is received.</p>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Invoice {{ invoice.number }}</h2>
+    {% if invoice.is_inspection %}
+    <div class="row"><span class="mut">Inspection fee</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
+    {% else %}
+    <div class="row"><span class="mut">Quoted work</span><span>MUR {{ invoice.labour_amount|floatformat:"2g" }}</span></div>
+    <div class="row"><span class="mut">Approved materials</span><span>MUR {{ invoice.materials_amount|floatformat:"2g" }}</span></div>
+    <div class="row t"><span>Total payable</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
+    {% endif %}
+    <div class="row"><span class="mut">Deadline</span><span>{{ invoice.due_date|date:"d/m/Y" }}</span></div>
+    <div class="row"><span class="mut">Status</span><span class="b ye">{% if invoice.is_overdue %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}</span></div>
+    <form method="post" action="{% url 'payments:invoice_cancel' invoice.pk %}" style="margin-top:16px">{% csrf_token %}
+      <button class="btn o" type="submit" onclick="return confirm('Cancel invoice {{ invoice.number }}?')">Cancel invoice</button>
+    </form>
+  </div>
+</div>
 {% endblock %}

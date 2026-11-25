@@ -1,0 +1,97 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Manage Skills - Review Skill Request. View: accounts.admin_skills.skill_request_detail.
+
+  Data comes from the view as `page`:
+    ref, status_label, tone, pending, submitted, reason (the handyman's justification),
+    action (add / modify / remove), action_label, current, requested, skill, skill_url (when the
+    name matches a skill in the catalogue), category,
+    handyman, initials, handyman_url, region, profile_status, profile_tone, skill_count,
+    admin_note, reviewed, reviewed_by (after a decision)
+  BACKEND (bookings / services): there is no view that approves or rejects a request yet, so the
+  decision form shows a demo message (data-demo). It should set status, admin_note, reviewed_at
+  and reviewed_by, and on approval update the handyman's skills. Then remove data-demo.
+{% endcomment %}
+
+{% block title %}{{ page.ref }} | Skill Requests | HandyConnect{% endblock %}
+{% block page %}skills{% endblock %}
+{% block crumb %}Skills{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
+<link rel="stylesheet" href="{% static 'services/css/admin_skills.css' %}">
+
+<a class="back" href="{% url 'accounts_admin:skill_requests' %}">&larr; Back to Skill Requests</a>
+<div class="bar">
+  <div>
+    <h1>Review Skill Request</h1>
+    <p class="sub">Approve or reject a handyman's skill change.</p>
+  </div>
+</div>
+<div class="ql-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+
+<div class="sk-grid">
+  <section class="card sk-box">
+    <div class="sk-box-head">
+      <h2 class="sk-name">Request {{ page.ref }}</h2>
+      <span class="sk-st is-{{ page.tone }}">{% if page.pending %}Pending review{% else %}{{ page.status_label }}{% endif %}</span>
+    </div>
+    <dl class="sk-dl">
+      <div><dt>Request type</dt><dd><span class="sk-chg is-{{ page.action }}">{{ page.action_label }} skill</span></dd></div>
+      <div><dt>Submitted on</dt><dd>{{ page.submitted }}</dd></div>
+      {% if page.action == 'modify' %}
+      <div><dt>Current skill</dt><dd>{{ page.current }}</dd></div>
+      <div><dt>Proposed skill</dt><dd>{{ page.requested }}</dd></div>
+      {% else %}
+      <div><dt>{% if page.action == 'remove' %}Skill to remove{% else %}Proposed skill{% endif %}</dt>
+        <dd>{% if page.skill_url %}<a href="{{ page.skill_url }}">{{ page.skill }}</a>{% else %}{{ page.skill }}{% endif %}</dd></div>
+      <div><dt>Category</dt><dd>{% if page.category %}{{ page.category }}{% elif page.skill_url %}<span class="mut">No category</span>{% else %}<span class="mut">Not in the skill catalogue</span>{% endif %}</dd></div>
+      {% endif %}
+      <div class="sk-wide"><dt>Justification</dt><dd class="sk-text">{{ page.reason|default:"No reason given." }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card sk-box">
+    <h2>Handyman</h2>
+    <div class="sk-person">
+      <span class="sk-av is-big" aria-hidden="true">{{ page.initials }}</span>
+      <div><strong>{{ page.handyman }}</strong>{% if page.profile_status %}<span class="sk-tag is-{{ page.profile_tone }}">{{ page.profile_status }}</span>{% endif %}</div>
+    </div>
+    <dl class="sk-dl sk-one">
+      <div><dt>Region</dt><dd>{{ page.region|default:"Not given" }}</dd></div>
+      <div><dt>Skills on profile</dt><dd>{{ page.skill_count }}</dd></div>
+    </dl>
+    <a class="btn o s sk-profile" href="{{ page.handyman_url }}">View Handyman Profile</a>
+  </section>
+</div>
+
+{% if page.pending %}
+<section class="card sk-next sk-decide">
+  {# BACKEND: post to a view that approves / rejects the request (name="decision"), then remove data-demo #}
+  <form method="post" action="#" data-decision novalidate data-demo="Not saved yet: approving or rejecting skill requests is not in the backend (frontend demo only).">
+    {% csrf_token %}
+    <label class="sk-field">
+      <span class="sk-label">Decision note <span class="mut">(needed to reject)</span></span>
+      <textarea class="in" name="admin_note" rows="2" placeholder="Reason for the decision..." data-note></textarea>
+      <span class="sk-err" data-err-note hidden>Please give a reason before rejecting.</span>
+    </label>
+    <div class="sk-actions">
+      <button class="btn soft-red" type="submit" name="decision" value="reject">Reject Request</button>
+      <button class="btn soft-green" type="submit" name="decision" value="approve">Approve Request</button>
+    </div>
+  </form>
+</section>
+{% else %}
+<section class="card sk-next">
+  <div>
+    <h2>Decision</h2>
+    <p class="mut">{{ page.status_label }}{% if page.reviewed %} on {{ page.reviewed }}{% endif %}{% if page.reviewed_by %} by {{ page.reviewed_by }}{% endif %}.{% if page.admin_note %} Note: {{ page.admin_note }}{% endif %}</p>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'services/js/admin_skills.js' %}"></script>
+{% endblock %}

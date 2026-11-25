@@ -1,0 +1,210 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job In Progress | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_job_in_progress.css' %}">
+</head>
+<body data-page="progress" data-uid="{{ hc_uid|default:'guest' }}">
+<div class="layout">
+
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            HandyConnect
+        </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
+
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="{% url 'dashboard:assigned_jobs' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>Job Requests</a>
+            <a class="active" aria-current="page" href="{% url 'dashboard:job_in_progress' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Job In Progress</a>
+            <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
+        </nav>
+
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman Dashboard</a> / Job In Progress</div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
+                </a>
+                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
+            </div>
+        </header>
+
+        <main class="content">
+            <div id="empty" hidden><h1 class="page-title">No job to show</h1>
+                <p class="page-sub">Approve a request in <a href="{% url 'dashboard:job_requests' %}"><u>Job Requests</u></a> and it will appear here.</p></div>
+            <div id="jip" hidden>
+                <div class="job-head"><span class="job-title" id="j-title"></span><span class="job-code" id="j-code"></span></div>
+                <div class="blue">
+                    <div class="notice info">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        <div><strong id="n-title"></strong><p id="n-sub"></p></div><span class="n-act" id="n-act"></span>
+                    </div>
+                    <div class="grid2">
+                        <div class="stack">
+                            <section class="card">
+                                <h2>Job brief</h2>
+                                <div class="tags"><span class="tag" id="j-status"></span><span class="tag" id="j-cat"></span></div>
+                                <p class="plain" id="j-brief"></p>
+                                <h3 class="divided">Approved scope of work</h3>
+                                <ul class="ticks" id="j-tasks"></ul>
+                                <dl class="kv"><div id="row-parts"><dt>Parts</dt><dd id="j-parts"></dd></div><div id="row-att"><dt>Attachment</dt><dd id="j-att"></dd></div></dl>
+                                <p class="footnote">Any additional work requires a revised quote. Contact the service team before changing the scope.</p>
+                            </section>
+                            <section class="card">
+                                <h2>Materials Request</h2>
+                                <div class="notice ok" id="m-ok" role="status" hidden><strong>Request sent</strong><p>The administrator has been notified.</p></div>
+                                <form id="m-form">
+                                    <label class="field" for="m-text">Enter Summary of Request:</label>
+                                    <textarea id="m-text" rows="4" required placeholder="e.g. Need to renew the seal, I shall buy a seal kit and extra tapes."></textarea>
+                                    <div class="attach-row"><span class="muted" id="m-file">Attach a photo or PDF (optional)</span>
+                                        <button type="button" class="link-btn" id="m-browse" aria-label="Attach file"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.6l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg></button>
+                                        <input type="file" id="m-input" accept="image/*,application/pdf" hidden></div>
+                                    <button class="btn big" type="submit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg> Send request</button>
+                                </form>
+                            </section>
+                        </div>
+                        <div class="stack">
+                            <section class="card"><h2>Job milestones</h2><ol class="timeline" id="miles"></ol></section>
+                            <a class="btn-o block flat" href="{% url 'dashboard:report_customer' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4M4 4h12l-2 4 2 4H4"/></svg> Report a customer concern</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="page-foot"><span>Secure workspace &middot; Your information stays private</span><span><a href="#">Help center</a> &middot; <a href="#">Privacy policy</a></span></footer>
+        </main>
+    </div>
+</div>
+
+<script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
+(function () {
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
+
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+    };
+
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+})();
+
+</script>
+<script>
+(function () {
+    function $(id) { return document.getElementById(id); }
+    var q = new URLSearchParams(location.search).get('job'), DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var DEF = { code: '', category: 'General repair', brief: 'Complete the work requested by the customer.', parts: '', attach: '', assigned: '\u2014',
+        tasks: ['Inspect the work area and connection', 'Carry out the repair', 'Test the result', 'Clean up and explain the work'] };
+    var RICH = { 'MJO-1042': { code: 'H232', category: 'Plumbing \u00b7 Leak repair', assigned: 'Oct 23, 11:16 AM', parts: 'P-trap seal kit \u00b7 1 kit', attach: 'sink-leak.jpg',
+        brief: 'Water is dripping from the pipe below the kitchen sink whenever the tap runs. Inspect the P-trap and replace the seal if needed.',
+        tasks: ['Inspect the drain assembly and connection', 'Replace the worn P-trap seal', 'Reseat the connection and run a 10-minute leak test', 'Clean the work area and explain the repair'] } };
+    function pick() {
+        var jobs = HC.get('jobs');
+        return jobs.filter(function (j) { return j.id === q && j.status !== 'completed'; })[0] || jobs.filter(function (j) { return j.status === 'in_progress'; })[0] || jobs.filter(function (j) { return j.status === 'scheduled'; })[0];
+    }
+    function render() {
+        var raw = pick(); $('empty').hidden = !!raw; $('jip').hidden = !raw; if (!raw) return;
+        var j = Object.assign({}, DEF, RICH[raw.id] || {}, raw), live = j.status === 'in_progress';
+        var tm = /(\d\d:\d\d)\s*[\u2013-]\s*(\d\d:\d\d)/.exec(j.slot), morning = /Morning/.test(j.slot) || (tm && parseInt(tm[1], 10) < 12);
+        var time = tm ? tm[1] + '\u2013' + tm[2] : (morning ? '09:00\u201312:00' : '13:00\u201317:00');
+        var dm = /Oct\s+(\d+)/.exec(j.slot), date = dm ? DAYS[new Date(Date.UTC(2026, 9, +dm[1])).getUTCDay()] + ', October ' + dm[1] : j.slot;
+        $('j-title').textContent = j.service; $('j-code').textContent = 'Code: ' + (j.code || j.id);
+        $('n-title').textContent = live ? 'Work started \u00b7 ' + (j.startedAt || 'just now') : 'You\u2019re scheduled for ' + date;
+        $('n-sub').textContent = (morning ? 'Morning' : 'Afternoon') + ' session \u00b7 ' + time + ' \u00b7 Estimated work 1.5 hours \u00b7 Fixed total MUR ' + Number(j.amount).toLocaleString('en-US') + ' \u00b7 Paid';
+        var act = $('n-act'); act.innerHTML = '';
+        if (live) { var l = HC.el('a', 'btn', 'Finish in Job Completion \u2192'); l.href = "{% url 'dashboard:job_completed' %}?job=" + j.id; act.appendChild(l); }
+        else { var b = HC.el('button', 'btn', 'Start work'); b.type = 'button';
+            b.onclick = function () { var all = HC.get('jobs'); all.forEach(function (x) { if (x.id === j.id) { x.status = 'in_progress'; x.startedAt = HC.now(); } }); HC.set('jobs', all); HC.notify('job', 'Job started', j.id + ' \u00b7 ' + j.service); render(); };
+            act.appendChild(b); }
+        $('j-status').textContent = live ? 'In progress' : 'Scheduled'; $('j-cat').textContent = j.category; $('j-brief').textContent = j.brief;
+        var ul = $('j-tasks'); ul.innerHTML = ''; j.tasks.forEach(function (t) { ul.appendChild(HC.el('li', '', t)); });
+        $('j-parts').textContent = j.parts; $('j-att').textContent = j.attach ? j.attach + ' \u00b7 View file' : ''; $('row-parts').hidden = !j.parts; $('row-att').hidden = !j.attach;
+        var m = $('miles'); m.innerHTML = '';
+        [['Assigned', j.assigned, 1], ['Scheduled', date.replace(/^\w+, /, '').replace('October', 'Oct') + ', ' + (morning ? 'Morning' : 'Afternoon') + ' \u00b7 ' + time, 1],
+         ['In progress', live ? j.startedAt || 'Started' : 'Start work on arrival', live], ['Completed', 'Record summary and completion', 0]].forEach(function (s) {
+            var li = HC.el('li', s[2] ? '' : 'next-up'); li.appendChild(HC.el('strong', '', s[0])); li.appendChild(HC.el('span', '', s[1])); m.appendChild(li); });
+    }
+    $('m-browse').onclick = function () { $('m-input').click(); };
+    $('m-input').onchange = function () { var f = this.files[0]; $('m-file').textContent = f ? f.name + ' \u00b7 ' + (f.size / 1048576).toFixed(1) + ' MB \u2713' : 'Attach a photo or PDF (optional)'; };
+    $('m-form').onsubmit = function (e) {
+        e.preventDefault();   /* remove when the backend view saves the request */
+        var j = pick(); HC.notify('job', 'Materials request sent', (j ? j.id + ' \u00b7 ' : '') + $('m-text').value.trim().slice(0, 80));
+        this.reset(); $('m-file').textContent = 'Attach a photo or PDF (optional)'; $('m-ok').hidden = false;
+    };
+    render();
+})();
+</script>
+</body>
+</html>

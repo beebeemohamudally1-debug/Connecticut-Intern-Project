@@ -21,6 +21,12 @@ urlpatterns = [
     path('materials/quotations/', views.material_quotation_list, name='material_quotation_list'),
     path('materials/<int:pk>/action/', views.material_request_action, name='material_request_action'),
     path('receipts/<int:pk>/action/', views.receipt_action, name='receipt_action'),
+    # administrator: invoices and offline payments
+    path('invoices/', views.invoice_list, name='invoice_list'),
+    path('invoices/new/<int:request_id>/', views.invoice_issue, name='invoice_issue'),
+    path('invoices/inspection/new/<int:request_id>/', views.inspection_invoice_issue, name='inspection_invoice_issue'),
+    path('invoices/<int:pk>/pay/', views.invoice_record_payment, name='invoice_record_payment'),
+    path('invoices/<int:pk>/cancel/', views.invoice_cancel, name='invoice_cancel'),
     # handyman
     path('handyman/estimates/', views.my_estimates, name='my_estimates'),
     path('handyman/estimates/new/<int:request_id>/', views.estimate_submit, name='estimate_submit'),
@@ -32,4 +38,7 @@ urlpatterns = [
     path('my/quotations/', views.my_quotations, name='my_quotations'),
     path('my/quotations/<int:pk>/', views.quotation_detail, name='quotation_detail'),
     path('my/payments/', views.payment_history, name='payment_history'),
+    path('my/invoices/', views.my_invoices, name='my_invoices'),
+    path('my/invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
+    path('my/receipts/<int:pk>/', views.receipt_detail, name='receipt_detail'),
 ]
