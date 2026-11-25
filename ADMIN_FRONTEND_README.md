@@ -1,9 +1,9 @@
 # Admin pages (frontend)
 
-This file lists the admin pages built so far. **The admin frontend is still in progress:** more sections (for example Services, Skills and Payments) are still to be built.
+This file lists the admin pages built so far. **The admin frontend is still in progress:** some sections still require backend integration, including Manage Services, Manage Skills and Payments.
 
 There are two kinds of pages:
-- **Sample-data pages** (the table under "Pages"): only the two Registration Verification pages are left. Their views send **sample data** and their buttons only show a demo message, because the backend has no handyman verification yet.
+- **Sample-data pages:** the two Registration Verification pages and the Manage Services pages. Registration Verification uses sample data from the views, while Manage Services uses demonstration data in the frontend. Administrative actions show demo messages until backend integration is completed.
 - **Service Quotations**, **Material Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users**, **Appointments** (saving still needed), **Service Requests** (forwarding still needed) and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
 
 ## Try it
@@ -345,6 +345,42 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
 5. **Attachments:** no photos or files on a request, so the page shows "No attachments".
 6. **Services link:** the service is plain text (`service_category`), not linked to the Services app, so the Service filter lists the names found in the requests.
 
+## Manage Services (frontend completed, backend integration still needed)
+The six frontend pages are implemented using templates in `templates/services/`. URLs are defined in `accounts/admin_urls.py` and protected using `role_required('admin')`, so only authorised administrators can open them.
+
+| Page | URL | Template |
+|---|---|---|
+| Manage Services | `/admin-portal/services/` | `services/manage_services.html` |
+| Add Service | `/admin-portal/services/add/` | `services/add_service.html` |
+| Edit Service | `/admin-portal/services/<id>/edit/` | `services/edit_service.html` |
+| View Service Details | `/admin-portal/services/<id>/view/` | `services/view_service.html` |
+| Handyman Service Requests | `/admin-portal/services/handyman-requests/` | `services/handyman_requests.html` |
+| Review Service Request | `/admin-portal/services/handyman-requests/<id>/review/` | `services/review_request.html` |
+
+- **Manage Services:** service listing, summary counts, search, category and status filters, and navigation to Add, Edit and View pages.
+- **Add / Edit Service:** form validation, category selection, description, availability and image selection.
+- **View Service Details:** service information, status, associated handymen and confirmation pop-ups.
+- **Handyman Service Requests:** request listing, search, action and status filters.
+- **Review Service Request:** request details, Approve / Reject confirmation pop-ups and a required rejection reason. Approved and rejected requests are read-only.
+- Sample service names and categories are aligned with the catalogue in `services/migrations/0002_seed_catalogue.py`.
+- The sidebar **Services** link points to `accounts_admin:manage_services`.
+- The Admin Dashboard **Handyman Service Requests** Review button points to `accounts_admin:handyman_requests`.
+- CSS and JavaScript are currently included within the templates.
+
+**Still needed from the backend (services)**
+1. **Real service data:** replace the demonstration data with records from `services.Service` and `ServiceCategory`, including actual service IDs and associated handymen.
+2. **Add / Edit Service:** implement views and forms that validate and save service information.
+3. **Deactivate / Reactivate:** implement views that update `Service.is_active`.
+4. **Handyman Service Requests:** retrieve real `bookings.HandymanProfileRequest` records where `request_type = TYPE_SERVICE`.
+5. **Approve / Reject:** update the request status, admin note, reviewer and review date. Approved requests should also update the handyman's `HandymanProfile.services`.
+6. **Service images and dates:** the current Service model does not contain image, created date or updated date fields. Add these if required.
+7. **Replace temporary routes:** replace the protected `TemplateView` routes with the corresponding backend views when available.
+8. **Remove demo behaviour:** replace demonstration messages and temporary JavaScript data with real backend responses. Connect pagination to the real records.
+
+**Testing completed**
+Frontend navigation, search, filters, form validation, confirmation pop-ups and admin access control have been tested. Django system checks passed.
+No service records or request decisions are currently saved through these frontend pages.
+
 ## Manage Skills (connected to the backend, saving still needed)
 Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/admin_skills.py` (read only, admins only), URLs in `accounts/admin_urls.py`, templates in `templates/services/`. Category is the trade a skill belongs to (`Skill.category`, e.g. Plumbing).
 
@@ -390,3 +426,4 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
 4. **Payment status page (needed from the payments team):** a read-only page with its own URL that shows the payment status of a request: the service and material quotations, how much was paid, when and how, and what is still owed. The **Payments** link in the sidebar (`templates/base_admin.html`, now `/payments/admin-dashboard/`, which gives a 404) should open it too. It must be separate from **Record payment** (`payments:payment_record`), which is a form for entering a new payment, not for checking the status. Once it exists, add **View Payment Status** buttons that open it from:
    - the Receipts pop-up on Material Quotations (`payments/admin_materials.html`)
    - the "Full Offline Payment Required" pop-up on Schedule Service (`bookings/admin_appointment_schedule.html`)
+5. **Manage Services:** connect the six completed frontend pages to the services backend, including service management and handyman service request approval / rejection. See the Manage Services section above.
