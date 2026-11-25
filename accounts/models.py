@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import Lower
-
+from django.utils import timezone
 
 class User(AbstractUser):
     ROLE_CUSTOMER = 'customer'
@@ -78,3 +78,33 @@ class HandymanProfile(models.Model):
     def clean(self):
         if self.user_id and self.user.role != User.ROLE_HANDYMAN:
             raise ValidationError({'user': 'The selected user is not a handyman.'})
+        
+class EmailVerification(models.Model):
+    """One-time email codes for registration and password reset. Only a hash is stored."""
+    PURPOSE_REGISTER = 'register'
+    PURPOSE_RESET = 'reset'
+
+    email = models.EmailField()
+    purpose = models.CharField(max_length=10)
+    code_hash = models.CharField(max_length=64)
+    created_at = models.DateTimeField(default=timezone.now)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [models.Index(fields=['email', 'purpose', 'created_at'])]
+        
+class ProviderDocument(models.Model):
+    """An ID photo or certificate uploaded by a handyman. Private: only administrators may view."""
+    KIND_ID = 'id_photo'
+    KIND_CERTIFICATE = 'certificate'
+    KIND_CHOICES = [(KIND_ID, 'ID card photo'), (KIND_CERTIFICATE, 'Certificate')]
+
+    profile = models.ForeignKey(HandymanProfile, on_delete=models.CASCADE, related_name='documents')
+    kind = models.CharField(max_length=12, choices=KIND_CHOICES)
+    file = models.FileField(upload_to='handyman_documents/%Y/%m/')
+    original_name = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.profile} - {self.get_kind_display()}'

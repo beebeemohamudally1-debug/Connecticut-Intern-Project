@@ -4,9 +4,22 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
+from datetime import timedelta
+from django.utils import timezone
+from accounts import verification
+from accounts.models import EmailVerification
+from unittest.mock import patch
+from accounts import auth_messages as M
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
+import io
+import shutil
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
+from PIL import Image
 
 User = get_user_model()
 PASSWORD = 'Str0ngPass!word'
@@ -56,7 +69,214 @@ class PermissionTests(TestCase):
         request.user = User.objects.create_user(username='c2', email='c2@example.com', password=PASSWORD)
         with self.assertRaises(PermissionDenied):
             view(request)
+            
+class VerificationTests(TestCase):
+    EMAIL = 'new@example.com'
 
+    def test_correct_code_works_once(self):
+        code = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'ok')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'none')
+
+    def test_three_wrong_attempts_lock_the_code(self):
+        code = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000000'), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000001'), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', '000002'), 'locked')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'locked')
+
+    def test_expired_code(self):
+        code = verification.issue(self.EMAIL, 'register')
+        EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=6))
+        self.assertEqual(verification.verify(self.EMAIL, 'register', code), 'expired')
+
+    def test_cooldown_blocks_immediate_resend(self):
+        verification.issue(self.EMAIL, 'register')
+        with self.assertRaises(verification.VerificationLimit) as ctx:
+            verification.issue(self.EMAIL, 'register')
+        self.assertEqual(ctx.exception.reason, 'cooldown')
+
+    def test_hourly_limit(self):
+        for _ in range(5):
+            verification.issue(self.EMAIL, 'register')
+            EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=5))
+        with self.assertRaises(verification.VerificationLimit) as ctx:
+            verification.issue(self.EMAIL, 'register')
+        self.assertEqual(ctx.exception.reason, 'hourly')
+
+    def test_new_code_replaces_old_one(self):
+        old = verification.issue(self.EMAIL, 'register')
+        EmailVerification.objects.update(created_at=timezone.now() - timedelta(minutes=2))
+        new = verification.issue(self.EMAIL, 'register')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', old), 'wrong')
+        self.assertEqual(verification.verify(self.EMAIL, 'register', new), 'ok')
+
+class RegistrationFlowTests(TestCase):
+    EMAIL = 'anna@example.com'
+    PASSWORD = 'Str0ngPass!word'
+    DETAILS = {
+        'first_name': 'Anna', 'surname': 'Dupont', 'additional_names': '', 'username': 'anna_d',
+        'phone': '51234567', 'region': 'Flacq', 'address': '12 Main Road',
+        'terms': 'on', 'privacy': 'on',
+    }
+
+    def setUp(self):
+        # fixed code and no real email
+        for target, kwargs in (('accounts.verification.send_code', {'return_value': True}),
+                               ('accounts.verification.secrets.randbelow', {'return_value': 123456})):
+            patcher = patch(target, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def verify_email(self, email=None):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': email or self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        return self.client.post(reverse('accounts:register_verify'), {'code': '123456'})
+
+    def reach_details_page(self):
+        self.verify_email()
+        self.client.post(reverse('accounts:register_password'),
+                         {'password': self.PASSWORD, 'confirm': self.PASSWORD})
+
+    def test_full_customer_registration_creates_user(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_customer'), self.DETAILS)
+        self.assertRedirects(r, reverse('accounts:register_done'), fetch_redirect_response=False)
+        user = User.objects.get(email=self.EMAIL)
+        self.assertEqual(user.role, 'customer')
+        self.assertEqual(user.region.name, 'Flacq')
+        self.assertTrue(user.check_password(self.PASSWORD))
+
+    def test_registered_email_is_refused(self):
+        User.objects.create_user(username='old', email=self.EMAIL, password=self.PASSWORD)
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        r = self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL.upper()})
+        self.assertEqual(r.context['errors']['email'], M.REG_EMAIL_TAKEN)
+
+    def test_wrong_code_is_refused(self):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        r = self.client.post(reverse('accounts:register_verify'), {'code': '000000'})
+        self.assertEqual(r.context['state'], 'wrong')
+        self.assertEqual(r.context['attempts_left'], 2)
+
+    def test_cannot_skip_email_verification(self):
+        self.client.post(reverse('accounts:register'), {'role': 'customer'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        r = self.client.get(reverse('accounts:register_password'))
+        self.assertRedirects(r, reverse('accounts:register_expired'), fetch_redirect_response=False)
+
+    def test_weak_password_is_refused(self):
+        self.verify_email()
+        r = self.client.post(reverse('accounts:register_password'), {'password': 'abc', 'confirm': 'abc'})
+        self.assertIn('password', r.context['errors'])
+
+    def test_bad_phone_is_refused(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_customer'), {**self.DETAILS, 'phone': '123'})
+        self.assertIn('phone', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_username_check(self):
+        User.objects.create_user(username='taken_name', email='t@example.com', password=self.PASSWORD)
+        url = reverse('accounts:username_check')
+        self.assertEqual(self.client.get(url, {'username': 'free_name'}).status_code, 200)
+        self.assertEqual(self.client.get(url, {'username': 'TAKEN_NAME'}).status_code, 409)
+        self.assertEqual(self.client.get(url, {'username': 'a!'}).status_code, 400)
+        
+TEMP_MEDIA = tempfile.mkdtemp()
+
+
+def image_file(name='doc.png', image_format='PNG'):
+    buffer = io.BytesIO()
+    Image.new('RGB', (10, 10), 'white').save(buffer, image_format)
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type='image/' + image_format.lower())
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA)
+class ProviderRegistrationTests(TestCase):
+    EMAIL = 'marc@example.com'
+    PASSWORD = 'Str0ngPass!word'
+    DETAILS = {
+        'first_name': 'Marc', 'surname': 'Lafleur', 'additional_names': '', 'username': 'marc_l',
+        'phone': '57123456', 'address': '5 Rue Royale',
+        'regions': ['Flacq', 'Moka'], 'categories': ['Plumbing', 'Electrical'],
+    }
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
+
+    def setUp(self):
+        for target, kwargs in (('accounts.verification.send_code', {'return_value': True}),
+                               ('accounts.verification.secrets.randbelow', {'return_value': 123456})):
+            patcher = patch(target, **kwargs)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def reach_details_page(self):
+        self.client.post(reverse('accounts:register'), {'role': 'provider'})
+        self.client.post(reverse('accounts:register_email'), {'email': self.EMAIL})
+        self.client.post(reverse('accounts:register_confirm'))
+        self.client.post(reverse('accounts:register_verify'), {'code': '123456'})
+        self.client.post(reverse('accounts:register_password'),
+                         {'password': self.PASSWORD, 'confirm': self.PASSWORD})
+
+    def reach_documents_page(self):
+        self.reach_details_page()
+        return self.client.post(reverse('accounts:register_provider'), self.DETAILS)
+
+    def submit(self, **overrides):
+        data = {'id_photo': image_file('id.png'),
+                'certificates': [image_file('c1.jpg', 'JPEG'), image_file('c2.png')],
+                'terms': 'on', 'privacy': 'on'}
+        data.update(overrides)
+        return self.client.post(reverse('accounts:register_provider_documents'), data)
+
+    def test_full_registration_creates_pending_account(self):
+        self.reach_documents_page()
+        r = self.submit()
+        self.assertRedirects(r, reverse('accounts:register_provider_done'), fetch_redirect_response=False)
+        user = User.objects.get(email=self.EMAIL)
+        self.assertEqual(user.role, 'handyman')
+        profile = user.handyman_profile
+        self.assertEqual(profile.status, HandymanProfile.STATUS_PENDING)
+        self.assertEqual(profile.documents.filter(kind='id_photo').count(), 1)
+        self.assertEqual(profile.documents.filter(kind='certificate').count(), 2)
+        self.assertEqual(set(profile.service_areas.values_list('name', flat=True)), {'Flacq', 'Moka'})
+        self.assertEqual(set(profile.categories.values_list('name', flat=True)), {'Plumbing', 'Electrical'})
+        self.assertNotIn('_auth_user_id', self.client.session)   # no automatic login
+
+    def test_fake_image_is_refused(self):
+        self.reach_documents_page()
+        fake = SimpleUploadedFile('id.png', b'this is not an image', content_type='image/png')
+        r = self.submit(id_photo=fake)
+        self.assertIn('id_photo', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_certificate_is_required(self):
+        self.reach_documents_page()
+        r = self.submit(certificates=[])
+        self.assertIn('certificates', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_consent_is_required(self):
+        self.reach_documents_page()
+        r = self.submit(terms='')
+        self.assertIn('terms', r.context['errors'])
+        self.assertFalse(User.objects.filter(email=self.EMAIL).exists())
+
+    def test_region_is_required(self):
+        self.reach_details_page()
+        r = self.client.post(reverse('accounts:register_provider'), {**self.DETAILS, 'regions': []})
+        self.assertIn('regions', r.context['errors'])
+
+    def test_documents_page_needs_details_first(self):
+        r = self.client.get(reverse('accounts:register_provider_documents'))
+        self.assertRedirects(r, reverse('accounts:register_expired'), fetch_redirect_response=False)
 class AdminStatusTests(TestCase):
     def setUp(self):
         from accounts.admin_views import _account_status
