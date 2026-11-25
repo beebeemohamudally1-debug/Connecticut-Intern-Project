@@ -21,8 +21,8 @@
     declined  -> the customer declined, or the quotation was cancelled
     rejected  -> the admin rejected the purchase request
   Forward / Reject post to payments:material_request_action (action forward |
-  reject, total, note). Receipts are only shown here (view only): they are reviewed in the payments section, not on this page. (payments:receipt_action, action approve |
-  reject, note). The note is needed to reject.
+  reject, total, note). Receipts are only shown here (view only): they are approved or rejected on the
+  Payment Status page (accounts_admin:payment_status), which the Receipts pop-up links to.
   The number cards, search, filters and pages work in the browser on the rows sent.
 {% endcomment %}
 
@@ -225,11 +225,12 @@
       <div><dt>Material quotation</dt><dd>MUR {{ p.quotation.total_amount|floatformat:"2g" }}</dd></div>
       <div class="{% if p.difference < 0 %}over{% endif %}"><dt>Difference</dt><dd>MUR {{ p.difference|floatformat:"2g" }}</dd></div>
     </dl>
-    {% if p.receipts_waiting %}<p class="mut mq-note">{{ p.receipts_waiting }} receipt{{ p.receipts_waiting|pluralize }} still to be checked in Payments. A negative difference means more was spent than quoted.</p>{% endif %}
+    {% if p.receipts_waiting %}<p class="mut mq-note">{{ p.receipts_waiting }} receipt{{ p.receipts_waiting|pluralize }} still to be checked on the Payment Status page. A negative difference means more was spent than quoted.</p>{% endif %}
 
     <div class="ql-btns">
       <button class="btn o" type="button" data-close>Close</button>
-      {# Payments are the payments team's section. Once both quotations are paid, schedule the service #}
+      {# Receipts review, the job invoice and payment start from the Payment Status page #}
+      <a class="btn soft-green" href="{% url 'accounts_admin:payment_status' p.request.pk %}">View Payment Status</a>
       {% if p.ready_to_schedule %}<a class="btn soft-blue" href="{% url 'accounts_admin:appointment_schedule' 'service' %}?request={{ p.request.pk }}">Schedule Appointment</a>{% endif %}
     </div>
   </div>
@@ -241,4 +242,4 @@
 {% block page_js %}
 <script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
 <script src="{% static 'payments/js/admin_materials.js' %}"></script>
-{% endblock %}
+{% endblock %}

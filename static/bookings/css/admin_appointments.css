@@ -191,3 +191,7 @@
 .ap-warn a { color: inherit; font-weight: 600; }
 .ap-h2-link { float: right; margin-top: 3px; font-size: 13px; font-weight: 600; color: #2866B1; text-decoration: none; }
 .ap-h2-link:hover { text-decoration: underline; }
+
+/* Inspection fee invoice buttons (Schedule Inspection, Appointment Details) */
+.ap-fee { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.ap-fee .ap-small { flex-basis: 100%; margin: 0; }

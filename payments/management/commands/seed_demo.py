@@ -21,7 +21,8 @@ from bookings.models import Appointment, HandymanProfileRequest, ServiceRequest,
 from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
 from jobs.models import Job, ProgressReport, TimeLog, WorkEvidence
 from reviews.models import Review
-from payments.models import LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation
+from payments.models import (Invoice, InvoicePayment, LabourEstimate, MaterialPurchaseRequest, MaterialReceipt,
+                             Payment, Quotation, Receipt)
 
 User = get_user_model()
 BASE = 'http://127.0.0.1:8000'
@@ -77,6 +78,10 @@ class Command(BaseCommand):
 
     def reset(self):
         demo = {'request__customer__username__startswith': 'demo_'}
+        # Invoices (payments team) point to the quotations, so they go first: receipt, payment, invoice
+        Receipt.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
+        InvoicePayment.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
+        Invoice.objects.filter(**demo).delete()
         Payment.objects.filter(quotation__request__customer__username__startswith='demo_').delete()
         MaterialReceipt.objects.filter(purchase_request__request__customer__username__startswith='demo_').delete()
         MaterialPurchaseRequest.objects.filter(**demo).delete()
@@ -131,6 +136,7 @@ class Command(BaseCommand):
             ('changes_requested_2', 'Deck staining', 0, 0, '4800', 'Sand the deck\nApply two coats of stain', 'approved', 'revision_requested'),
             ('changes_requested_3', 'Bathroom fan install', 3, 1, '2200', 'Cut vent\nInstall fan\nConnect wiring', 'approved', 'revision_requested'),
             ('accepted', 'Garden fence repair', 2, 0, '3000', 'Replace panels\nLevel posts\nPaint section', 'approved', 'accepted'),
+            ('ready_invoice', 'Bathroom tap replacement', 1, 0, '1600', 'Remove old taps\nFit new mixer tap\nTest for leaks', 'approved', 'accepted'),
             ('accepted_waiting', 'Gate repair', 0, 0, '2800', 'Fix hinges\nRealign gate\nOil lock', 'approved', 'accepted'),
             ('paid', 'Water heater service', 3, 1, '2400', 'Drain tank\nReplace element\nTest', 'approved', 'paid'),
             ('declined', 'Roof gutter cleaning', 3, 0, '5700', 'Clear gutters\nFlush downpipes', 'approved', 'declined'),
@@ -179,6 +185,9 @@ class Command(BaseCommand):
         # One receipt approved, one waiting for review.
         self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False,
                       receipts=[('1850', 'approved'), ('1250', 'submitted')])
+        # Bathroom tap: both accepted, receipts match the material quotation (ready to invoice on Payment Status).
+        self.material(admin, handymen[0], 'ready_invoice', '1 mixer tap\n2 flexible hoses', '1300', paid=False,
+                      receipts=[('950', 'approved'), ('350', 'submitted')])
         # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
         self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True,
                       receipts=[('1150', 'approved'), ('690', 'approved')])

@@ -71,7 +71,7 @@
       <a href="{% url 'accounts_admin:appointments' %}" data-nav="appointments">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
         Appointments</a>
-      <a href="/payments/admin-dashboard/" data-nav="payments">
+      <a href="{% url 'payments:invoice_list' %}" data-nav="payments">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
         Payments</a>
       <a href="{% url 'accounts_admin:complaints' %}" data-nav="complaints">
@@ -211,4 +211,4 @@
 <script src="{% static 'js/admin_back.js' %}" defer></script>
 {# Page-specific script (a page fills this block when it needs its own JavaScript) #}
 {% block page_js %}{% endblock %}
-{% endblock %}
+{% endblock %}

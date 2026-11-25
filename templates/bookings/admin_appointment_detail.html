@@ -81,9 +81,14 @@
     {% else %}
     <ul class="ap-checks">
       <li class="ok"><span>Service quotation</span><strong>Not needed before an inspection</strong></li>
-      <li class="no"><span>Inspection fee</span><strong>Not recorded in the system</strong></li>
+      {% if page.fee %}<li class="{% if page.fee.row.ok %}ok{% else %}no{% endif %}"><span>{{ page.fee.row.label }}</span><strong>{{ page.fee.row.value }}</strong></li>{% endif %}
     </ul>
-    <p class="mut ap-small">The backend has no inspection fee yet, so it cannot be checked here.</p>
+    {% if page.fee.issue_url or page.fee.pay_url %}
+    <div class="ap-fee">
+      {% if page.fee.issue_url %}<a class="btn o ap-main" href="{{ page.fee.issue_url }}">Issue Inspection Invoice</a>{% endif %}
+      {% if page.fee.pay_url %}<a class="btn o ap-main" href="{{ page.fee.pay_url }}">Record Payment</a>{% endif %}
+    </div>
+    {% endif %}
     {% endif %}
   </section>
 
@@ -165,4 +170,4 @@
 {% block page_js %}
 <script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
 <script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
-{% endblock %}
+{% endblock %}
