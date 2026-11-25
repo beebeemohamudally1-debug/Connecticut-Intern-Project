@@ -19,7 +19,8 @@
     (there is no activity log, so "sent" has no date).
   - Buttons follow the model rules: Send / Re-issue (draft, revised), Edit / Revise
     (draft, revised, revision_requested), Cancel (not cancelled, declined or paid),
-    Record payment (ready_for_payment).
+    Payment status (ready_for_payment): opens the admin Payment Status page (accounts_admin:payment_status),
+    where the receipts are checked and the job invoice is issued and paid.
   - Customer response prompt (accepted, revision_requested, declined): opens by itself once per
     answer in this browser (localStorage), and from "View response". There is no "closed" status
     or decline reason in the backend, so "Mark as Closed" only stops the prompt opening again.
@@ -102,7 +103,7 @@
           {% if q.status != 'accepted' %}<span class="mut">{{ q.readiness_issue }}</span>
           {% elif not other %}<span class="mut">Waiting for the {% if q.quotation_type == 'labour' %}material{% else %}service{% endif %} quotation</span>
           {% elif other.status != 'accepted' %}<span class="mut">{% if q.quotation_type == 'labour' %}Material{% else %}Service{% endif %} quotation not accepted yet</span>
-          {% elif q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'payments:payment_record' q.pk %}">Record payment</a>
+          {% elif q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'accounts_admin:payment_status' q.request.pk %}">View payment status</a>
           {% else %}<span class="mut">{{ q.readiness_issue }}</span>{% endif %}
         </dd></div>
         {% endif %}
@@ -184,7 +185,7 @@
             {% else %}<button class="btn soft-blue" type="button" disabled>Waiting for Receipts</button>{% endif %}
           {% elif other %}<a class="btn soft-blue" href="{% url 'payments:quotation_detail_admin' other.pk %}" data-seen>Go to Material Quotation</a>
           {% else %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}" data-seen>Go to Material Quotations</a>{% endif %}
-          {% if q.ready_for_payment and other.status == 'accepted' %}<a class="btn soft-green" href="{% url 'payments:payment_record' q.pk %}" data-seen>Check Payment Status</a>{% endif %}
+          {% if q.ready_for_payment and other.status == 'accepted' %}<a class="btn soft-green" href="{% url 'accounts_admin:payment_status' q.request.pk %}" data-seen>Check Payment Status</a>{% endif %}
         {% else %}
           {# BACKEND: enable both once the estimate can be sent back to the handyman and comes back updated #}
           <button class="btn o" type="button" disabled title="Not in the backend yet">Ask Handyman to Update</button>
@@ -227,4 +228,4 @@
 
 {% block page_js %}
 <script src="{% static 'payments/js/quotation_admin_detail.js' %}"></script>
-{% endblock %}
+{% endblock %}

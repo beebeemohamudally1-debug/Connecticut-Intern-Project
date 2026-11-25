@@ -1,5 +1,6 @@
 from django.urls import path
 from . import admin_appointments as appointments
+from . import admin_payments as payments
 from . import admin_skills as skills
 from . import admin_views as views
 from django.views.generic import TemplateView
@@ -39,10 +40,11 @@ urlpatterns = [
     path('appointments/schedule/<str:kind>/', appointments.appointment_schedule, name='appointment_schedule'),
     path('appointments/<int:pk>/', appointments.appointment_detail, name='appointment_detail'),
     path('appointments/<int:pk>/reschedule/', appointments.appointment_reschedule, name='appointment_reschedule'),
+    path('payments/<int:request_id>/', payments.payment_status, name='payment_status'),
     path('skills/', skills.skills, name='skills'),
     path('skills/add/', skills.skill_form, name='skill_add'),
     path('skills/<int:pk>/', skills.skill_detail, name='skill_detail'),
     path('skills/<int:pk>/edit/', skills.skill_form, name='skill_edit'),
     path('skills/requests/', skills.skill_requests, name='skill_requests'),
     path('skills/requests/<int:pk>/', skills.skill_request_detail, name='skill_request_detail'),
-]
+]

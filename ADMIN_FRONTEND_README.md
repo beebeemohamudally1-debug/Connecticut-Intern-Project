@@ -162,7 +162,7 @@ There are only two quotations per request: the service (labour) quotation and th
 2. **Attached documents** on a purchase request, and a **message to the customer** when the quotation is sent.
 3. **Send a material request back to the handyman** when the customer asks for changes, so the handyman can update the materials and costs (like `LabourEstimate.resubmit`). Then the **Ask Handyman to Update** button can be enabled.
 4. **Notify the handyman** when the customer approves the material quotation, so they know they can buy the materials (the payments app sends no notifications yet).
-5. **Payment status page (payments team):** see "Payment status page" under Integration. Once it exists, add a **View Payment Status** button to the Receipts pop-up.
+5. Receipts are now reviewed on **Payment Status** (the Receipts pop-up has a **View Payment Status** button).
 
 ## Private Feedback (connected to the backend)
 Built on the existing `reviews` app: real views, URLs and the `Review` model. Needs an account with `role = 'admin'` **and staff status** (the reviews views check both).
@@ -305,14 +305,13 @@ Built from the low-fi and high-fi, with the same pieces as Service Quotations. O
    - **Reschedule:** save the new date and slot, and put it back to Pending.
    - **Cancel:** set it to Cancelled and keep the reason (the pop-up sends `reason`; the model has no field for it yet). Then set the Cancel form's `action` and remove `data-demo`.
    - **Request status:** set the service request to **Booked** once its appointment is confirmed.
-2. **Inspection fee:** not in the backend, so Details shows "Inspection fee: Not recorded in the system" and inspections can be scheduled without it.
+2. **Inspection fee (connected):** Schedule Inspection and Appointment Details show the payments team's inspection fee invoice (none / issued / paid with receipt) with **Issue Inspection Invoice** or **Record Payment**; the links add `?next=<this page>`. An inspection can only be scheduled once the fee is paid (their rule: "The visit can be scheduled only after the fee is cleared").
 3. **Proposal and customer answer:** there is no stored proposal, and the customer cannot accept or refuse it, so the Customer Confirmation card only shows that it is waiting.
 4. **Handyman availability:** no working hours or days off, so availability only checks confirmed appointments.
 5. **Exact times:** only Morning and Afternoon slots exist.
 6. **Notifications** to the customer and handyman when an appointment is scheduled, confirmed, rescheduled or cancelled.
 7. **Status history:** no log, so the history is built from `created_at`, `confirmed_at` and the current status.
-8. **Payment status page (payments team):** the "Full Offline Payment Required" pop-up on Schedule Service has only Close for now. Once the payment status page exists, add a **View Payment Status** button to it (see Integration).
-9. **Inspection before service (team decision):** a service can be scheduled without a completed inspection. In our flow the quotation comes after the inspection, so this is left open. Add a check if the team wants it strict.
+8. **Inspection before service (team decision):** a service can be scheduled without a completed inspection. In our flow the quotation comes after the inspection, so this is left open. Add a check if the team wants it strict.
 
 ## Service Requests (connected to the backend, forwarding still needed)
 Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **bookings** app. Only admins can open them.
@@ -399,6 +398,20 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
 4. **Description and dates:** `Skill` has no description, created or updated date. The description is left out of the pages, and the list's **Updated** column shows "—" (marked `BACKEND`).
 5. **Requested skill is text:** `HandymanProfileRequest.requested_value` is not linked to `Skill`, so the Review page links to the skill only when the name matches one in the catalogue.
 6. **Keep a handyman's skills in one place:** Manage Skills and the Handyman Profile both read `HandymanProfile.skills`, so approving a request must update it (see item 3).
+
+## Payment Status (connected to the backend, two actions still needed)
+`/admin-portal/payments/<request id>/` (`accounts_admin:payment_status`, `accounts/admin_payments.py`, `payments/admin_payment_status.html`). Read only, plus the receipt actions. Opened from Service Quotation Details, the Receipts pop-up on Material Quotations and the "Full Offline Payment Required" pop-up on Schedule Service. The sidebar **Payments** link opens the payments team's **Invoices** list.
+- **Quotations:** the service and material quotations, what is paid, what is left, and the job invoice (number, due date, status, receipt). **Issue Invoice** opens `payments:invoice_issue` once the checklist is complete; **Record Payment** opens `payments:invoice_record_payment`.
+- **Before Payment** checklist: service quotation accepted; materials (none, rejected, or material quotation accepted + receipts approved + material quotation at the actual cost).
+- **Material Receipts** (once the purchase is forwarded): Approve / Reject (reason needed) post to `payments:receipt_action` and come back here (`next`).
+- **Send Final Material Quotation:** shows the change from the quoted total to the approved receipts total. Demo only (`BACKEND`).
+- **Issue Invoice** and **Record Payment** links add `?next=<this page>`. Once paid, **View Receipt** opens a pop-up with the receipt (their receipt page is for customers only).
+
+**Still needed from the backend (payments)**
+1. **Final material quotation:** an accepted material quotation cannot be changed or sent again. A view that sets its total to the approved receipts total and sends it to the customer, then set the pop-up form's `action` and remove `data-demo`.
+2. **Invoice check:** `Invoice.issue_job` does not check the receipts or the actual cost, so the invoice is only held back on this page.
+3. **Come back after saving:** `invoice_issue`, `inspection_invoice_issue` and `invoice_record_payment` go to the Invoices list. Redirecting to a safe `next` (like `receipt_action`) would bring the admin back to Payment Status or Schedule Inspection.
+4. **No materials:** `LabourEstimate.materials_needed` does not exist yet, so no material request (or a rejected one) counts as "no materials needed".
 
 ## Back links
 `static/js/admin_back.js` (loaded by `base_admin.html`) makes the "← Back" link of every admin page go back to the admin page the admin came from, with its name ("Back to Skill Details", "Back to search results"). The pages and labels are the `PAGES` list at the top of the file: add a new admin page there.
