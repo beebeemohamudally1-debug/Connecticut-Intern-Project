@@ -10,6 +10,7 @@ from accounts import verification
 from accounts.models import EmailVerification
 from unittest.mock import patch
 from accounts import auth_messages as M
+from accounts.models import ProviderDocument
 
 from accounts.models import HandymanProfile
 from accounts.permissions import role_required
@@ -508,5 +509,83 @@ class AdminUserActionTests(TestCase):
         self.assertContains(r, reverse('accounts_admin:suspend_user', args=[self.customer.pk]))
         r = self.client.get(reverse('accounts_admin:handyman_profile', args=[self.handyman.pk]))
         self.assertContains(r, reverse('accounts_admin:delete_user', args=[self.handyman.pk]))
+        
+@override_settings(MEDIA_ROOT=TEMP_MEDIA)
+class HandymanVerificationTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='adm3', email='adm3@example.com', password=PASSWORD, role='admin', is_staff=True)
+        self.handyman = User.objects.create_user(
+            username='han3', email='han3@example.com', password=PASSWORD, role='handyman')
+        self.profile = HandymanProfile.objects.create(user=self.handyman)
+        self.document = ProviderDocument.objects.create(
+            profile=self.profile, kind=ProviderDocument.KIND_ID,
+            file=image_file('id.png'), original_name='id.png')
+        self.client.force_login(self.admin)
+        self.verify_url = reverse('accounts_admin:handyman_verify', args=[self.handyman.pk])
+        self.decide_url = reverse('accounts_admin:handyman_decide', args=[self.handyman.pk])
+        self.file_url = reverse('accounts_admin:handyman_document_file', args=[self.document.pk])
+
+    def decide(self, decision, notes=''):
+        return self.client.post(self.decide_url, {'decision': decision, 'notes': notes})
+
+    def test_approve_activates_the_handyman(self):
+        r = self.decide('approve', 'All documents valid')
+        self.assertRedirects(r, self.verify_url, fetch_redirect_response=False)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.status, HandymanProfile.STATUS_ACTIVE)
+        self.assertEqual(self.profile.decided_by, self.admin)
+        self.assertIsNotNone(self.profile.decided_at)
+        self.assertEqual(self.profile.decision_notes, 'All documents valid')
+
+    def test_reject_needs_a_reason(self):
+        r = self.decide('reject', '   ')
+        self.assertIn('reason', r.context['applicant']['error'])
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.status, HandymanProfile.STATUS_PENDING)
+
+    def test_reject_saves_the_reason_and_the_handyman_sees_it_at_login(self):
+        self.decide('reject', 'ID photo unreadable')
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.status, HandymanProfile.STATUS_REJECTED)
+        self.assertEqual(self.profile.rejection_reason, 'ID photo unreadable')
+        r = Client().post(reverse('accounts:login'), {'email': 'han3@example.com', 'password': PASSWORD})
+        self.assertContains(r, 'ID photo unreadable')
+
+    def test_a_decision_is_final(self):
+        self.decide('approve')
+        self.decide('reject', 'changed my mind')
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.status, HandymanProfile.STATUS_ACTIVE)
+
+    def test_non_admin_cannot_decide(self):
+        self.client.force_login(self.handyman)
+        self.decide('approve')
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.status, HandymanProfile.STATUS_PENDING)
+
+    def test_get_request_is_refused(self):
+        self.assertEqual(self.client.get(self.decide_url).status_code, 405)
+
+    def test_admin_can_open_a_document(self):
+        r = self.client.get(self.file_url)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r['Content-Type'], 'image/png')
+        self.assertTrue(b''.join(r.streaming_content).startswith(b'\x89PNG'))
+
+    def test_other_users_cannot_open_documents(self):
+        customer = User.objects.create_user(username='cus3', email='cus3@example.com', password=PASSWORD)
+        self.client.force_login(customer)
+        self.assertIn(self.client.get(self.file_url).status_code, (302, 403, 404))
+        self.client.logout()
+        self.assertIn(self.client.get(self.file_url).status_code, (302, 403, 404))
+
+    def test_page_shows_buttons_only_while_pending(self):
+        r = self.client.get(self.verify_url)
+        self.assertContains(r, 'Approve Registration')
+        self.decide('approve')
+        r = self.client.get(self.verify_url)
+        self.assertNotContains(r, 'Approve Registration')
+        self.assertContains(r, 'Decision Recorded')
         
 # Create your tests here.

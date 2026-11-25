@@ -226,6 +226,7 @@ def handyman_profile(request, pk):
         services = _approved_values(u, HandymanProfileRequest.TYPE_SERVICE)
         areas, verified = '', None
     handyman = {
+                'pk': u.pk,
                 **_action_urls(u),
         'kind': 'handyman', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'verified': verified,
@@ -240,53 +241,6 @@ def handyman_profile(request, pk):
         'reports_url': reverse('accounts_admin:work_progress_reports', args=[latest.pk]) if latest else '',
     }
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': handyman})
-
-
-# Sample data for the Registration Verification page (no verification or documents in the backend yet)
-APPLICANT = {
-    'id': 'HND-0184',
-    'name': 'Amir Patel',
-    'email': 'amir.patel@email.com',
-    'submitted': '03 Nov 2026',
-    'status': 'Pending',
-    'documents': [
-        {'title': 'National Identity Card', 'file': 'identity-card.pdf', 'action': 'View document'},
-        {'title': 'Trade qualification', 'file': 'plumbing-certificate.pdf', 'action': 'View document'},
-        {'title': 'Proof of address', 'file': 'proof-of-address.pdf', 'action': 'View document'},
-        {'title': 'Profile photograph', 'file': 'handyman-photo.jpg', 'action': 'View image'},
-        {'title': 'Police character certificate', 'file': 'police-certificate.pdf', 'action': 'View document'},
-        {'title': 'Reference letter', 'file': 'reference-letter.pdf', 'action': 'View document'},
-    ],
-}
-
-
-# The same page for a handyman who was already approved (opened from the profile)
-APPROVED_APPLICANT = {
-    'id': 'USR-0874',
-    'name': 'Marcus Reed',
-    'email': 'marcus.reed@email.com',
-    'submitted': '10 May 2026',
-    'status': 'Approved',
-    'decided': '13 May 2026',
-    'notes': 'All documents checked and valid.',
-    'documents': APPLICANT['documents'],
-}
-
-
-@role_required('admin')
-def handyman_verify(request):
-    """Handyman Registration Verification."""
-    return render(request, 'accounts/admin_handyman_verify.html', {'applicant': APPLICANT})
-
-
-@role_required('admin')
-def handyman_documents(request):
-    """Registration documents of an already approved handyman (read only)."""
-    return render(request, 'accounts/admin_handyman_verify.html', {'applicant': APPROVED_APPLICANT})
-
-
-
-
 
 @role_required('admin')
 def notifications(request):

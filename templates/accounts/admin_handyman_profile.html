@@ -110,7 +110,7 @@
       <p class="mut">Identity document and qualification records are available for administrator review.</p>
     </div>
     {# Sample pages until registration documents are in the backend: the pending one while not approved #}
-    {% if handyman.verified is False %}{% url 'accounts_admin:handyman_verify' as verify_url %}{% else %}{% url 'accounts_admin:handyman_documents' as verify_url %}{% endif %}
+       {% if handyman.verified is False %}{% url 'accounts_admin:handyman_verify' handyman.pk as verify_url %}{% else %}{% url 'accounts_admin:handyman_documents' handyman.pk as verify_url %}{% endif %}
     <a class="btn soft-blue s" href="{{ verify_url|default:'#' }}">{% if handyman.verified is False %}Review registration{% else %}View documents{% endif %}</a>
   </section>
 </div>
