@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
-{% comment %}
-  Shell for every customer page. Existing child templates keep working: they only fill {% block content %}.
-  Optional blocks: title, crumb (breadcrumb label).
-{% endcomment %}
+
 {% block body %}
+
 <link rel="stylesheet" href="{% static 'customer/css/customer.css' %}">
+<link rel="stylesheet" href="{% static 'css/notification_dropdown.css' %}">
+
 {% include "customer/_shell_top.html" %}
+
 {% block content %}{% endblock %}
+
 {% include "customer/_shell_bottom.html" %}
+
+<script src="{% static 'js/notification_dropdown.js' %}" defer></script>
+
 {% endblock %}
