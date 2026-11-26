@@ -2,6 +2,7 @@
 {% block title %}Complaints | HandyConnect{% endblock %}
 {% block page %}complaints{% endblock %}
 {% block content %}
+{% if role == 'customer' %}{% include "customer/_complaint_list.html" %}{% else %}
 {% include "jobs/_messages.html" %}
 <div class="bar"><div>
   <div class="lab">{% if role == 'admin' %}Admin · Complaints{% else %}Complaints{% endif %}</div>
@@ -23,4 +24,5 @@
   <td><a class="btn s o" href="{% url 'complaints:detail' c.pk %}">Open</a></td>
 </tr>{% empty %}<tr><td colspan="7" class="mut">No complaints.</td></tr>{% endfor %}
 </tbody></table></div>
+{% endif %}
 {% endblock %}

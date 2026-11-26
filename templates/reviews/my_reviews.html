@@ -1,24 +1,26 @@
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Reviews</title>
-</head>
-<body>
-    <h1>My Reviews</h1>
-
-    {% for review in reviews %}
-        <div>
-            <h3>{{ review.job.reference }}</h3>
-            <p>Service: {{ review.job.service_name }}</p>
-            <p>Rating: {{ review.rating }}/5</p>
-            <p>Comment: {{ review.comment }}</p>
-            <p>Status: {{ review.get_status_display }}</p>
-        </div>
-        <hr>
-    {% empty %}
-        <p>No reviews submitted yet.</p>
-    {% endfor %}
-</body>
-</html>
+{% extends "base_customer.html" %}
+{% comment %}
+  REQUIRED (unchanged): reviews (each: job.reference, job.service_name, rating, comment, get_status_display).
+  OPTIONAL per review: created_at, reference (e.g. FB-0834), provider_name.
+{% endcomment %}
+{% block title %}My private feedback | HandyConnect{% endblock %}
+{% block page %}reviews{% endblock %}
+{% block content %}
+{% url 'dashboard:customer_dashboard' as u_home %}
+<div class="cp-head"><div><h1>Private feedback</h1><p>Visible only to you and administrators. It is never published or shared with the handyman.</p></div></div>
+<div class="cp-stack" data-hook="review-list">
+{% for review in reviews %}
+  <section class="cp-panel" aria-label="Feedback for {{ review.job.reference }}">
+    <div class="cp-panel-row"><div><h2>{{ review.job.reference }} · {{ review.job.service_name }}</h2>{% if review.provider_name %}<p class="cp-small">{{ review.provider_name }}</p>{% endif %}</div>
+      {% include "customer/_badge.html" with tone="ok" label=review.get_status_display %}</div>
+    <div class="cp-stars is-static" role="img" aria-label="{{ review.rating }} out of 5">
+      {% for n in "12345" %}<span class="cp-star{% if review.rating >= forloop.counter %} is-on{% endif %}"><svg class="cp-ic" aria-hidden="true"><use href="#i-star"/></svg></span>{% endfor %}
+    </div>
+    <p>“{{ review.comment }}”</p>
+    {% if review.created_at %}<p class="cp-tiny">{{ review.created_at|date:"M d, Y · g:i A" }}{% if review.reference %} · {{ review.reference }}{% endif %}</p>{% endif %}
+  </section>
+{% empty %}
+  <section class="cp-panel"><div class="cp-empty"><svg class="cp-ic" aria-hidden="true"><use href="#i-star"/></svg><strong>No feedback shared yet</strong><p>After a job is completed and paid you can rate your experience here, privately.</p><a class="cp-btn is-light" href="{{ u_home }}">Back to services</a></div></section>
+{% endfor %}
+</div>
+{% endblock %}

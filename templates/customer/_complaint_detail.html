@@ -1,0 +1,37 @@
+{% comment %} Customer view of complaints/complaint_detail.html. Same context: c, evidence, thread, log, reply_form, role {% endcomment %}
+{% url 'complaints:list' as u_list %}
+<div class="cp-head"><div><h1>{{ c.reference }} · {{ c.subject }}</h1><p>Submitted {{ c.created_at|date:"M d, Y · g:i A" }}</p></div>
+  <div class="cp-head-actions">{% include "customer/_badge.html" with code=c.badge label=c.get_status_display %}<a class="cp-btn is-light" href="{{ u_list }}"><svg class="cp-ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>All complaints</a></div></div>
+<div class="cp-cols is-main-side">
+  <div class="cp-stack">
+    <section class="cp-panel" aria-labelledby="cp-cd-h"><h2 id="cp-cd-h">{{ c.reference }} · {{ c.subject }}</h2>
+      <p class="cp-small" style="margin-top:-10px">Your complaint about {{ c.job.reference }} · {{ c.job.service_name }}</p>
+      <p class="cp-text-muted">{{ c.description|linebreaksbr }}</p>
+      {% for e in evidence %}<p class="cp-attach">📎 <a href="{% url 'complaints:evidence_file' e.pk %}">Attachment {{ forloop.counter }}</a> ({{ e.uploaded_by.get_full_name|default:e.uploaded_by.username }})</p>{% endfor %}
+      <div class="cp-notice"><svg class="cp-ic" aria-hidden="true"><use href="#i-lock"/></svg><div><strong>Private: you and the administrator only</strong><p>The other party cannot read this thread. Our team contacts each person separately.</p></div></div>
+      {% if c.outcome %}<div class="cp-notice is-ok"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Decision</strong><p>{{ c.outcome }}{% if c.is_resolved %} · Resolved {{ c.resolved_at|date:"M d, g:i A" }}{% endif %}</p></div></div>{% endif %}
+      <div class="cp-thread" data-hook="thread">
+        {% for m in thread %}<div class="cp-msg{% if m.kind != 'enquiry' %} is-me{% endif %}"><small>{{ m.author.get_full_name|default:m.author.username }}{% if m.kind == 'enquiry' %} · Administrator{% else %} · You{% endif %} · {{ m.created_at|date:"M d · g:i A" }}</small>{{ m.body|linebreaksbr }}</div>
+        {% empty %}<p class="cp-small">No messages yet. We’ll write here if we need more information.</p>{% endfor %}
+      </div>
+      {% if reply_form %}
+      <form method="post" enctype="multipart/form-data" action="{% url 'complaints:reply' c.pk %}" class="cp-stack" style="gap:12px" data-hook="reply-form">{% csrf_token %}
+        <div class="cp-field"><label for="{{ reply_form.body.id_for_label }}">Reply privately</label>{{ reply_form.body }}{% for e in reply_form.body.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>
+        <label class="cp-upload" data-cp-upload data-max-mb="5"><svg class="cp-ic" aria-hidden="true"><use href="#i-upload"/></svg><span>Attach evidence · JPG, PNG or PDF · Up to 5 MB</span><span class="cp-upload-names"></span><input type="file" name="{{ reply_form.evidence.html_name }}" id="{{ reply_form.evidence.id_for_label }}" accept=".jpg,.jpeg,.png,.pdf"></label>
+        {% for e in reply_form.evidence.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}
+        <div><button class="cp-btn is-primary" type="submit"><svg class="cp-ic" aria-hidden="true"><use href="#i-send"/></svg>Send private reply</button></div>
+      </form>{% endif %}
+    </section>
+  </div>
+  <aside class="cp-stack">
+    <section class="cp-panel"><h2>Case timeline</h2>
+      <div class="cp-timeline" data-hook="case-timeline">
+        {% for l in log %}<div class="cp-mile is-done"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>{{ l.to_status }}</strong><span>{{ l.created_at|date:"M d, g:i A" }}{% if l.note %} · {{ l.note }}{% endif %}</span></div></div>
+        {% empty %}<div class="cp-mile is-now"><svg class="cp-ic" aria-hidden="true"><use href="#i-clock"/></svg><div><strong>{{ c.get_status_display }}</strong><span>{{ c.created_at|date:"M d, g:i A" }} · Complaint received</span></div></div>{% endfor %}
+        {% if not c.is_resolved %}<div class="cp-mile"><svg class="cp-ic" aria-hidden="true"><use href="#i-circle"/></svg><div><strong>Resolution</strong><span>We’ll update you here and in Notifications.</span></div></div>{% endif %}
+      </div></section>
+    <section class="cp-panel"><h2>Related job</h2>
+      <dl class="cp-details"><div class="cp-detail"><dt>Request</dt><dd>{{ c.job.reference }}</dd></div><div class="cp-detail"><dt>Service</dt><dd>{{ c.job.service_name }}</dd></div></dl>
+      {% url 'jobs:detail' c.job.pk as u_job %}<a class="cp-btn is-light is-block" href="{{ u_job }}">View job record</a></section>
+  </aside>
+</div>

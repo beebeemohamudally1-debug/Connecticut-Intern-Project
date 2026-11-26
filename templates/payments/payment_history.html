@@ -1,20 +1,22 @@
 {% extends "base_customer.html" %}
+{% comment %} REQUIRED (unchanged): payments (each: quotation.request.reference, amount, date_received, get_method_display, reference). {% endcomment %}
 {% block title %}Payment history | HandyConnect{% endblock %}
 {% block page %}history{% endblock %}
 {% block content %}
-<div class="lab">Your account</div>
-<h1>Payment history</h1>
-<p class="sub">Payments recorded for your quotations.</p>
-<div class="card">
-  <table class="tb">
-    <thead><tr><th>Request</th><th>Amount (MUR)</th><th>Date</th><th>Method</th><th>Reference</th></tr></thead>
+{% url 'payments:my_invoices' as u_inv %}
+{% url 'customer_portal:penalties' as u_pen %}
+<div class="cp-head"><div><h1>Payments</h1><p>Payments recorded for your quotations. You pay offline; the administrator records and verifies each payment.</p></div>
+  <div class="cp-head-actions">{% if u_inv %}<a class="cp-btn is-light" href="{{ u_inv }}">Invoices &amp; receipts</a>{% endif %}</div></div>
+<section class="cp-panel">
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="payment-table">
+    <thead><tr><th scope="col">Request</th><th scope="col" class="is-num">Amount (MUR)</th><th scope="col">Date</th><th scope="col">Method</th><th scope="col">Reference</th></tr></thead>
     <tbody>
     {% for p in payments %}
-      <tr><td>{{ p.quotation.request.reference }}</td><td>{{ p.amount }}</td><td>{{ p.date_received }}</td><td>{{ p.get_method_display }}</td><td>{{ p.reference|default:"-" }}</td></tr>
+      <tr><td data-label="Request">{{ p.quotation.request.reference }}</td><td class="is-num is-strong" data-label="Amount">{{ p.amount }}</td><td data-label="Date">{{ p.date_received }}</td><td data-label="Method">{{ p.get_method_display }}</td><td data-label="Reference">{{ p.reference|default:"-" }}</td></tr>
     {% empty %}
-      <tr><td colspan="5" class="mut">No payments recorded yet.</td></tr>
+      <tr class="cp-empty-row"><td colspan="5">No payments recorded yet.</td></tr>
     {% endfor %}
     </tbody>
-  </table>
-</div>
+  </table></div>
+</section>
 {% endblock %}

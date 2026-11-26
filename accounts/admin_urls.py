@@ -1,8 +1,9 @@
 from django.urls import path
 from . import admin_appointments as appointments
-from . import admin_payments as payments
 from . import admin_skills as skills
 from . import admin_views as views
+from . import admin_actions as actions
+from . import admin_verification as verification
 from django.views.generic import TemplateView
 from dashboard.permissions import role_required
 app_name = 'accounts_admin'
@@ -10,12 +11,17 @@ app_name = 'accounts_admin'
 urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('users/', views.users, name='users'),
+    path('users/<int:pk>/suspend/', actions.suspend_user, name='suspend_user'),
+    path('users/<int:pk>/reactivate/', actions.reactivate_user, name='reactivate_user'),
+    path('users/<int:pk>/delete/', actions.delete_user, name='delete_user'),
     path('search/', views.search, name='search'),
     path('users/customer/<int:pk>/', views.customer_detail, name='customer_detail'),
     path('users/handyman/<int:pk>/', views.handyman_profile, name='handyman_profile'),
-    path('users/handyman/documents/', views.handyman_documents, name='handyman_documents'),
-    path('users/handyman/verify/', views.handyman_verify, name='handyman_verify'),
-    path('notifications/', views.notifications, name='notifications'),
+    path('notifications/', views.notifications, name='notifications'),   
+    path('users/handyman/<int:pk>/verify/', verification.handyman_verify, name='handyman_verify'),
+    path('users/handyman/<int:pk>/documents/', verification.handyman_verify, name='handyman_documents'),
+    path('users/handyman/<int:pk>/decide/', verification.handyman_decide, name='handyman_decide'),
+    path('users/handyman/documents/file/<int:doc_pk>/', verification.handyman_document_file, name='handyman_document_file'),
     path('work-progress/', views.work_progress, name='work_progress'),
     path('work-progress/<int:pk>/', views.job_progress, name='work_progress_job'),
     path('work-progress/<int:pk>/reports/', views.daily_reports, name='work_progress_reports'),
@@ -40,11 +46,11 @@ urlpatterns = [
     path('appointments/schedule/<str:kind>/', appointments.appointment_schedule, name='appointment_schedule'),
     path('appointments/<int:pk>/', appointments.appointment_detail, name='appointment_detail'),
     path('appointments/<int:pk>/reschedule/', appointments.appointment_reschedule, name='appointment_reschedule'),
-    path('payments/<int:request_id>/', payments.payment_status, name='payment_status'),
     path('skills/', skills.skills, name='skills'),
     path('skills/add/', skills.skill_form, name='skill_add'),
     path('skills/<int:pk>/', skills.skill_detail, name='skill_detail'),
     path('skills/<int:pk>/edit/', skills.skill_form, name='skill_edit'),
     path('skills/requests/', skills.skill_requests, name='skill_requests'),
     path('skills/requests/<int:pk>/', skills.skill_request_detail, name='skill_request_detail'),
-]
+]
+

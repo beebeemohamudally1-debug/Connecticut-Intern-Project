@@ -1,5 +1,15 @@
 {% extends "base.html" %}
+{% load static %}
+{% comment %}
+  Shared by customer and handyman pages (jobs, complaints).
+  Customers get the customer portal shell (needs `role` in context, which those views already pass);
+  handymen keep the original layout unchanged.
+{% endcomment %}
 {% block body %}
+{% if role == 'customer' %}
+<link rel="stylesheet" href="{% static 'customer/css/customer.css' %}">
+{% include "customer/_shell_top.html" %}
+{% else %}
 <div class="app c">
 <header class="top">
   <div class="logo"><i></i>HandyConnect</div>
@@ -8,6 +18,13 @@
     <a href="{% url 'complaints:list' %}">Complaints</a>
   </nav>
 </header>
-<main class="main">{% block content %}{% endblock %}</main>
+<main class="main">
+{% endif %}
+{% block content %}{% endblock %}
+{% if role == 'customer' %}
+{% include "customer/_shell_bottom.html" %}
+{% else %}
+</main>
 </div>
+{% endif %}
 {% endblock %}
