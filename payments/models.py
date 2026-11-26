@@ -594,3 +594,5 @@ class Receipt(models.Model):
 
     def __str__(self):
         return f"{self.number} for {self.invoice.number}"
+
+from .payouts import HandymanPayout  # noqa: E402,F401

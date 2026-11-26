@@ -1,16 +1,21 @@
 {% extends "base_customer.html" %}
-{% comment %} REQUIRED (unchanged): invoices (number, pk, get_invoice_type_display, request.reference, due_date, total_amount, status, get_status_display, is_overdue, receipt). {% endcomment %}
-{% block title %}My invoices | HandyConnect{% endblock %}
+{% block title %}Customer · My invoices | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div class="cp-head"><div><h1>My invoices</h1><p>Invoices, inspection fees and receipts.</p></div></div>
-<section class="cp-panel"><div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="invoice-table">
-  <thead><tr><th scope="col">Invoice</th><th scope="col">Type</th><th scope="col">Request</th><th scope="col">Due</th><th scope="col" class="is-num">Total (MUR)</th><th scope="col">Status</th><th scope="col"><span class="cp-sr">Receipt</span></th></tr></thead>
-  <tbody>{% for invoice in invoices %}<tr>
-    <td data-label="Invoice"><a class="cp-link" href="{% url 'payments:invoice_detail' invoice.pk %}">{{ invoice.number }}</a></td>
-    <td data-label="Type">{{ invoice.get_invoice_type_display }}</td><td data-label="Request">{{ invoice.request.reference }}</td><td data-label="Due">{{ invoice.due_date|date:"d/m/Y" }}</td>
-    <td class="is-num is-strong" data-label="Total">{{ invoice.total_amount|floatformat:"2g" }}</td>
-    <td data-label="Status">{% if invoice.status == 'paid' %}{% include "customer/_badge.html" with tone="ok" label=invoice.get_status_display %}{% elif invoice.is_overdue %}{% include "customer/_badge.html" with tone="bad" label="Overdue" %}{% elif invoice.status == 'issued' %}{% include "customer/_badge.html" with tone="warn" label=invoice.get_status_display %}{% else %}{% include "customer/_badge.html" with tone="neutral" label=invoice.get_status_display %}{% endif %}</td>
-    <td data-label="">{% if invoice.receipt %}<a class="cp-link" href="{% url 'payments:receipt_detail' invoice.receipt.pk %}">Receipt</a>{% endif %}</td>
-  </tr>{% empty %}<tr class="cp-empty-row"><td colspan="7">You have no invoices yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% include "payments/_messages.html" %}
+<div class="bar"><div><div class="lab">Your account</div><h1>My invoices</h1><p class="sub">Invoices, inspection fees and receipts.</p></div></div>
+<div class="card">
+  {% for invoice in invoices %}
+  <div class="row">
+    <span><a href="{% url 'payments:invoice_detail' invoice.pk %}">{{ invoice.number }}</a> · {{ invoice.get_invoice_type_display }}
+      <span class="mut">· {{ invoice.request.reference }} · due {{ invoice.due_date|date:"d/m/Y" }}</span></span>
+    <span>MUR {{ invoice.total_amount|floatformat:"2g" }}
+      <span class="b{% if invoice.status == 'issued' %} ye{% endif %}">{% if invoice.is_overdue %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}</span>
+      {% if invoice.receipt %}<a href="{% url 'payments:receipt_detail' invoice.receipt.pk %}">Receipt</a>{% endif %}
+    </span>
+  </div>
+  {% empty %}
+  <p class="sub">You have no invoices yet.</p>
+  {% endfor %}
+</div>
 {% endblock %}

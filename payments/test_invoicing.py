@@ -172,3 +172,23 @@ class DeadLinkTests(TestCase):
                     if status in (404, 500):
                         problems.append(f'{role}: {href}  ->  {status}   (found on {page})')
         self.assertEqual(problems, [], '\n' + '\n'.join(problems))
+
+
+class HandymanPagesTests(TestCase):
+    """Guards against the blank-page bug: the handyman pages must show the sidebar AND their own content."""
+
+    def setUp(self):
+        make_user('handy1', 'handyman')
+        self.client.login(username='handy1', password=PASSWORD)
+
+    def test_my_materials_page(self):
+        response = self.client.get(reverse('payments:my_materials'))
+        self.assertContains(response, 'class="sidebar"')
+        self.assertContains(response, 'My material requests')
+        self.assertContains(response, reverse('payments:my_estimates'))
+
+    def test_my_estimates_page(self):
+        response = self.client.get(reverse('payments:my_estimates'))
+        self.assertContains(response, 'class="sidebar"')
+        self.assertContains(response, 'My labour estimates')
+        self.assertContains(response, reverse('payments:my_materials'))

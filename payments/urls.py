@@ -1,5 +1,5 @@
 from django.urls import path
-
+from .payout_urls import urlpatterns as payout_urlpatterns
 from . import views
 
 app_name = 'payments'
@@ -42,3 +42,5 @@ urlpatterns = [
     path('my/invoices/<int:pk>/', views.invoice_detail, name='invoice_detail'),
     path('my/receipts/<int:pk>/', views.receipt_detail, name='receipt_detail'),
 ]
+
+urlpatterns += payout_urlpatterns

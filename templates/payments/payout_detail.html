@@ -1,0 +1,52 @@
+{% extends base_template %}
+{% block title %}Payout {{ payout.number }} | HandyConnect{% endblock %}
+{% block page %}payouts{% endblock %}
+{% block content %}
+<div class="bar">
+  <div>
+    <div class="lab">{% if is_admin %}Admin · Payouts{% else %}Handyman · Earnings{% endif %}</div>
+    <h1>Payout {{ payout.number }}</h1>
+  </div>
+  <span class="b {% if payout.is_confirmed %}gr{% else %}ye{% endif %}">{{ payout.get_status_display }}</span>
+</div>
+{% include "payments/_messages.html" %}
+<div class="g2">
+  <div class="card">
+    <h2>Payout</h2>
+    <div class="row"><span class="mut">Job</span><span>{{ payout.job.reference }} · {{ payout.job.service_name }}</span></div>
+    <div class="row"><span class="mut">Handyman</span><span>{{ payout.handyman }}</span></div>
+    <div class="row"><span class="mut">Labour</span><span>MUR {{ payout.labour_amount }}</span></div>
+    <div class="row"><span class="mut">Materials</span><span>MUR {{ payout.materials_amount }}</span></div>
+    <div class="row t"><span>Total paid</span><span>MUR {{ payout.amount }}</span></div>
+    <div class="row"><span class="mut">Date paid</span><span>{{ payout.date_paid }}</span></div>
+    <div class="row"><span class="mut">Method</span><span>{{ payout.get_method_display }}</span></div>
+    <div class="row"><span class="mut">Reference</span><span>{{ payout.reference|default:"-" }}</span></div>
+    {% if payout.is_confirmed %}
+    <div class="row"><span class="mut">Confirmed</span><span>{{ payout.confirmed_at|date:"d/m/Y H:i" }}</span></div>
+    {% if payout.proof_image %}<div class="row"><span class="mut">Proof</span><a href="{{ payout.proof_image.url }}" target="_blank">View</a></div>{% endif %}
+    {% elif role == 'handyman' %}
+    <form method="post" action="{% url 'payments:payout_confirm' payout.pk %}" enctype="multipart/form-data" style="margin-top:20px">
+      {% csrf_token %}
+      <label for="proof_image">Proof of payment (optional, JPG or PNG)</label>
+      <input class="in" id="proof_image" name="proof_image" type="file" accept=".jpg,.jpeg,.png">
+      <button class="btn" style="margin-top:12px">I received this payout</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if is_admin %}
+  <div class="card">
+    <h2>Cross-check</h2>
+    <div class="row"><span class="mut">Customer paid</span><span>MUR {{ payout.customer_paid }}</span></div>
+    <div class="row"><span class="mut">Handyman payout</span><span>MUR {{ payout.amount }}</span></div>
+    <div class="row t"><span>Platform margin</span><span>MUR {{ payout.platform_margin }}</span></div>
+    <div class="row"><span class="mut">Invoice</span><span>{{ payout.invoice.number }}</span></div>
+    {% if notes %}
+    <p style="margin:16px 0 8px"><span class="b re">Review</span></p>
+    {% for note in notes %}<p class="mut" style="margin:0 0 8px">{{ note }}</p>{% endfor %}
+    {% else %}
+    <p style="margin:16px 0 0"><span class="b gr">OK</span> The payout matches the approved estimate and receipts.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
