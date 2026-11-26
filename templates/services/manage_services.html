@@ -7,7 +7,16 @@
 {% block crumb %}Services{% endblock %}
 
 {% block content %}
-
+{% if messages %}
+    {% for message in messages %}
+        <div class="card" role="alert"
+             style="padding: 15px; margin-bottom: 15px;
+                    background: #dcfce7; color: #166534;
+                    border: 1px solid #bbf7d0;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
 
 
 <div class="bar">
