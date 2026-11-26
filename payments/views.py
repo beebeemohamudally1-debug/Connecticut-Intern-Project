@@ -124,7 +124,7 @@ def quotation_create(request, request_id):
             _form_error(form, error)
         else:
             messages.success(request, 'Quotation sent to the customer.' if 'send' in request.POST else 'Quotation saved as a draft.')
-            return redirect('payments:quotation_list')
+            return redirect('payments:quotation_detail_admin', pk=quotation.pk)
     return render(request, 'payments/quotation_form.html', {'form': form, 'service_request': service_request, 'estimate': estimate})
 
 
