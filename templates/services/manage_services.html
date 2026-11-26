@@ -21,7 +21,7 @@
     <div class="service-actions">
         <a href="{% url 'accounts_admin:handyman_requests' %}"
             class="btn o">
-            Handyman Requests (2)
+            Handyman Requests ({{ pending_requests }})
         </a>
 
         <a href="{% url 'accounts_admin:add_service' %}" class="btn">
@@ -41,17 +41,14 @@
             aria-label="Search services"
         >
 
-        <select id="category-filter"
-                aria-label="Filter by category">
+        <select id="category-filter" aria-label="Filter by category">
             <option value="all">All categories</option>
-            <option value="plumbing">Plumbing</option>
-            <option value="electrical">Electrical</option>
-            <option value="carpentry">Carpentry</option>
-            <option value="painting">Painting</option>
-            <option value="cleaning">Cleaning</option>
-            <option value="gardening">Gardening</option>
-            <option value="air-conditioning">Air conditioning</option>
-            <option value="appliance-repair">Appliance repair</option>
+
+            {% for category in categories %}
+                <option value="{{ category.pk }}">
+                    {{ category.name }}
+                </option>
+            {% endfor %}
         </select>
 
         <select id="status-filter"
@@ -82,56 +79,37 @@
             </thead>
 
             <tbody>
-                <!-- TODO: Replace sample data with Django loop -->
+                {% for service in services %}
+                    <tr data-category="{{ service.category_id }}"
+                        data-status="{% if service.is_active %}active{% else %}inactive{% endif %}">
 
-                <tr data-category="plumbing" data-status="active">
-                    <td>Pipe leak repair</td>
-                    <td>Plumbing</td>
-                    <td><span class="b green">Active</span></td>
-                    <td>10</td>
-                    <td>03 Nov 2026</td>
-                    <td>
-                        <a href="{% url 'accounts_admin:view_service' 1 %}" class="btn o s">
-                            View
-                        </a>
-                        <a href="{% url 'accounts_admin:edit_service' 1 %}" class="btn o s">
-                            Edit
-                        </a>
-                        
-                    </td>
-                </tr>
+                        <td>{{ service.name }}</td>
+                        <td>{{ service.category.name }}</td>
 
-                <tr data-category="electrical" data-status="active">
-                    <td>Electrical repair</td>
-                    <td>Electrical</td>
-                    <td><span class="b green">Active</span></td>
-                    <td>8</td>
-                    <td>05 Nov 2026</td>
-                    <td>
-                        <a href="{% url 'accounts_admin:view_service' 2 %}" class="btn o s">
-                            View
-                        </a>
-                        <a href="{% url 'accounts_admin:edit_service' 2 %}" class="btn o s">
-                            Edit
-                        </a>
-                    </td>
-                </tr>
+                        <td>
+                            {% if service.is_active %}
+                                <span class="b green">Active</span>
+                            {% else %}
+                                <span class="b red">Inactive</span>
+                            {% endif %}
+                        </td>
 
-                <tr data-category="cleaning" data-status="inactive">
-                    <td>Home deep cleaning</td>
-                    <td>Cleaning</td>
-                    <td><span class="b red">Inactive</span></td>
-                    <td>4</td>
-                    <td>02 Nov 2026</td>
-                    <td>
-                        <a href="{% url 'accounts_admin:view_service' 3 %}" class="btn o s">
-                            View
-                        </a>
-                        <a href="{% url 'accounts_admin:edit_service' 3 %}" class="btn o s">
-                            Edit
-                        </a>
-                    </td>
-                </tr>
+                        <td>{{ service.handymen_count }}</td>
+                        <td>—</td>
+
+                        <td>
+                            <a href="{% url 'accounts_admin:view_service' service.pk %}"
+                            class="btn o s">
+                                View
+                            </a>
+
+                            <a href="{% url 'accounts_admin:edit_service' service.pk %}"
+                            class="btn o s">
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -140,14 +118,18 @@
         No services match your search.
     </p>
 
-    <!-- TODO: BACKEND INTEGRATION
-         Implement server-side pagination when real
-         service records are available.
-    -->
     <div class="service-pagination">
-        <button class="btn o s" disabled>Previous</button>
-        <span>Page 1</span>
-        <button class="btn o s" disabled>Next</button>
+        <button type="button" class="btn o s"
+                id="previous-page" disabled>
+            Previous
+        </button>
+
+        <span id="page-info">Page 1 of 1</span>
+
+        <button type="button" class="btn o s"
+                id="next-page" disabled>
+            Next
+        </button>
     </div>
 
 </section>
@@ -190,6 +172,23 @@
         padding: 20px;
         text-align: center;
     }
+    .b.green {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+
+    .b.red {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .b.green::before {
+        background-color: #16a34a;
+    }
+
+    .b.red::before {
+        background-color: #dc2626;
+    }
 </style>
 
 {% endblock %}
@@ -201,14 +200,23 @@ document.addEventListener("DOMContentLoaded", function () {
     const category = document.getElementById("category-filter");
     const status = document.getElementById("status-filter");
     const clear = document.getElementById("clear-service-filters");
-    const rows = document.querySelectorAll("#services-table tbody tr");
+    const rows = Array.from(
+        document.querySelectorAll("#services-table tbody tr")
+    );
     const empty = document.getElementById("services-empty");
+
+    const previous = document.getElementById("previous-page");
+    const next = document.getElementById("next-page");
+    const pageInfo = document.getElementById("page-info");
+
+    const rowsPerPage = 5;
+    let currentPage = 1;
+    let totalPages = 1;
 
     function filterServices() {
         const query = search.value.trim().toLowerCase();
-        let visible = 0;
 
-        rows.forEach(function (row) {
+        const filteredRows = rows.filter(function (row) {
             const matchesSearch =
                 row.textContent.toLowerCase().includes(query);
 
@@ -220,27 +228,68 @@ document.addEventListener("DOMContentLoaded", function () {
                 status.value === "all" ||
                 row.dataset.status === status.value;
 
-            const show = matchesSearch &&
-                         matchesCategory &&
-                         matchesStatus;
-
-            row.hidden = !show;
-            if (show) visible++;
+            return matchesSearch &&
+                   matchesCategory &&
+                   matchesStatus;
         });
 
-        empty.hidden = visible !== 0;
+        totalPages = Math.max(
+            1, Math.ceil(filteredRows.length / rowsPerPage)
+        );
+
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+
+        rows.forEach(function (row) {
+            row.hidden = true;
+        });
+
+        filteredRows.slice(start, end).forEach(function (row) {
+            row.hidden = false;
+        });
+
+        empty.hidden = filteredRows.length !== 0;
+
+        pageInfo.textContent =
+            `Page ${currentPage} of ${totalPages}`;
+
+        previous.disabled = currentPage === 1;
+        next.disabled = currentPage === totalPages;
     }
 
-    search.addEventListener("input", filterServices);
-    category.addEventListener("change", filterServices);
-    status.addEventListener("change", filterServices);
+    function resetPage() {
+        currentPage = 1;
+        filterServices();
+    }
+
+    search.addEventListener("input", resetPage);
+    category.addEventListener("change", resetPage);
+    status.addEventListener("change", resetPage);
 
     clear.addEventListener("click", function () {
         search.value = "";
         category.value = "all";
         status.value = "all";
-        filterServices();
+        resetPage();
     });
+
+    previous.addEventListener("click", function () {
+        if (currentPage > 1) {
+            currentPage--;
+            filterServices();
+        }
+    });
+
+    next.addEventListener("click", function () {
+        if (currentPage < totalPages) {
+            currentPage++;
+            filterServices();
+        }
+    });
+
+    filterServices();
 });
 </script>
 {% endblock %}

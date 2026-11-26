@@ -4,6 +4,8 @@ from . import admin_skills as skills
 from . import admin_views as views
 from django.views.generic import TemplateView
 from dashboard.permissions import role_required
+from . import admin_services as services
+
 app_name = 'accounts_admin'
 
 urlpatterns = [
@@ -24,12 +26,13 @@ urlpatterns = [
 
     # TODO: BACKEND INTEGRATION
     # Temporary admin-only frontend routes.
-    path('services/', role_required('admin')(TemplateView.as_view(template_name='services/manage_services.html')), name='manage_services'),
-    path('services/add/', role_required('admin')(TemplateView.as_view(template_name='services/add_service.html')), name='add_service'),
-    path('services/<int:service_id>/edit/', role_required('admin')(TemplateView.as_view(template_name='services/edit_service.html')), name='edit_service'),
-    path('services/<int:service_id>/view/', role_required('admin')(TemplateView.as_view(template_name='services/view_service.html')), name='view_service'),
-    path('services/handyman-requests/', role_required('admin')(TemplateView.as_view(template_name='services/handyman_requests.html')), name='handyman_requests'),
-    path('services/handyman-requests/<int:request_id>/review/', role_required('admin')(TemplateView.as_view(template_name='services/review_request.html')), name='review_service_request'),
+    path('services/', services.manage_services, name='manage_services'),
+    path('services/add/', services.add_service, name='add_service'),
+    path('services/<int:service_id>/edit/', services.edit_service, name='edit_service'),
+    path('services/<int:service_id>/view/', services.view_service, name='view_service'),
+    path('services/<int:service_id>/deactivate/', services.deactivate_service, name='deactivate_service'),
+    path('services/handyman-requests/', services.handyman_requests, name='handyman_requests'),
+    path('services/handyman-requests/<int:request_id>/review/', services.review_service_request, name='review_service_request'),
     path('complaints/<int:pk>/', views.complaint_case, name='complaint_case'),
     path('complaints/<int:pk>/customer/', views.complaint_conversation, {'who': 'customer'}, name='complaint_customer'),
     path('complaints/<int:pk>/handyman/', views.complaint_conversation, {'who': 'handyman'}, name='complaint_handyman'),
