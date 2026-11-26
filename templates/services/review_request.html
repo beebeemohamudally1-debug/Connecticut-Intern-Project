@@ -8,15 +8,6 @@
 
 {% block content %}
 
-{% comment %}
-TODO: BACKEND INTEGRATION
-Retrieve the selected request using its request ID.
-Load the handyman profile and requested service.
-Connect approval and rejection to backend endpoints.
-Validate administrator permissions and request status.
-Save the decision note and update the request status.
-{% endcomment %}
-
 <div style="margin-bottom: 20px;">
     <a href="{% url 'accounts_admin:handyman_requests' %}"
        style="color: #2563eb; font-weight: 600; text-decoration: underline;">
@@ -24,27 +15,38 @@ Save the decision note and update the request status.
     </a>
 </div>
 
+{% if messages %}
+    {% for message in messages %}
+        <div class="card" style="padding: 15px; margin-bottom: 15px;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
 <div class="bar">
     <div>
-        <h1>Review Service Change Request</h1>
-        <p class="sub">
-            Review the request before approving or rejecting it.
-        </p>
+        {% if service_request.status == 'pending' %}
+            <h1>Review Service Change Request</h1>
+            <p class="sub">Review the request before approving or rejecting it.</p>
+        {% else %}
+            <h1>Service Change Request Details</h1>
+            <p class="sub">View the details of a previously reviewed request.</p>
+        {% endif %}
     </div>
 
+    {% if service_request.status == 'pending' %}
     <div class="review-actions">
-        <button type="button"
-                class="btn o reject-btn"
+        <button type="button" class="btn o reject-btn"
                 onclick="openDecision('Reject')">
             Reject
         </button>
 
-        <button type="button"
-                class="btn"
+        <button type="button" class="btn"
                 onclick="openDecision('Approve')">
             Approve
         </button>
     </div>
+    {% endif %}
 </div>
 
 <div class="review-grid">
@@ -55,33 +57,56 @@ Save the decision note and update the request status.
         <dl class="review-details">
             <div>
                 <dt>Request ID</dt>
-                <dd>SR-001</dd>
+                <dd>SR-{{ service_request.pk|stringformat:"03d" }}</dd>
             </div>
 
             <div>
                 <dt>Handyman</dt>
-                <dd>Marcus Reed</dd>
+                <dd>{{ handyman_name }}</dd>
             </div>
 
             <div>
                 <dt>Request Type</dt>
-                <dd>Add Service</dd>
+                <dd>{{ service_request.get_action_display }} Service</dd>
             </div>
 
+            {% if service_request.current_value %}
             <div>
-                <dt>Service Name</dt>
-                <dd>Pipe leak repair</dd>
+                <dt>Current Service</dt>
+                <dd>{{ service_request.current_value }}</dd>
             </div>
+            {% endif %}
+
+            {% if service_request.requested_value %}
+            <div>
+                <dt>Requested Service</dt>
+                <dd>{{ service_request.requested_value }}</dd>
+            </div>
+            {% endif %}
 
             <div>
                 <dt>Submitted Date</dt>
-                <dd>20 Nov 2026</dd>
+                <dd>{{ service_request.submitted_at|date:"d M Y" }}</dd>
+            </div>
+
+            <div>
+                <dt>Request Reason</dt>
+                <dd>{{ service_request.reason|default:"Not provided" }}</dd>
             </div>
 
             <div>
                 <dt>Request Status</dt>
                 <dd>
-                    <span class="pending-status">Pending</span>
+                    {% if service_request.status == 'approved' %}
+                        <span class="active-status">Approved</span>
+                    {% elif service_request.status == 'rejected' %}
+                        <span class="pending-status"
+                              style="background:#fee2e2;color:#991b1b;">
+                            Rejected
+                        </span>
+                    {% else %}
+                        <span class="pending-status">Pending</span>
+                    {% endif %}
                 </dd>
             </div>
         </dl>
@@ -91,10 +116,10 @@ Save the decision note and update the request status.
         <h2>Handyman Profile Review</h2>
 
         <div class="handyman-profile">
-            <div class="profile-avatar">MR</div>
+            <div class="profile-avatar">{{ handyman_initials }}</div>
 
             <div>
-                <h3>Marcus Reed</h3>
+                <h3>{{ handyman_name }}</h3>
                 <p>Handyman</p>
             </div>
         </div>
@@ -102,18 +127,26 @@ Save the decision note and update the request status.
         <dl class="review-details">
             <div>
                 <dt>Name</dt>
-                <dd>Marcus Reed</dd>
+                <dd>{{ handyman_name }}</dd>
             </div>
 
             <div>
                 <dt>Region</dt>
-                <dd>Port Louis</dd>
+                <dd>{{ service_request.handyman.region.name|default:"Not specified" }}</dd>
             </div>
 
             <div>
                 <dt>Account Status</dt>
+                <dd>{{ handyman_status }}</dd>
+            </div>
+
+            <div>
+                <dt>Profile</dt>
                 <dd>
-                    <span class="active-status">Active</span>
+                    <a href="{% url 'accounts_admin:handyman_profile' service_request.handyman.pk %}"
+                       class="btn o s">
+                        View Profile
+                    </a>
                 </dd>
             </div>
         </dl>
@@ -121,28 +154,53 @@ Save the decision note and update the request status.
 
 </div>
 
-<section class="card review-card">
-    <h2>Decision Note</h2>
+<form method="post" id="decisionForm">
+    {% csrf_token %}
 
-    <p class="decision-description">
-        Provide a reason or additional information regarding
-        your decision. A reason is required when rejecting a request.
-    </p>
+    <input type="hidden" name="decision" id="decisionValue">
 
-    <label for="decisionNote">Administrator's Note</label>
+    <section class="card review-card">
+        <h2>Decision Note</h2>
 
-    <textarea id="decisionNote"
-              rows="5"
-              maxlength="1000"
-              placeholder="Enter your decision note here..."></textarea>
+        <p class="decision-description">
+            {% if service_request.status == 'pending' %}
+                Provide additional information regarding your decision.
+                A reason is required when rejecting a request.
+            {% else %}
+                Decision recorded during the review of this request.
+            {% endif %}
+        </p>
 
-    <p id="noteError" class="note-error" hidden>
-        Please provide a reason for rejecting this request.
-    </p>
-</section>
+        <label for="decisionNote">Administrator's Note</label>
 
-<!-- Decision confirmation pop-up -->
+        <textarea id="decisionNote"
+                  name="admin_note"
+                  rows="5"
+                  maxlength="1000"
+                  placeholder="Enter your decision note here..."
+                  {% if service_request.status != 'pending' %}readonly{% endif %}>{{ service_request.admin_note }}</textarea>
 
+        <p id="noteError" class="note-error" hidden>
+            Please provide a reason for rejecting this request.
+        </p>
+
+        {% if service_request.status != 'pending' %}
+        <dl class="review-details">
+            <div>
+                <dt>Reviewed By</dt>
+                <dd>{{ service_request.reviewed_by.get_full_name|default:service_request.reviewed_by.username|default:"Not recorded" }}</dd>
+            </div>
+
+            <div>
+                <dt>Reviewed Date</dt>
+                <dd>{{ service_request.reviewed_at|date:"d M Y, H:i"|default:"Not recorded" }}</dd>
+            </div>
+        </dl>
+        {% endif %}
+    </section>
+</form>
+
+{% if service_request.status == 'pending' %}
 <dialog id="decisionModal" class="decision-modal">
 
     <h2 id="decisionTitle">Confirm Decision</h2>
@@ -150,14 +208,12 @@ Save the decision note and update the request status.
     <p id="decisionMessage"></p>
 
     <div class="modal-actions">
-        <button type="button"
-                class="btn o"
+        <button type="button" class="btn o"
                 onclick="document.getElementById('decisionModal').close()">
             Cancel
         </button>
 
-        <button type="button"
-                class="btn"
+        <button type="button" class="btn"
                 id="confirmDecision"
                 onclick="submitDecision()">
             Confirm
@@ -165,6 +221,7 @@ Save the decision note and update the request status.
     </div>
 
 </dialog>
+{% endif %}
 
 <style>
     .review-actions {
@@ -327,89 +384,8 @@ Save the decision note and update the request status.
     }
 </style>
 
+{% if service_request.status == 'pending' %}
 <script>
-    const requestId = "{{ view.kwargs.request_id }}";
-
-    // TODO: BACKEND INTEGRATION
-    // Replace temporary request details with database records.
-
-    const requests = {
-        "2": {
-            "SR-001": "SR-002",
-            "Marcus Reed": "Sofia Martinez",
-            "Pipe leak repair": "Electrical repair",
-            "Add Service": "Change Service",
-            "20 Nov 2026": "21 Nov 2026",
-            "MR": "SM",
-            "Pending": "Approved"
-        },
-        "3": {
-            "SR-001": "SR-003",
-            "Marcus Reed": "James Carter",
-            "Pipe leak repair": "Interior wall painting",
-            "Add Service": "Remove Service",
-            "20 Nov 2026": "22 Nov 2026",
-            "MR": "JC",
-            "Pending": "Rejected"
-        },
-        "4": {
-            "SR-001": "SR-004",
-            "Marcus Reed": "Ethan Taylor",
-            "Pipe leak repair": "Shelf installation",
-            "20 Nov 2026": "23 Nov 2026",
-            "MR": "ET"
-        }
-    };
-
-    const selectedRequest = requests[requestId];
-
-    if (selectedRequest) {
-        document.querySelectorAll(
-            '.review-details dd, .handyman-profile h3, .profile-avatar'
-        ).forEach(element => {
-            const value = element.textContent.trim();
-
-            if (selectedRequest[value] && value !== "Pending") {
-                element.textContent = selectedRequest[value];
-            }
-        });
-    }
-
-    if (requestId === "2" || requestId === "3") {
-
-        const approved = requestId === "2";
-
-        document.querySelector(".bar h1").textContent =
-            "Service Change Request Details";
-
-        document.querySelector(".bar .sub").textContent =
-            "View the details of a previously reviewed request.";
-
-        document.querySelector(".review-actions").style.display =
-            "none";
-
-        const status = document.querySelector(".pending-status");
-
-        status.textContent = approved ? "Approved" : "Rejected";
-
-        status.style.background =
-            approved ? "#dcfce7" : "#fee2e2";
-
-        status.style.color =
-            approved ? "#166534" : "#991b1b";
-
-        const note = document.getElementById("decisionNote");
-
-        note.readOnly = true;
-
-        note.value = approved
-            ? "Service change request approved."
-            : "Request rejected because further verification is required.";
-
-        document.querySelector(".decision-description").textContent =
-            "Decision recorded during the review of this request.";
-    }
-
     let selectedDecision = '';
 
     const decisionNote = document.getElementById('decisionNote');
@@ -446,16 +422,12 @@ Save the decision note and update the request status.
     }
 
     function submitDecision() {
-        // TODO: BACKEND INTEGRATION
-        // Submit the decision and administrator's note
-        // to the appropriate backend endpoint.
+        document.getElementById('decisionValue').value =
+            selectedDecision.toLowerCase();
 
-        alert(
-            'Demo only: ' + selectedDecision +
-            ' is not connected to the backend yet.'
-        );
+        document.getElementById('confirmDecision').disabled = true;
 
-        document.getElementById('decisionModal').close();
+        document.getElementById('decisionForm').requestSubmit();
     }
 
     decisionNote.addEventListener('input', () => {
@@ -464,5 +436,6 @@ Save the decision note and update the request status.
         }
     });
 </script>
+{% endif %}
 
 {% endblock %}

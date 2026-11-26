@@ -28,14 +28,35 @@
          Add Django form validation and image upload handling.
     -->
 
-    <form id="add-service-form" enctype="multipart/form-data">
+    <form id="add-service-form" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
         <h2>Details</h2>
+        {% if form.errors %}
+            <div style="background: #fef2f2;
+                        color: #b91c1c;
+                        padding: 12px;
+                        border-radius: 8px;
+                        margin-top: 16px;">
+
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p>{{ field.label }}: {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+
+            </div>
+        {% endif %}
 
         <div class="service-form-grid">
             <div class="service-field">
                 <label for="service-name">Service Name *</label>
                 <input type="text" id="service-name"
                     name="name" required maxlength="120"
+                    value="{{ form.name.value|default_if_none:'' }}"
                     placeholder="e.g. Pipe leak repair">
             </div>
 
@@ -43,39 +64,52 @@
                 <label for="service-category">Category *</label>
                 <select id="service-category" name="category" required>
                     <option value="">Select Category</option>
-                    <option value="plumbing">Plumbing</option>
-                    <option value="electrical">Electrical</option>
-                    <option value="carpentry">Carpentry</option>
-                    <option value="painting">Painting</option>
-                    <option value="cleaning">Cleaning</option>
-                    <option value="gardening">Gardening</option>
-                    <option value="air-conditioning">Air conditioning</option>
-                    <option value="appliance-repair">Appliance repair</option>
+
+                    {% for category in categories %}
+                        <option value="{{ category.pk }}"
+                            {% if form.category.value|stringformat:"s" == category.pk|stringformat:"s" %}
+                                selected
+                            {% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="service-field full-width">
                 <label for="service-description">Description *</label>
                 <textarea id="service-description"
-                          name="description" rows="4"
-                          required
-                          placeholder="Describe the service"></textarea>
+                    name="description" rows="4"
+                    required
+                    placeholder="Describe the service">{{ form.description.value|default_if_none:'' }}</textarea>
             </div>
 
             <div class="service-field">
                 <label for="service-availability">Availability *</label>
                 <select id="service-availability"
                         name="availability" required>
-                    <option value="active">Available</option>
-                    <option value="inactive">Unavailable</option>
+
+                    <option value="active"
+                        {% if form.availability.value == 'active' %}selected{% endif %}>
+                        Available
+                    </option>
+
+                    <option value="inactive"
+                        {% if form.availability.value == 'inactive' %}selected{% endif %}>
+                        Unavailable
+                    </option>
+
                 </select>
             </div>
 
             <div class="service-field">
                 <label for="service-image">Service Image</label>
+
                 <input type="file" id="service-image"
-                       name="image" accept="image/*">
-                <small>Choose an image for this service.</small>
+                    name="image"
+                    accept=".jpg,.jpeg,.png,.webp">
+
+                <small>Optional. JPG, PNG or WEBP. Maximum 5 MB.</small>
             </div>
         </div>
 
@@ -155,22 +189,4 @@
     }
 </style>
 
-{% endblock %}
-
-{% block page_js %}
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    const form = document.getElementById("add-service-form");
-
-    form.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        if (!form.reportValidity()) return;
-
-        // TODO: BACKEND INTEGRATION
-        // Submit validated data to the Django Service creation view.
-        alert("Demo only: Service creation is not connected to the backend yet.");
-    });
-});
-</script>
 {% endblock %}

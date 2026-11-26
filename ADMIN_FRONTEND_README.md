@@ -325,41 +325,34 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
 5. **Attachments:** no photos or files on a request, so the page shows "No attachments".
 6. **Services link:** the service is plain text (`service_category`), not linked to the Services app, so the Service filter lists the names found in the requests.
 
-## Manage Services (frontend completed, backend integration still needed)
-The six frontend pages are implemented using templates in `templates/services/`. URLs are defined in `accounts/admin_urls.py` and protected using `role_required('admin')`, so only authorised administrators can open them.
+## Manage Services (Connected to the Backend)
+### Backend Integration
+- Connected all six Manage Services pages to the Django backend.
+- Retrieved services, categories and handyman requests from the database.
+- Implemented service creation, editing, viewing, deactivation and reactivation.
+- Added optional service image uploads with file type and size validation.
+- Implemented duplicate service validation.
+- Displayed actual handyman assignments and pending request counts.
+- Connected service request approval and rejection.
+- Implemented Add, Modify and Remove service assignments upon approval.
+- Recorded administrator notes, reviewer information and review dates.
+- Prevented repeated decisions on previously reviewed requests.
+- Implemented search, filters and client-side pagination with five records per page.
+- Protected all service management endpoints with administrator access control.
 
-| Page | URL | Template |
-|---|---|---|
-| Manage Services | `/admin-portal/services/` | `services/manage_services.html` |
-| Add Service | `/admin-portal/services/add/` | `services/add_service.html` |
-| Edit Service | `/admin-portal/services/<id>/edit/` | `services/edit_service.html` |
-| View Service Details | `/admin-portal/services/<id>/view/` | `services/view_service.html` |
-| Handyman Service Requests | `/admin-portal/services/handyman-requests/` | `services/handyman_requests.html` |
-| Review Service Request | `/admin-portal/services/handyman-requests/<id>/review/` | `services/review_request.html` |
+### Testing
+- Successfully tested service creation, editing, deactivation and reactivation.
+- Successfully tested image uploads and duplicate validation.
+- Successfully tested service request approval, modification, removal and rejection.
+- Verified database updates after request approval.
+- Tested search, filters and pagination.
+- Removed temporary database test records.
+- Ran the Django test suite. One previously existing error remains, with no new errors reported.
 
-- **Manage Services:** service listing, summary counts, search, category and status filters, and navigation to Add, Edit and View pages.
-- **Add / Edit Service:** form validation, category selection, description, availability and image selection.
-- **View Service Details:** service information, status, associated handymen and confirmation pop-ups.
-- **Handyman Service Requests:** request listing, search, action and status filters.
-- **Review Service Request:** request details, Approve / Reject confirmation pop-ups and a required rejection reason. Approved and rejected requests are read-only.
-- Sample service names and categories are aligned with the catalogue in `services/migrations/0002_seed_catalogue.py`.
-- The sidebar **Services** link points to `accounts_admin:manage_services`.
-- The Admin Dashboard **Handyman Service Requests** Review button points to `accounts_admin:handyman_requests`.
-- CSS and JavaScript are currently included within the templates.
-
-**Still needed from the backend (services)**
-1. **Real service data:** replace the demonstration data with records from `services.Service` and `ServiceCategory`, including actual service IDs and associated handymen.
-2. **Add / Edit Service:** implement views and forms that validate and save service information.
-3. **Deactivate / Reactivate:** implement views that update `Service.is_active`.
-4. **Handyman Service Requests:** retrieve real `bookings.HandymanProfileRequest` records where `request_type = TYPE_SERVICE`.
-5. **Approve / Reject:** update the request status, admin note, reviewer and review date. Approved requests should also update the handyman's `HandymanProfile.services`.
-6. **Service images and dates:** the current Service model does not contain image, created date or updated date fields. Add these if required.
-7. **Replace temporary routes:** replace the protected `TemplateView` routes with the corresponding backend views when available.
-8. **Remove demo behaviour:** replace demonstration messages and temporary JavaScript data with real backend responses. Connect pagination to the real records.
-
-**Testing completed**
-Frontend navigation, search, filters, form validation, confirmation pop-ups and admin access control have been tested. Django system checks passed.
-No service records or request decisions are currently saved through these frontend pages.
+### Integration Notes
+- Service creation and modification timestamps are not currently available in the Service model.
+- Automatic cleanup of unused service image files is not currently implemented.
+- Handyman service request submission depends on the Handyman module. The administrator-side review, approval and rejection functionalities have been implemented and tested using temporary database records.
 
 ## Manage Skills (connected to the backend, saving still needed)
 Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/admin_skills.py` (read only, admins only), URLs in `accounts/admin_urls.py`, templates in `templates/services/`. Category is the trade a skill belongs to (`Skill.category`, e.g. Plumbing).

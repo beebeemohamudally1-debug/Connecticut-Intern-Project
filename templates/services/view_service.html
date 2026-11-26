@@ -7,13 +7,16 @@
 {% block crumb %}Service Details{% endblock %}
 
 {% block content %}
-
-{% comment %}
-TODO: BACKEND INTEGRATION
-Load the selected service using its ID.
-Replace sample details, metrics and handyman records
-with data from the Services backend.
-{% endcomment %}
+{% if messages %}
+    {% for message in messages %}
+        <div class="card" role="alert"
+             style="padding: 15px; margin-bottom: 15px;
+                    background: #dcfce7; color: #166534;
+                    border: 1px solid #bbf7d0;">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
 
 <div style="margin-bottom: 20px;">
     <a href="{% url 'accounts_admin:manage_services' %}"
@@ -29,11 +32,17 @@ with data from the Services backend.
     </div>
 
     <div class="view-service-actions">
-        <button type="button" class="btn o"
-                onclick="document.getElementById('deactivateModal').showModal()">
-            Deactivate
-        </button>
-        <a href="{% url 'accounts_admin:edit_service' 1 %}"
+        {% if service.is_active %}
+            <button type="button" class="btn o"
+                    onclick="document.getElementById('deactivateModal').showModal()">
+                Deactivate
+            </button>
+        {% else %}
+            <button type="button" class="btn o" disabled>
+                Already Inactive
+            </button>
+        {% endif %}
+        <a href="{% url 'accounts_admin:edit_service' service.pk %}"
            class="btn">
             Edit
         </a>
@@ -46,26 +55,41 @@ with data from the Services backend.
         <h2>Service Profile</h2>
 
         <div class="service-image-placeholder">
-            <span>Service Image</span>
+            {% if service.image %}
+                <img src="{{ service.image.url }}"
+                    alt="{{ service.name }}"
+                    style="width: 100%;
+                            height: 100%;
+                            object-fit: contain;
+                            border-radius: 10px;">
+            {% else %}
+                <span>No service image available</span>
+            {% endif %}
         </div>
 
         <dl class="service-details">
             <div>
                 <dt>Service Name</dt>
-                <dd>Pipe leak repair</dd>
+                <dd>{{ service.name }}</dd>
             </div>
             <div>
                 <dt>Category</dt>
-                <dd>Plumbing</dd>
+                <dd>{{ service.category.name }}</dd>
             </div>
             <div>
                 <dt>Availability</dt>
-                <dd><span class="b green">Active</span></dd>
+                <dd>
+                    {% if service.is_active %}
+                        <span class="b green">Active</span>
+                    {% else %}
+                        <span class="b red">Inactive</span>
+                    {% endif %}
+                </dd>
             </div>
         </dl>
 
         <h3>Description</h3>
-        <p>Identify and repair leaking water pipes.</p>
+        <p>{{ service.description|default:"No description provided." }}</p>
     </section>
 
     <section class="card view-service-metrics">
@@ -74,15 +98,15 @@ with data from the Services backend.
         <dl class="service-details">
             <div>
                 <dt>Handymen</dt>
-                <dd>10</dd>
+                <dd>{{ handymen_count }}</dd>
             </div>
             <div>
                 <dt>Created On</dt>
-                <dd>01 Nov 2026</dd>
+                <dd>—</dd>
             </div>
             <div>
                 <dt>Last Updated On</dt>
-                <dd>03 Nov 2026</dd>
+                <dd>—</dd>
             </div>
         </dl>
     </section>
@@ -103,30 +127,44 @@ with data from the Services backend.
                 </tr>
             </thead>
             <tbody>
-                <!-- TODO: BACKEND INTEGRATION
-                     Populate this table with handymen
-                     offering the selected service.
-                -->
-                <tr>
-                    <td>Marcus Reed</td>
-                    <td>Port Louis</td>
-                    <td><span class="b green">Active</span></td>
-                    <td>
-                        <button type="button" class="btn o s" disabled>
-                            View Profile
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Daniel Morgan</td>
-                    <td>Curepipe</td>
-                    <td><span class="b green">Active</span></td>
-                    <td>
-                        <button type="button" class="btn o s" disabled>
-                            View Profile
-                        </button>
-                    </td>
-                </tr>
+                {% for handyman in handymen %}
+                    <tr>
+                        <td>
+                            {{ handyman.user.get_full_name|default:handyman.user.username }}
+                        </td>
+
+                        <td>
+                            {% for area in handyman.service_areas.all %}
+                                {{ area.name }}{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                {{ handyman.user.region.name|default:"Not specified" }}
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {% if handyman.status == 'ACTIVE' %}
+                                <span class="b green">Active</span>
+                            {% elif handyman.status == 'REJECTED' %}
+                                <span class="b red">Rejected</span>
+                            {% else %}
+                                <span class="b">Pending Approval</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <a href="{% url 'accounts_admin:handyman_profile' handyman.user.pk %}"
+                            class="btn o s">
+                                View Profile
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center;">
+                            No handymen associated with this service.
+                        </td>
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -149,7 +187,7 @@ Validate administrator permissions on the server.
         Customers will no longer be able to request it.
     </p>
 
-    <p><strong>Service Name:</strong> Pipe leak repair</p>
+    <p><strong>Service Name:</strong> {{ service.name }}</p>
 
     <div style="display: flex; justify-content: flex-end;
                 gap: 12px; margin-top: 24px;">
@@ -159,11 +197,17 @@ Validate administrator permissions on the server.
             Keep Active
         </button>
 
-        <button type="button" class="btn"
-                style="background: #dc2626; color: white;"
-                onclick="alert('Demo only: Deactivation is not connected to the backend yet.'); document.getElementById('deactivateModal').close();">
-            Deactivate
-        </button>
+        <form method="POST"
+            action="{% url 'accounts_admin:deactivate_service' service.pk %}">
+
+            {% csrf_token %}
+
+            <button type="submit" class="btn"
+                    style="background: #dc2626; color: white;">
+                Deactivate
+            </button>
+
+        </form>
 
     </div>
 
@@ -244,76 +288,23 @@ Validate administrator permissions on the server.
             grid-template-columns: 1fr;
         }
     }
-</style>
-<script>
-    // TODO: BACKEND INTEGRATION
-    // Replace sample data with the selected service record.
-
-    const serviceId = "{{ view.kwargs.service_id }}";
-
-    const serviceData = {
-        "2": {
-            "Pipe leak repair": "Electrical repair",
-            "Plumbing": "Electrical",
-            "Identify and repair leaking water pipes.": 
-                "Identify and repair electrical faults in residential and commercial buildings.",
-            "10": "8",
-            "03 Nov 2026": "05 Nov 2026",
-            "Marcus Reed": "Sofia Martinez",
-            "Daniel Morgan": "Oliver Brown"
-        },
-        "3": {
-            "Pipe leak repair": "Home deep cleaning",
-            "Plumbing": "Cleaning",
-            "Identify and repair leaking water pipes.": 
-                "Thorough cleaning of residential rooms, kitchens, bathrooms and other living areas.",
-            "10": "4",
-            "03 Nov 2026": "02 Nov 2026",
-            "Marcus Reed": "Lucas Wilson",
-            "Daniel Morgan": "Emma Davis"
-        }
-    };
-
-    const selectedService = serviceData[serviceId];
-
-    if (selectedService) {
-        document.querySelectorAll(
-            '.service-details dd, .view-service-profile p, .service-handymen-card td'
-        ).forEach(element => {
-            const value = element.textContent.trim();
-
-            if (selectedService[value]) {
-                element.textContent = selectedService[value];
-            }
-        });
-
-        document.querySelector(
-            '.view-service-actions a'
-        ).href = `/admin-portal/services/${serviceId}/edit/`;
-
-        document.querySelector(
-            '#deactivateModal p:nth-of-type(2)'
-        ).innerHTML =
-            '<strong>Service Name:</strong> ' +
-            selectedService["Pipe leak repair"];
-
-        if (serviceId === "3") {
-            const statusBadge = document.querySelector(
-                '.view-service-profile .service-details .b'
-            );
-
-            statusBadge.textContent = "Inactive";
-            statusBadge.classList.remove("green");
-            statusBadge.classList.add("red");
-
-            const deactivateButton = document.querySelector(
-                '.view-service-actions button'
-            );
-
-            deactivateButton.disabled = true;
-            deactivateButton.style.opacity = "0.5";
-            deactivateButton.textContent = "Already Inactive";
-        }
+    .b.green {
+        background-color: #dcfce7;
+        color: #166534;
     }
-</script>
+
+    .b.red {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+
+    .b.green::before {
+        background-color: #16a34a;
+    }
+
+    .b.red::before {
+        background-color: #dc2626;
+    }
+</style>
+
 {% endblock %}
