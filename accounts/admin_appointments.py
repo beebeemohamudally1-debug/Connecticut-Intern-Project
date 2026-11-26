@@ -19,6 +19,7 @@ from urllib.parse import urlencode
 
 from payments.models import Invoice, Quotation, inspection_fee, request_payment_state
 
+from .admin_payments import materials_state
 from .admin_views import _initials, _person_name
 
 SLOT_TIMES = {'morning': '08:00 - 12:00', 'afternoon': '13:00 - 17:00'}
@@ -46,12 +47,14 @@ def _payment_checks(sr):
     """Quotation and payment checks for a service appointment (FR-A-9 part C).
 
     The labour quotation must be accepted and paid; a material quotation, if there is one,
-    must be accepted and paid too.
+    must be accepted and paid too. If the job needs materials but there is no material quotation
+    yet (accounts.admin_payments.materials_state), it is not ready.
     """
     quotes = list(sr.quotations.exclude(status__in=[Quotation.CANCELLED, Quotation.DECLINED])
                   .select_related('payment').order_by('-created_at')) if sr else []
     labour = next((q for q in quotes if q.quotation_type == Quotation.LABOUR), None)
     material = next((q for q in quotes if q.quotation_type == Quotation.MATERIAL), None)
+    needs_materials = bool(sr) and materials_state(sr)['state'] != 'none'
 
     def state(q, needed):
         if not q:
@@ -67,9 +70,9 @@ def _payment_checks(sr):
 
     rows = [
         ('Service quotation', *state(labour, True)),
-        ('Material quotation', *state(material, False)),
+        ('Material quotation', *state(material, needs_materials)),
         ('Labour payment', *paid(labour, True)),
-        ('Material payment', *paid(material, False)),
+        ('Material payment', *paid(material, needs_materials)),
     ]
     ready = all(ok for _, _, ok in rows) and request_payment_state(sr) == 'paid'
     rows.append(('Full payment', 'Received' if ready else 'Not received', ready))
@@ -366,4 +369,4 @@ def appointment_reschedule(request, pk):
         'today': timezone.localdate().isoformat(),
         'detail_url': reverse('accounts_admin:appointment_detail', args=[a.pk]),
     }
-    return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})
+    return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})

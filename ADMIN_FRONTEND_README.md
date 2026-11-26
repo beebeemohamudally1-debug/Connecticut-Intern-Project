@@ -3,8 +3,8 @@
 This file lists the admin pages built so far. **The admin frontend is still in progress:** some sections still require backend integration, including Manage Services, Manage Skills and Payments.
 
 There are two kinds of pages:
-- **Sample-data pages:** the two Registration Verification pages and the Manage Services pages. Registration Verification uses sample data from the views, while Manage Services uses demonstration data in the frontend. Administrative actions show demo messages until backend integration is completed.
-- **Service Quotations**, **Material Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users**, **Appointments** (saving still needed), **Service Requests** (forwarding still needed) and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
+- **Sample-data pages:** the Manage Services pages, which use demonstration data in the frontend. Their actions show demo messages until backend integration is completed.
+- **Service Quotations**, **Material Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users** (with Registration Verification), **Appointments** (saving still needed), **Service Requests** (forwarding still needed) and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
 
 ## Try it
 ```
@@ -45,53 +45,33 @@ All URLs are in `accounts/admin_urls.py` (namespace `accounts_admin`, under `/ad
 
 | URL | Name | Template | Sample data in the view |
 |---|---|---|---|
-| `users/handyman/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | `APPLICANT` |
-| `users/handyman/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | `APPROVED_APPLICANT` |
+| `users/handyman/<id>/verify/` | `handyman_verify` | `accounts/admin_handyman_verify.html` | none: real `HandymanProfile` and its documents |
+| `users/handyman/<id>/documents/` | `handyman_documents` | `accounts/admin_handyman_verify.html` | none: same page for an approved or rejected handyman |
 | `notifications/` | `notifications` | `notifications/admin_notifications.html` | none: real notifications for the logged-in admin |
 | `search/?q=` | `search` | `accounts/admin_search.html` | none: real users, jobs and service requests (navbar search) |
 
 The **Admin Dashboard** (`dashboard/admin_dashboard.html`) is already connected to real data in `dashboard/services.py`.
 
-## What each page needs
-The full list of names is in the comment at the top of each template. The connected pages have more detail in their own sections below. Summary:
+## What each page still needs
+What is **missing** on each page. The names each template uses are in the comment at the top of the template, and each page has more detail in its own section below.
 
-**Pages still on sample data**
-
-- **Registration Verification** – `applicant`: id, name, email, submitted, status (`Pending`, `Approved` or `Rejected`), decided, notes, documents (title, file, action). Approve and Reject show only for `Pending`.
-
-**Pages connected to the backend**
-
-- **Notifications** – `notifications` (list of `Notification`: id, title, message, notification_type, is_read, created_at, newest first) and `unread_count`. Mark as read already posts to `notifications:mark_as_read` and `notifications:mark_all_as_read`. A notification with a `url` has its title as a link, so the admin can open the page it is about (it is marked as read on the way).
-- **Logout** (profile menu in `base_admin.html`) posts to `accounts:logout`, which logs the admin out and opens the login page.
-- **Manage Users** – `page.stats` (total, customers, handymen, pending) and `page.users` (name, initials, role, email, status, url). `url` is the user's Customer Details or Handyman Profile page.
-- **Customer Details** – `customer`: name, initials, id, registered, email, phone, address, status (`Active` or `Suspended`), counts (submitted, completed, pending, cancelled), requests (id, title, status, state, url).
-- **Handyman Profile** – `handyman`: name, initials, id, email, phone, areas, availability, status, verified, registered, completed, assigned, skills, services, reports_url.
-- **Admin Profile** – `admin`: name, initials, email, role, status, from the logged-in user. Saving is not connected yet (no update view).
-- **Labour estimates tab** – `estimates` (`LabourEstimate` list). The Review pop-up posts to the payments approve and revision views.
-- **Quotations tab** – `quotations` (`Quotation` list, labour quotations).
-- **Create Service Quotation** – `form`, `service_request`, `estimate`.
-- **Revise Service Quotation** – `form`, `quotation`.
-- **Service Quotation Details** – `quotation`, `other` (the material quotation of the same request) and `request_payment` (payment state of the whole request).
-- **Material Quotations overview** – `purchase_requests` (each with `request`, `handyman`, `quotation`, and from the view `receipt_list`, `receipts_waiting`, `approved_total`, `difference`, `ready_to_schedule`).
-- **Private Feedback list** – `reviews`, `selected_status`, and `pending_count`, `approved_count`, `rejected_count`.
-- **Feedback Details** – `review`. Approve and Reject post to `reviews:approve_review` and `reviews:reject_review`.
-- **Job Summary Report** – `jobs` (each with `quotation_amount` and `payment_state`), the counts `total_jobs`, `assigned_jobs`, `in_progress_jobs`, `completed_jobs`, `cancelled_jobs`, and the filters `start_date`, `end_date`, `selected_status`, `status_choices`, `errors`.
-- **Complaint Queue** – `page.stats` (total, pending, in_progress, resolved) and `page.complaints` (reference, subject, filed_by, role, job, created_at, status, url).
-- **Case Overview / Resolve Case** – `page`: the complaint (reference, subject, description, job, filed_by, against, status), evidence, message counts, activity, the outcome once resolved, and the page links. Resolve also gets `page.checks` (customer_replied, handyman_replied, has_evidence).
-- **Private chat** – the same `page`, plus who, person (name, initials, email), recipient_id, messages (author, from_admin, at, body) and next_url.
-- **Work Progress Overview** – `page.services` and `page.jobs` (reference, service, customer, handyman, percent, due, status, status_label, url).
-- **Job Progress Details** – `job`: reference, title, handyman, customer, started, due, service, request_ref, scheduled, status, percent, overdue, latest_note, last_report, is_flagged, flag_reason, timeline, reports_url, evidence_url.
-- **Daily Work Reports** – `page`: reference, service, customer, job_url, handymen, reports (report_date, updated_at, handyman, details, percent, photos, url).
-- **Work Evidence** – `page`: reference, title, back_url, back_label, report_date, updated_at, handyman, status, photos (caption, filename, url), notes, notes_title, is_flagged, flag_reason, flag_url, next_url.
-
-- **Service Requests list** – `page.rows` (ref, customer, service, handyman, state, label, created, url), `page.stats` (all, review, forwarded, accepted) and `page.services`.
-- **Service Request Details** – `page`: the request fields, the chosen `handyman` (`sample` when it is sample data), `response` (label, tone, details, answered on), `quotation_step` (accepted only) and the appointment / job links.
-- **Appointments list** – `page.appointments` (ref, type, customer, handyman, date, slot, status, url) and the type counts.
-- **Appointment Calendar** – `page.view` (`month`, `week` or `day`), the days with their `events`, and the previous / next links.
-- **Appointment Details** – `page`: the appointment, customer, handyman, `checks` (payment rows and `ready`), `conflict` and `history`.
-- **Schedule / Reschedule** – `page`: the request picker, `checks`, `handymen`, `busy` (confirmed slots per handyman, for the live availability check).
-
-Job `status` is `assigned`, `in_progress`, `completed` or `delayed` (`delayed` comes from `job.is_delayed`).
+| Page | Status | Still missing |
+|---|---|---|
+| Notifications, Logout, Navbar search | Connected | Nothing |
+| Manage Users, Customer Details, Handyman Profile | Connected | Nothing |
+| Registration Verification | Connected | Nothing |
+| Admin Profile | Connected | Nothing |
+| Reports | Connected | Nothing |
+| Service Quotations (estimates, create, revise, details) | Connected | Sending a quotation back to the handyman after a customer revision; a single-estimate page; line items, margin and documents are not stored |
+| Material Quotations | Connected | Sending a request back to the handyman; notifying the handyman; line items and attachments |
+| Payment Status | Connected | Sending the final material quotation; `Invoice.issue_job` checks; coming back after saving an invoice |
+| Private Feedback | Connected | A success message after Approve / Reject; an admin note |
+| Complaints | Connected | Notifications open the shared complaint page; no assigned admin, category, priority or internal notes |
+| Work Progress | Connected | `WorkEvidence` has no link to its report (photos are matched by day) |
+| Service Requests | Connected, forwarding not saved | Forwarding to a handyman; the handyman chosen by the customer (sample for now); notifications; exact time and attachments |
+| Appointments | Connected, actions not saved | Saving Schedule, Confirm, Reschedule and Cancel; the customer's answer; handyman availability; notifications |
+| Manage Skills | Connected, actions not saved | Saving a skill, Deactivate / Reactivate, Approve / Reject requests; description and dates |
+| Manage Services | Demo data only | All of the backend (see Manage Services) |
 
 ## Service Quotations (connected to the backend)
 Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
@@ -244,16 +224,15 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 **Still needed from the backend**
 1. `WorkEvidence` has no link to a `ProgressReport`, so photos are matched to a report by upload day. A `report` field on `WorkEvidence` would make this exact.
 
-## Admin Profile (partly connected)
+## Admin Profile (connected to the backend)
 | Page | URL | Template |
 |---|---|---|
 | Admin Profile | `/admin-portal/profile/` | `accounts/admin_profile.html` |
 
 - The `profile` view in `accounts/admin_views.py` (admin only) shows the **logged-in** administrator: name (`get_full_name()`, or the username), initials, email, and status from `is_active`.
 
-**Still needed from the backend**
-1. **Saving:** there is no profile update view yet, so **Save changes** only updates the page and shows a demo message. When one exists, set the form's `action` to it, remove `data-demo` from the form, and read `full_name` and `email` from the POST.
-2. **Change Password:** there is no change-password page yet, so the button links to `#`. Point it to that page when the authentication pages exist.
+- **Save changes** posts to the same view, which checks and saves the full name and email (an email used by another account is refused).
+- **Change Password** opens the forgot-password pages (`accounts:forgot_password`): a 6-digit code is emailed, then the new password is set and the admin logs in again.
 
 ## Manage Users (connected to the backend)
 | Page | URL | Template |
@@ -267,9 +246,9 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 - Customer Details: the address is `user.address` (or the latest service request's address when it is empty). The counts and recent requests come from `bookings.ServiceRequest` (each request id opens Service Request Details); completed jobs from `jobs.Job`.
 - Handyman Profile: skills, services and service areas come from `accounts.HandymanProfile` (areas fall back to `user.region`); **Verified** when the profile is approved. A handyman without a profile falls back to the approved `bookings.HandymanProfileRequest` changes. Completed and assigned jobs come from `jobs.Job`; **View Daily Work Report** opens the reports of the latest job.
 
-**Still needed from the backend**
-1. **Suspend, Reactivate and Delete** (`accounts/_user_modals.html`): no views yet, so the buttons only show a demo message.
-2. **Registration documents and approve / reject:** the registration is still a stub, so no documents are stored and there is no view that approves or rejects a `HandymanProfile`. **Review registration** (pending handymen) and **View documents** still open the sample verification pages.
+**Account actions and registration verification (connected)**
+1. **Suspend, Reactivate and Delete** (`accounts/_user_modals.html`) post to `accounts/admin_actions.py`. Suspend and Delete log the person out; Delete is a soft delete (`is_active = False`), so their jobs, complaints and payments stay.
+2. **Registration Verification** (`accounts/admin_verification.py`): **Review registration** (pending) and **View documents** open `users/handyman/<id>/verify/` with the real application and its uploaded documents (opened through `handyman_document_file`, admins only). **Approve** / **Reject** post to `handyman_decide`; a note is required to reject.
 3. **Availability:** no field, so the profile shows "Not recorded".
 4. **Job history:** no page for one handyman's jobs, so the button links to `#`.
 5. **Approved skill and service requests:** approving a `HandymanProfileRequest` should also update `HandymanProfile.skills` / `.services`, so the profile shows the change.
@@ -431,15 +410,8 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
 - Up to 6 results per group are shown; the rest is counted ("try a longer search").
 
 ## Integration (not done yet)
-1. **Registration Verification:** once the backend has handyman verification, replace `APPLICANT` and `APPROVED_APPLICANT` with the real application, keeping the same names, and add the handyman id to the URLs.
-2. **Buttons:** turn these into forms that post to real views:
-   - Suspend, Reactivate and Delete (`accounts/_user_modals.html`)
-   - Approve and Reject (`admin_handyman_verify.html`)
-   - Save on the Admin Profile (remove `data-demo` once it saves)
+1. **Buttons:** turn these into forms that post to real views:
    - Schedule, Reschedule, Confirm and Cancel on the Appointments pages (see Appointments)
    - Forward Request and Notify Customer on Service Request Details (see Service Requests)
-3. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
-4. **Payment status page (needed from the payments team):** a read-only page with its own URL that shows the payment status of a request: the service and material quotations, how much was paid, when and how, and what is still owed. The **Payments** link in the sidebar (`templates/base_admin.html`, now `/payments/admin-dashboard/`, which gives a 404) should open it too. It must be separate from **Record payment** (`payments:payment_record`), which is a form for entering a new payment, not for checking the status. Once it exists, add **View Payment Status** buttons that open it from:
-   - the Receipts pop-up on Material Quotations (`payments/admin_materials.html`)
-   - the "Full Offline Payment Required" pop-up on Schedule Service (`bookings/admin_appointment_schedule.html`)
-5. **Manage Services:** connect the six completed frontend pages to the services backend, including service management and handyman service request approval / rejection. See the Manage Services section above.
+2. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
+3. **Manage Services:** connect the six completed frontend pages to the services backend, including service management and handyman service request approval / rejection. See the Manage Services section above.

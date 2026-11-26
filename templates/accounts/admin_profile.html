@@ -12,10 +12,10 @@
     email     -> user.email
     role      -> 'Administrator'
     status    -> 'Active' if user.is_active
-  Connected: accounts/admin_views.py profile (admin only).
-  Saving is NOT connected yet: there is no profile update view. When one
-  exists, set the form's action to it, remove data-demo, and read
-  `full_name` and `email` from the POST.
+  Connected: accounts/admin_views.py profile (admin only). A POST saves
+  `full_name` and `email`; errors come back as `errors`.
+  Change Password opens the forgot-password pages (accounts:forgot_password):
+  a code is emailed, then the new password is set.
 {% endcomment %}
 
 {% block title %}Admin Profile | HandyConnect{% endblock %}
@@ -32,7 +32,6 @@
   </div>
 </div>
 
-{# BACKEND: remove data-demo when the profile update view exists (see the comment at the top). #}
 <form class="card profile" method="post" action="" novalidate data-profile-form>
   {% csrf_token %}
 
@@ -100,8 +99,8 @@
   </div>
 
   <div class="profile-foot">
-    {# Point this to the change-password page when the authentication pages exist. #}
-    <a class="btn o orange" href="#">
+    {# No change-password page for logged-in users yet, so this uses the forgot-password pages #}
+    <a class="btn o orange" href="{% url 'accounts:forgot_password' %}">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       Change Password
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
