@@ -19,6 +19,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from . import views
+import re
+from django.conf import settings
+from django.http import Http404
+from django.urls import re_path
+from django.views.static import serve
 
 urlpatterns = [
     path('dev/', views.home, name='home'),
@@ -37,6 +42,18 @@ urlpatterns = [
     path('customer/', include('customer_portal.urls')),
 ]
 
-# Uploaded files (for example material receipts) are served by Django only while DEBUG is on
+
+PRIVATE_MEDIA_FOLDERS = {'handyman_documents'}
+
+
+def public_media(request, path):
+    """Development only: serve uploaded media, but never the private handyman documents.
+    Those are opened only through the administrator-only document view."""
+    parts = [p.strip().rstrip('. ').lower() for p in re.split(r'[\\/]+', path)]
+    if PRIVATE_MEDIA_FOLDERS.intersection(parts):
+        raise Http404
+    return serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [re_path(r'^%s(?P<path>.*)$' % re.escape(settings.MEDIA_URL.lstrip('/')), public_media)]

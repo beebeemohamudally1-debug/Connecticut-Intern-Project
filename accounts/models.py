@@ -60,6 +60,10 @@ class HandymanProfile(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     rejection_reason = models.TextField(blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    decision_notes = models.TextField(blank=True)
     bio = models.TextField(blank=True)
     categories = models.ManyToManyField('services.ServiceCategory', blank=True, related_name='handymen')
     services = models.ManyToManyField('services.Service', blank=True, related_name='handymen')

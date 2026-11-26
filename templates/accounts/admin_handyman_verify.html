@@ -60,7 +60,7 @@
           <svg class="ico" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
         </span>
         <span class="doc-text"><strong>{{ d.title }}</strong><span class="mut">{{ d.file }}</span></span>
-        <a class="doc-link" href="#">{{ d.action }}<span class="sr-only"> {{ d.title }}</span></a>
+        <a class="doc-link" href="{{ d.url|default:'#' }}" target="_blank" rel="noopener">{{ d.action }}<span class="sr-only"> {{ d.title }}</span></a>
       </li>
       {% endfor %}
     </ul>
@@ -74,14 +74,18 @@
       <h2>Verification Decision</h2>
       <p class="mut vf-hint">Confirm the documents are valid and match the applicant's profile.</p>
     </div>
-    <label class="vf-notes">
-      <span class="sr-only">Review notes (optional)</span>
-      <textarea class="in" rows="3" placeholder="Review notes (optional)" data-notes></textarea>
-    </label>
-    <div class="decision">
-      <button class="btn green" type="button" data-decide="approved">Approve Registration</button>
-      <button class="btn soft-red" type="button" data-decide="rejected">Reject Registration</button>
-    </div>
+    <form method="post" action="{{ applicant.decide_url }}">
+      {% csrf_token %}
+      <label class="vf-notes">
+        <span class="sr-only">Review notes (required when rejecting)</span>
+        <textarea class="in" name="notes" rows="3" placeholder="Review notes (required when rejecting)"></textarea>
+      </label>
+      {% if applicant.error %}<p class="field-error" role="alert">{{ applicant.error }}</p>{% endif %}
+      <div class="decision">
+        <button class="btn green" type="submit" name="decision" value="approve">Approve Registration</button>
+        <button class="btn soft-red" type="submit" name="decision" value="reject">Reject Registration</button>
+      </div>
+    </form>
   </section>
   {% else %}
   <section class="card cd-card vf-decision">

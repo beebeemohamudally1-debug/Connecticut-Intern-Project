@@ -3,6 +3,8 @@ from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import filesizeformat
@@ -20,12 +22,33 @@ User = get_user_model()
 
 @role_required('admin')
 def profile(request):
-    """Admin Profile: the logged-in administrator.
-
-    Saving is not connected yet: the accounts app has no profile update view
-    (the form keeps data-demo until one exists).
-    """
+    """Admin Profile: the logged-in administrator. A POST saves the full name and email."""
     u = request.user
+    errors = {}
+    values = {'full_name': _person_name(u), 'email': u.email}
+    if request.method == 'POST':
+        full_name = ' '.join(request.POST.get('full_name', '').split())
+        email = request.POST.get('email', '').strip().lower()
+        values = {'full_name': full_name, 'email': email}
+        if not full_name:
+            errors['full_name'] = 'Enter your full name.'
+        elif len(full_name) > 150:
+            errors['full_name'] = 'The full name is too long.'
+        if not email:
+            errors['email'] = 'Enter your email address.'
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errors['email'] = 'Enter a valid email address.'
+            else:
+                if User.objects.filter(email__iexact=email).exclude(pk=u.pk).exists():
+                    errors['email'] = 'That email address is already used by another account.'
+        if not errors:
+            u.first_name, _, u.last_name = full_name.partition(' ')
+            u.email = email
+            u.save(update_fields=['first_name', 'last_name', 'email'])
+            return redirect(reverse('accounts_admin:profile') + '?saved=1')
     admin = {
         'name': _person_name(u),
         'initials': _initials(u),
@@ -33,8 +56,9 @@ def profile(request):
         'role': 'Administrator',
         'status': 'Active' if u.is_active else 'Inactive',
     }
-    return render(request, 'accounts/admin_profile.html', {'admin': admin})
-
+    return render(request, 'accounts/admin_profile.html', {
+        'admin': admin, 'values': values, 'errors': errors,
+        'saved': request.GET.get('saved') == '1'})
 # ---------- Manage Users (section 3): real accounts.User and accounts.HandymanProfile data ----------
 # Not in the backend yet: suspend / reactivate / delete views, registration documents and
 # approve / reject, and availability. Those parts of the pages stay as before
@@ -65,6 +89,13 @@ def _user_url(u):
     name = 'accounts_admin:handyman_profile' if u.role == 'handyman' else 'accounts_admin:customer_detail'
     return reverse(name, args=[u.pk])
 
+def _action_urls(u):
+    """Addresses of the Suspend / Reactivate / Delete actions for the pop-ups."""
+    return {
+        'suspend_url': reverse('accounts_admin:suspend_user', args=[u.pk]),
+        'reactivate_url': reverse('accounts_admin:reactivate_user', args=[u.pk]),
+        'delete_url': reverse('accounts_admin:delete_user', args=[u.pk]),
+    }
 
 def _local_date(dt):
     return timezone.localtime(dt).strftime('%d %B %Y') if dt else '-'
@@ -143,6 +174,7 @@ def customer_detail(request, pk):
     reqs = list(ServiceRequest.objects.filter(customer=u).order_by('-created_at'))
     done, cancelled = ServiceRequest.STATUS_COMPLETED, ServiceRequest.STATUS_CANCELLED
     customer = {
+                **_action_urls(u),
         'kind': 'customer', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'registered': _local_date(u.date_joined),
         'email': u.email or '-', 'phone': u.phone or '-',
@@ -197,6 +229,8 @@ def handyman_profile(request, pk):
         services = _approved_values(u, HandymanProfileRequest.TYPE_SERVICE)
         areas, verified = '', None
     handyman = {
+                'pk': u.pk,
+                **_action_urls(u),
         'kind': 'handyman', 'name': _person_name(u), 'initials': _initials(u),
         'id': f'USR-{u.pk:04d}', 'verified': verified,
         'status': _account_status(u), 'email': u.email or '-', 'phone': u.phone or '-',
@@ -210,53 +244,6 @@ def handyman_profile(request, pk):
         'reports_url': reverse('accounts_admin:work_progress_reports', args=[latest.pk]) if latest else '',
     }
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': handyman})
-
-
-# Sample data for the Registration Verification page (no verification or documents in the backend yet)
-APPLICANT = {
-    'id': 'HND-0184',
-    'name': 'Amir Patel',
-    'email': 'amir.patel@email.com',
-    'submitted': '03 Nov 2026',
-    'status': 'Pending',
-    'documents': [
-        {'title': 'National Identity Card', 'file': 'identity-card.pdf', 'action': 'View document'},
-        {'title': 'Trade qualification', 'file': 'plumbing-certificate.pdf', 'action': 'View document'},
-        {'title': 'Proof of address', 'file': 'proof-of-address.pdf', 'action': 'View document'},
-        {'title': 'Profile photograph', 'file': 'handyman-photo.jpg', 'action': 'View image'},
-        {'title': 'Police character certificate', 'file': 'police-certificate.pdf', 'action': 'View document'},
-        {'title': 'Reference letter', 'file': 'reference-letter.pdf', 'action': 'View document'},
-    ],
-}
-
-
-# The same page for a handyman who was already approved (opened from the profile)
-APPROVED_APPLICANT = {
-    'id': 'USR-0874',
-    'name': 'Marcus Reed',
-    'email': 'marcus.reed@email.com',
-    'submitted': '10 May 2026',
-    'status': 'Approved',
-    'decided': '13 May 2026',
-    'notes': 'All documents checked and valid.',
-    'documents': APPLICANT['documents'],
-}
-
-
-@role_required('admin')
-def handyman_verify(request):
-    """Handyman Registration Verification."""
-    return render(request, 'accounts/admin_handyman_verify.html', {'applicant': APPLICANT})
-
-
-@role_required('admin')
-def handyman_documents(request):
-    """Registration documents of an already approved handyman (read only)."""
-    return render(request, 'accounts/admin_handyman_verify.html', {'applicant': APPROVED_APPLICANT})
-
-
-
-
 
 @role_required('admin')
 def notifications(request):
