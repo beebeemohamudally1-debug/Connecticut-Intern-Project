@@ -1,5 +1,6 @@
 from django.urls import path
 from . import admin_appointments as appointments
+from . import admin_payments as payments
 from . import admin_skills as skills
 from . import admin_views as views
 from . import admin_actions as actions
@@ -46,6 +47,7 @@ urlpatterns = [
     path('appointments/schedule/<str:kind>/', appointments.appointment_schedule, name='appointment_schedule'),
     path('appointments/<int:pk>/', appointments.appointment_detail, name='appointment_detail'),
     path('appointments/<int:pk>/reschedule/', appointments.appointment_reschedule, name='appointment_reschedule'),
+    path('payments/<int:request_id>/', payments.payment_status, name='payment_status'),
     path('skills/', skills.skills, name='skills'),
     path('skills/add/', skills.skill_form, name='skill_add'),
     path('skills/<int:pk>/', skills.skill_detail, name='skill_detail'),
