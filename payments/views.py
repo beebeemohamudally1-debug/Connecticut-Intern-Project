@@ -270,7 +270,7 @@ def estimate_submit(request, request_id):
         messages.success(request, 'Estimate sent to the administrator.')
         return redirect('payments:my_estimates')
     return _form_page(request, form, title='Labour estimate', subtitle=f'Request {service_request.reference}',
-                      base='base_handyman.html', nav='requests', button='Send estimate', back='payments:my_estimates')
+                      base='dashboard/handyman_base.html', nav='requests', button='Send estimate', back='payments:my_estimates')
 
 
 @role_required('handyman')
@@ -283,7 +283,7 @@ def estimate_resubmit(request, pk):
             return redirect('payments:my_estimates')
     extra = f"Administrator's note: {estimate.admin_note}" if estimate.admin_note else ''
     return _form_page(request, form, title='Revise estimate', subtitle=f'Request {estimate.request.reference}',
-                      base='base_handyman.html', nav='requests', button='Send revised estimate', back='payments:my_estimates', extra=extra)
+                      base='dashboard/handyman_base.html', nav='requests', button='Send revised estimate', back='payments:my_estimates', extra=extra)
 
 
 @role_required('handyman')
@@ -306,7 +306,7 @@ def material_request_submit(request, request_id):
         messages.success(request, 'Purchase request sent to the administrator.')
         return redirect('payments:my_materials')
     return _form_page(request, form, title='Material purchase request', subtitle=f'Request {service_request.reference}',
-                      base='base_handyman.html', nav='materials', button='Send request', back='payments:my_materials')
+                      base='dashboard/handyman_base.html', nav='materials', button='Send request', back='payments:my_materials')
 
 
 @role_required('handyman')
@@ -325,7 +325,7 @@ def receipt_upload(request, pk):
             messages.success(request, 'Receipt uploaded for review.')
             return redirect('payments:my_materials')
     return _form_page(request, form, title='Upload receipt', subtitle=f'Request {purchase.request.reference}',
-                      base='base_handyman.html', nav='materials', button='Upload receipt', back='payments:my_materials')
+                      base='dashboard/handyman_base.html', nav='materials', button='Upload receipt', back='payments:my_materials')
 
 
 # ================================================================== customer
@@ -361,7 +361,15 @@ def payment_history(request):
 @role_required('admin')
 def invoice_list(request):
     invoices = Invoice.objects.select_related('request', 'request__customer', 'invoice_payment', 'receipt')
-    return render(request, 'payments/admin_invoice_list.html', {'invoices': invoices})
+    # Requests whose labour quotation the customer accepted but that have no live job invoice yet.
+    # This is how the admin reaches "Issue invoice", which needs a request.
+    already_invoiced = Invoice.objects.filter(invoice_type=Invoice.JOB,
+                                              status__in=[Invoice.ISSUED, Invoice.PAID]).values('request')
+    ready = (ServiceRequest.objects
+             .filter(quotations__quotation_type=Quotation.LABOUR, quotations__status=Quotation.ACCEPTED)
+             .exclude(pk__in=already_invoiced).exclude(status='cancelled')
+             .select_related('customer').distinct())
+    return render(request, 'payments/admin_invoice_list.html', {'invoices': invoices, 'ready': ready})
 
 
 @role_required('admin')

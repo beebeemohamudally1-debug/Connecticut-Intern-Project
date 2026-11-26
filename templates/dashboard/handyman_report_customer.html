@@ -22,6 +22,8 @@
             <a href="{% url 'dashboard:job_requests' %}">Job Requests</a>
             <a href="{% url 'dashboard:job_completed' %}?view=tracking">Job Tracking</a>
             <a href="{% url 'dashboard:job_completed' %}?view=completed">Job Completion</a>
+            <a href="{% url 'payments:my_estimates' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>My Estimates</a>
+            <a href="{% url 'payments:my_materials' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>My Materials</a>
         </nav>
 
         <a class="help-card" href="{% url 'dashboard:report_customer' %}">
