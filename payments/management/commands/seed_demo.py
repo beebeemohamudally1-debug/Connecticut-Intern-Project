@@ -136,6 +136,8 @@ class Command(BaseCommand):
             ('changes_requested_2', 'Deck staining', 0, 0, '4800', 'Sand the deck\nApply two coats of stain', 'approved', 'revision_requested'),
             ('changes_requested_3', 'Bathroom fan install', 3, 1, '2200', 'Cut vent\nInstall fan\nConnect wiring', 'approved', 'revision_requested'),
             ('accepted', 'Garden fence repair', 2, 0, '3000', 'Replace panels\nLevel posts\nPaint section', 'approved', 'accepted'),
+            ('labour_only', 'Light switch replacement', 2, 1, '900', 'Replace two light switches\nTest the circuit', 'approved', 'accepted'),
+            ('no_request', 'Curtain rail fitting', 1, 1, '800', 'Fit two curtain rails\nCheck the wall plugs', 'approved', 'accepted'),
             ('ready_invoice', 'Bathroom tap replacement', 1, 0, '1600', 'Remove old taps\nFit new mixer tap\nTest for leaks', 'approved', 'accepted'),
             ('accepted_waiting', 'Gate repair', 0, 0, '2800', 'Fix hinges\nRealign gate\nOil lock', 'approved', 'accepted'),
             ('paid', 'Water heater service', 3, 1, '2400', 'Drain tank\nReplace element\nTest', 'approved', 'paid'),
@@ -185,6 +187,11 @@ class Command(BaseCommand):
         # One receipt approved, one waiting for review.
         self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False,
                       receipts=[('1850', 'approved'), ('1250', 'submitted')])
+        # Light switch: the handyman says no materials are needed (material request with cost 0): labour only.
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['labour_only']['request'], handyman=handymen[1],
+            items='No materials needed', estimated_cost=Decimal('0'))
+        # Curtain rail: labour accepted, no material request yet (the admin pages wait for it).
         # Bathroom tap: both accepted, receipts match the material quotation (ready to invoice on Payment Status).
         self.material(admin, handymen[0], 'ready_invoice', '1 mixer tap\n2 flexible hoses', '1300', paid=False,
                       receipts=[('950', 'approved'), ('350', 'submitted')])
@@ -571,6 +578,8 @@ class Command(BaseCommand):
         for key, service in [('needs_quote', 'Pipe leak repair'), ('draft', 'Kitchen shelf install'),
                              ('sent', 'Ceiling fan installation'), ('changes_requested', 'Wall painting'),
                              ('accepted', 'Garden fence repair'), ('accepted_waiting', 'Gate repair'),
+                             ('labour_only', 'Light switch replacement'),
+                             ('no_request', 'Curtain rail fitting'),
                              ('paid', 'Water heater service'),
                              ('declined', 'Roof gutter cleaning'), ('cancelled', 'Shower installation')]:
             req = ServiceRequest.objects.filter(customer__username__startswith='demo_', service_category=service).first()
@@ -595,7 +604,8 @@ class Command(BaseCommand):
             out(f'  {BASE}/payments/quotations/new/{i["request"]}/?estimate={i["estimate"]}')
         out('\nQuotation details')
         for key, label in [('draft', 'Draft'), ('sent', 'Sent, awaiting customer'), ('changes_requested', 'Changes requested'),
-                           ('accepted_waiting', 'Accepted, no materials'), ('accepted', 'Both accepted, unpaid'),
+                           ('accepted_waiting', 'Accepted, material request waiting'),
+                           ('labour_only', 'Accepted, no materials'), ('no_request', 'Accepted, no material request yet'), ('accepted', 'Both accepted, unpaid'),
                            ('paid', 'Both paid'), ('declined', 'Declined'), ('cancelled', 'Cancelled')]:
             if key in ids and ids[key]['quotation']:
                 out(f'  {label + ":":26} {BASE}/payments/quotations/{ids[key]["quotation"]}/')

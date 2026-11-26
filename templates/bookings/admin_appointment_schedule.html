@@ -33,7 +33,7 @@
   <div>
     <h1>Schedule {{ page.kind_label }} Appointment</h1>
     {% if page.existing %}<p class="sub ap-late" role="alert">Already scheduled: {{ page.request.ref }} has {{ page.existing.ref }} ({{ page.existing.status }}). <a href="{{ page.existing.url }}">Open it</a> to reschedule or cancel instead.</p>
-    {% else %}<p class="sub">{% if page.kind == 'inspection' %}Arrange a site inspection before the quotation.{% else %}Arrange the service once both quotations are accepted and fully paid.{% endif %}</p>{% endif %}
+    {% else %}<p class="sub">{% if page.kind == 'inspection' %}Arrange a site inspection before the quotation.{% else %}Arrange the service once the quotations are accepted and fully paid.{% endif %}</p>{% endif %}
   </div>
   {% if messages %}<div class="ql-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
 </div>
@@ -124,7 +124,7 @@
   <div class="ap-body">
     <span class="ap-icon is-red" aria-hidden="true">!</span>
     <h2 id="up-title" class="ap-center">Full Offline Payment Required</h2>
-    <p class="mut ap-center">Both quotations must be accepted and paid before the service is scheduled.</p>
+    <p class="mut ap-center">The quotations (service, and materials if the job needs them) must be accepted and paid before the service is scheduled.</p>
     <ul class="ap-checks">
       {% for c in page.checks.rows %}<li class="{% if c.ok %}ok{% else %}no{% endif %}"><span>{{ c.label }}</span><strong>{{ c.value }}</strong></li>{% endfor %}
     </ul>
@@ -170,4 +170,4 @@
     if (change) change.addEventListener('click', function () { var f = document.querySelector('[name="date"]'); if (f) f.focus(); });
   })();
 </script>
-{% endblock %}
+{% endblock %}

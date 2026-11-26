@@ -7,8 +7,8 @@ This view only READS the database (admin only).
   - Invoice: Issue Invoice opens payments:invoice_issue (only once the checklist is complete), then
     Record payment opens payments:invoice_record_payment, and the receipt number shows once cleared.
 BACKEND (payments):
-  - LabourEstimate.materials_needed does not exist yet, so a request with no material request (or a
-    rejected one) is treated as "no materials needed".
+  - No materials: a material request with estimated cost 0 means "no materials needed" (team rule,
+    see materials_state). No request yet means the page waits for one.
   - Invoice.issue_job does not check the receipts yet, so the invoice is only held back on this page.
   - There is no action that changes an accepted material quotation to the receipts total, so
     "Send Final Material Quotation" is a demo button.
@@ -41,6 +41,31 @@ def _money(value):
     return f'MUR {value:,.2f}'
 
 
+def materials_state(sr):
+    """Does this job need materials? Used by Payment Status, Service Quotation Details, Schedule Service
+    (through accounts/templatetags/admin_materials.py for the templates).
+
+    Team rule (no backend change): the handyman sends a material request for every job, using the
+    existing form. Estimated cost 0 means "no materials needed".
+    Returns {'state', 'label', 'note'} (note: one sentence for the customer response pop-up):
+      requested -> a real material request is in progress (submitted or forwarded)
+      none      -> the latest request has estimated cost 0: the job is labour only
+      waiting   -> no request yet, or the last one was rejected
+    """
+    purchase = (sr.material_requests.order_by('-created_at').first()
+                if hasattr(sr, 'material_requests') else None)
+    if purchase and purchase.estimated_cost == 0 and purchase.status != MaterialPurchaseRequest.FORWARDED:
+        return {'state': 'none', 'label': 'No materials needed',
+                'note': 'The handyman says no materials are needed, so the job is labour only.'}
+    if purchase and purchase.status != MaterialPurchaseRequest.REJECTED:
+        return {'state': 'requested', 'label': 'Material request sent', 'note': ''}
+    if purchase:
+        return {'state': 'waiting', 'label': 'Material request rejected: waiting for a new one',
+                'note': 'The material request was rejected. Payment waits for the handyman\'s new request.'}
+    return {'state': 'waiting', 'label': 'Waiting for the handyman\'s material request',
+            'note': 'Payment comes after the handyman says which materials are needed (or none).'}
+
+
 @role_required('admin')
 def payment_status(request, request_id):
     sr = get_object_or_404(ServiceRequest.objects.select_related('customer'), pk=request_id)
@@ -51,21 +76,18 @@ def payment_status(request, request_id):
     receipts = list(purchase.receipts.order_by('created_at')) if purchase else []
     approved_total = sum((r.amount_spent for r in receipts if r.status == MaterialReceipt.APPROVED), Decimal('0'))
     waiting = sum(1 for r in receipts if r.status == MaterialReceipt.SUBMITTED)
-    # BACKEND: becomes the estimate's materials_needed once LabourEstimate has that field.
-    # Until then: no material request (or a rejected one) means no materials are needed.
-    materials_used = bool(purchase and purchase.status != MaterialPurchaseRequest.REJECTED)
+    mats = materials_state(sr)          # requested / none / waiting (see materials_state)
+    materials_used = mats['state'] == 'requested'
 
     # ---------- Checklist before payment (each: label, detail, ok) ----------
     checks = []
     checks.append(('Service quotation accepted',
                    QUOTE_LABEL.get(labour.status, labour.get_status_display()) if labour else 'Not prepared yet',
                    bool(labour and labour.status == Quotation.ACCEPTED)))
-    if not purchase:
-        checks.append(('Materials', 'No material request: labour only', True))
+    if mats['state'] != 'requested':
+        checks.append(('Materials', mats['label'], mats['state'] == 'none'))
     elif purchase.status == MaterialPurchaseRequest.SUBMITTED:
         checks.append(('Materials', 'Material request waiting for your review', False))
-    elif purchase.status == MaterialPurchaseRequest.REJECTED:
-        checks.append(('Materials', 'Material request rejected: labour only', True))
     else:
         material_ok = bool(material and material.status == Quotation.ACCEPTED)
         checks.append(('Material quotation accepted',
