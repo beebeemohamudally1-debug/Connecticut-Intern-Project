@@ -57,20 +57,22 @@ What is **missing** on each page. The names each template uses are in the commen
 
 | Page | Status | Still missing |
 |---|---|---|
-| Notifications, Logout, Navbar search | Connected | Nothing |
-| Manage Users, Customer Details, Handyman Profile | Connected | Nothing |
+| Admin Dashboard | Connected | Nothing |
+| Notifications | Connected | Notifications for estimates, quotations and appointments (only complaints and service requests send them) |
+| Logout, Navbar search | Connected | Nothing |
+| Manage Users, Customer Details, Handyman Profile | Connected | Handyman availability (shows "Not recorded") |
 | Registration Verification | Connected | Nothing |
 | Admin Profile | Connected | Nothing |
 | Reports | Connected | Nothing |
-| Service Quotations (estimates, create, revise, details) | Connected | Sending a quotation back to the handyman after a customer revision; a single-estimate page; line items, margin and documents are not stored |
+| Service Quotations (estimates, create, revise, details) | Connected | Sending a quotation back to the handyman after a customer revision; notifications; a single-estimate page; line items, margin and documents are not stored |
 | Material Quotations | Connected | Sending a request back to the handyman; notifying the handyman; line items and attachments |
-| Payment Status | Connected | Sending the final material quotation; `Invoice.issue_job` checks; coming back after saving an invoice |
+| Payment Status | Connected | Sending the final material quotation at the receipts total; `Invoice.issue_job` checking the receipts; coming back after saving an invoice; on the handyman side, a material request with a cost field before payment (cost 0 = no materials) |
 | Private Feedback | Connected | A success message after Approve / Reject; an admin note |
 | Complaints | Connected | Notifications open the shared complaint page; no assigned admin, category, priority or internal notes |
 | Work Progress | Connected | `WorkEvidence` has no link to its report (photos are matched by day) |
 | Service Requests | Connected, forwarding not saved | Forwarding to a handyman; the handyman chosen by the customer (sample for now); notifications; exact time and attachments |
 | Appointments | Connected, actions not saved | Saving Schedule, Confirm, Reschedule and Cancel; the customer's answer; handyman availability; notifications |
-| Manage Skills | Connected, actions not saved | Saving a skill, Deactivate / Reactivate, Approve / Reject requests; description and dates |
+| Manage Skills | Connected, actions not saved | Saving a skill, Deactivate / Reactivate, Approve / Reject requests; description and dates; a handyman page to request skill changes |
 | Manage Services | Demo data only | All of the backend (see Manage Services) |
 
 ## Service Quotations (connected to the backend)
