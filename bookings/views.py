@@ -15,7 +15,8 @@ from django.utils import timezone
 from accounts.models import User
 from dashboard.permissions import role_required
 from jobs.models import Job
-from payments.models import LabourEstimate, Quotation
+from accounts.models import HandymanProfile
+from payments.models import LabourEstimate, Quotation, request_payment_state
 
 from .models import Appointment, ServiceRequest, ServiceRequestAssignment
 
@@ -79,26 +80,54 @@ def _preferred(sr):
 def _quotation_step(sr):
     """After the handyman accepts: where the labour estimate / service quotation stands (FR-A-9 part A).
 
-    Returns (text, button label, url); no button while the admin can only wait. Estimates open
-    their own pop-up on the Labour estimates tab (#est-<id>).
+    Returns (text, button label, url, stage); no button while the admin can only wait. Estimates open
+    their own pop-up on the Labour estimates tab (#est-<id>). stage is the short label on the list page.
     """
     quote = (sr.quotations.filter(quotation_type=Quotation.LABOUR).exclude(status=Quotation.CANCELLED)
              .order_by('-created_at').first())
     if quote:
-        return ('The service quotation is prepared. Follow it in Service Quotations.', 'View Quotation',
-                reverse('payments:quotation_detail_admin', args=[quote.pk]))
+        quote_url = reverse('payments:quotation_detail_admin', args=[quote.pk])
+        if quote.status == Quotation.ACCEPTED:
+            # After the customer accepts: payment (Payment Status), then the service appointment
+            if request_payment_state(sr) != 'paid':
+                return ('The customer accepted the quotation. Check the payment status: materials, invoice and payment.',
+                        'Check Payment Status', reverse('accounts_admin:payment_status', args=[sr.pk]), 'Awaiting payment')
+            service = sr.appointments.filter(appointment_type=Appointment.TYPE_SERVICE).exclude(
+                status=Appointment.STATUS_CANCELLED).first()
+            if service:
+                return ('Fully paid. The service appointment is ' + service.get_status_display().lower() + '.',
+                        'View Appointment', reverse('accounts_admin:appointment_detail', args=[service.pk]), 'Service booked')
+            return ('Fully paid. Schedule the service appointment.', 'Schedule Service',
+                    reverse('accounts_admin:appointment_schedule', args=['service']) + f'?request={sr.pk}', 'Ready to schedule')
+        text = {
+            Quotation.DRAFT: 'The service quotation is saved as a draft. Send it to the customer.',
+            Quotation.REVISION_REQUESTED: 'The customer asked for changes to the quotation.',
+            Quotation.DECLINED: 'The customer declined the quotation.',
+        }.get(quote.status, "The quotation is with the customer. Waiting for their answer.")
+        stage = {Quotation.DRAFT: 'Quote draft', Quotation.REVISION_REQUESTED: 'Quote changes asked',
+                 Quotation.DECLINED: 'Quote declined'}.get(quote.status, 'Quote sent')
+        return (text, 'View Quotation', quote_url, stage)
     est = sr.labour_estimates.order_by('-created_at').first()
     if est is None:
-        return ("Waiting for the handyman's labour estimate (after assessing the job).", '', '')
+        # The handyman may need to visit first: the inspection (with its fee) is scheduled here
+        inspection = sr.appointments.filter(appointment_type=Appointment.TYPE_INSPECTION).exclude(
+            status=Appointment.STATUS_CANCELLED).first()
+        if inspection:
+            return ('Inspection ' + inspection.get_status_display().lower() + ". The handyman sends the labour estimate after the visit.",
+                    'View Inspection', reverse('accounts_admin:appointment_detail', args=[inspection.pk]), 'Inspection')
+        return ("Waiting for the handyman's labour estimate. If they need to see the job first, schedule an inspection.",
+                'Schedule Inspection', reverse('accounts_admin:appointment_schedule', args=['inspection']) + f'?request={sr.pk}',
+                'Awaiting estimate')
     estimate_url = reverse('payments:estimate_list') + f'#est-{est.pk}'
     if est.status == LabourEstimate.SUBMITTED:
-        return ('The handyman sent a labour estimate. Review it.', 'Review Estimate', estimate_url)
+        return ('The handyman sent a labour estimate. Review it.', 'Review Estimate', estimate_url, 'Estimate to review')
     if est.status == LabourEstimate.APPROVED:
         return ('The labour estimate is approved. Prepare the service quotation.', 'Prepare Quotation',
-                reverse('payments:quotation_create', args=[sr.pk]) + f'?estimate={est.pk}')
+                reverse('payments:quotation_create', args=[sr.pk]) + f'?estimate={est.pk}', 'Quote to prepare')
     if est.status == LabourEstimate.REVISION_REQUESTED:
-        return ("Waiting for the handyman's revised labour estimate.", 'View Estimate', estimate_url)
-    return ('The labour estimate was rejected.', 'View Estimate', estimate_url)
+        return ("Waiting for the handyman's revised labour estimate.", 'View Estimate', estimate_url, 'Estimate revising')
+    return ("The labour estimate was rejected. Wait for the handyman's new estimate, or forward the request to another handyman.",
+            'View Estimate', estimate_url, 'Estimate rejected')
 
 
 def _requests():
@@ -118,6 +147,8 @@ def admin_requests(request):
         state = _state(sr, latest)
         chosen, sample = _chosen(sr, latest, sample_handymen)
         rows.append({
+            # Accepted: the stage it has reached (quote sent, ready to schedule, ...)
+            'stage': _quotation_step(sr)[3] if state == 'accepted' else '',
             'ref': sr.reference, 'customer': _name(sr.customer), 'service': sr.service_category or 'Service request',
             'handyman': _name(chosen), 'sample': sample, 'state': state, 'label': STATES[state],
             'created': timezone.localdate(sr.created_at).isoformat(), 'created_label': f'{timezone.localtime(sr.created_at):%d %b %Y}',
@@ -167,6 +198,9 @@ def admin_request_detail(request, pk):
             'on': f'{timezone.localtime(latest.responded_at):%d %b %Y}' if latest and latest.responded_at else '',
         },
         'handyman_pk': handyman.pk if handyman else '',
+        # Only an approved, active handyman can receive the request
+        'handyman_ok': bool(handyman and handyman.is_active and not getattr(handyman, 'is_suspended', False)
+                            and HandymanProfile.objects.filter(user=handyman, status=HandymanProfile.STATUS_ACTIVE).exists()),
         # Accepted: the next step is the labour estimate / service quotation
         'quotation_step': _quotation_step(sr) if state == 'accepted' else None,
         'appointment_url': reverse('accounts_admin:appointment_detail', args=[appointment.pk]) if appointment else '',
