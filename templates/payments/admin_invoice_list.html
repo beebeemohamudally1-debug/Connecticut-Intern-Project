@@ -20,7 +20,7 @@
   <h2>Issued invoices</h2>
   {% for invoice in invoices %}
   <div class="row">
-    <span>{{ invoice.number }} · {{ invoice.request.reference }} · {{ invoice.request.customer.get_full_name|default:invoice.request.customer.username }}
+    <span>{{ invoice.number }} · {% if invoice.is_subscription %}Subscription · {{ invoice.subscription.handyman.get_full_name|default:invoice.subscription.handyman.username }}{% else %}{{ invoice.request.reference }} · {{ invoice.request.customer.get_full_name|default:invoice.request.customer.username }}{% endif %}
       <span class="mut">· due {{ invoice.due_date|date:"d/m/Y" }}</span></span>
     <span>MUR {{ invoice.total_amount|floatformat:"2g" }}
       <span class="b{% if invoice.status == 'issued' %} ye{% endif %}">{% if invoice.is_overdue %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}</span>

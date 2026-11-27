@@ -222,13 +222,13 @@
               <td>{{ r.amount }}</td>
               <td>{{ r.issue }}</td>
               <td><span class="b {{ r.tone }}">{{ r.status }}</span></td>
-              <td><a class="btn o s" href="{{ payments_url|default:'/payments/admin-dashboard/' }}">{{ r.action }}</a></td>
+              <td><a class="btn o s" href="{% if payments_url %}{{ payments_url }}{% else %}{% url 'payments:invoice_list' %}{% endif %}">{{ r.action }}</a></td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
-      <p class="more"><a class="btn o s" href="{{ payments_url|default:'/payments/admin-dashboard/' }}">View all payments</a></p>
+      <p class="more"><a class="btn o s" href="{% if payments_url %}{{ payments_url }}{% else %}{% url 'payments:invoice_list' %}{% endif %}">View all payments</a></p>
     </div>
     {% else %}
     <p class="act-empty">Nothing is waiting for you right now.</p>
@@ -239,4 +239,4 @@
 </section>
 {% endblock %}
 
-{% block page_js %}<script src="{% static 'dashboard/js/admin_dashboard.js' %}" defer></script>{% endblock %}
+{% block page_js %}<script src="{% static 'dashboard/js/admin_dashboard.js' %}" defer></script>{% endblock %}

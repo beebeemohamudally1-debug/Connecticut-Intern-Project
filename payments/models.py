@@ -412,15 +412,21 @@ class DocumentCounter(models.Model):
 class Invoice(models.Model):
     """What the customer has to pay: a job invoice (INV) or an inspection fee (INS)."""
 
-    JOB, INSPECTION = 'job', 'inspection'
-    TYPE_CHOICES = [(JOB, 'Job invoice'), (INSPECTION, 'Inspection fee')]
-    PREFIXES = {JOB: 'INV', INSPECTION: 'INS'}
+    JOB, INSPECTION, SUBSCRIPTION = 'job', 'inspection', 'subscription'
+    TYPE_CHOICES = [(JOB, 'Job invoice'), (INSPECTION, 'Inspection fee'), (SUBSCRIPTION, 'Handyman subscription')]
+    PREFIXES = {JOB: 'INV', INSPECTION: 'INS', SUBSCRIPTION: 'SUB'}
+    PLAN_CHOICES = [('monthly', 'Monthly'), ('yearly', 'Yearly')]
     ISSUED, PAID, CANCELLED = 'issued', 'paid', 'cancelled'
     STATUS_CHOICES = [(ISSUED, 'Awaiting payment'), (PAID, 'Paid'), (CANCELLED, 'Cancelled')]
 
     number = models.CharField(max_length=20, unique=True, editable=False)
     invoice_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default=JOB)
-    request = models.ForeignKey('bookings.ServiceRequest', on_delete=models.PROTECT, related_name='invoices')
+    # Job and inspection invoices belong to a service request. Subscription invoices belong to a subscription.
+    request = models.ForeignKey('bookings.ServiceRequest', null=True, blank=True, on_delete=models.PROTECT, related_name='invoices')
+    subscription = models.ForeignKey('payments.HandymanSubscription', null=True, blank=True, on_delete=models.PROTECT, related_name='invoices')
+    subscription_plan = models.CharField(max_length=10, blank=True, choices=PLAN_CHOICES)
+    period_start = models.DateField(null=True, blank=True)     # subscription: first and last day this payment covers
+    period_end = models.DateField(null=True, blank=True)
     labour_quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.PROTECT, related_name='labour_invoices')
     material_quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.PROTECT, related_name='material_invoices')
     # Amounts are copied when the invoice is issued, so later edits cannot change a sent invoice
@@ -431,7 +437,7 @@ class Invoice(models.Model):
     payment_instructions = models.TextField(blank=True)
     due_date = models.DateField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=ISSUED)
-    issued_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='invoices_issued')
+    issued_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name='invoices_issued')   # empty = issued by the system
     issued_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -443,6 +449,12 @@ class Invoice(models.Model):
                 condition=Q(status__in=['issued', 'paid']),
                 name='one_live_invoice_per_request_and_type',
             ),
+            # A subscription has at most one unpaid invoice at a time.
+            models.UniqueConstraint(
+                fields=['subscription'],
+                condition=Q(invoice_type='subscription', status='issued'),
+                name='one_open_invoice_per_subscription',
+            ),
         ]
 
     def __str__(self):
@@ -453,12 +465,18 @@ class Invoice(models.Model):
         return self.invoice_type == self.INSPECTION
 
     @property
+    def is_subscription(self):
+        return self.invoice_type == self.SUBSCRIPTION
+
+    @property
     def is_overdue(self):
         return self.status == self.ISSUED and self.due_date < timezone.localdate()
 
     @property
     def handyman(self):
-        """The handyman who accepted the request, if any."""
+        """The handyman who accepted the request (or who owns the subscription), if any."""
+        if self.is_subscription:
+            return self.subscription.handyman
         from bookings.models import ServiceRequestAssignment      # local import avoids a circular import
         assignment = (ServiceRequestAssignment.objects.filter(service_request=self.request, status='accepted')
                       .select_related('handyman').first())
@@ -547,6 +565,10 @@ class Invoice(models.Model):
                     raise ValidationError("A quotation on this invoice has already been paid.")
                 Payment(quotation=quotation, amount=quotation.total_amount, date_received=payment.date_received,
                         method=payment.method, reference=payment.reference, recorded_by=by).save()
+        if self.invoice_type == self.SUBSCRIPTION:
+            # Paying extends the handyman's listing: the receipt shows the period that is now covered
+            self.period_start, self.period_end = self.subscription.activate_after_payment(self.subscription_plan or None)
+            self.save(update_fields=['period_start', 'period_end'])
         self.status = self.PAID
         self.save(update_fields=['status'])
         Receipt.objects.create(invoice=self, payment=payment, number=DocumentCounter.next_number('RCT'))
@@ -596,3 +618,4 @@ class Receipt(models.Model):
         return f"{self.number} for {self.invoice.number}"
 
 from .payouts import HandymanPayout  # noqa: E402,F401
+from .subscriptions import HandymanSubscription, SubscriptionReminder  # noqa: E402,F401

@@ -66,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'payments.middleware.SubscriptionOnboardingMiddleware'
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -81,6 +82,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'customer_portal.context.unread',
+                'customer_portal.context.unread',
+                'payments.context.handyman_subscription',
             ],
         },
     },

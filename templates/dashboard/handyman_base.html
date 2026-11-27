@@ -49,6 +49,7 @@
             <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
             <a href="{% url 'payments:my_estimates' %}"{% if url_name == 'my_estimates' or url_name == 'estimate_submit' or url_name == 'estimate_resubmit' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>My Estimates</a>
             <a href="{% url 'payments:my_materials' %}"{% if url_name == 'my_materials' or url_name == 'material_request_submit' or url_name == 'receipt_upload' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>My Materials</a>
+            <a href="{% url 'payments:my_subscription' %}"{% if url_name == 'my_subscription' or url_name == 'subscription_receipt' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>My Subscription</a>
         </nav>
 
         <a class="help-card" href="{% url 'dashboard:report_customer' %}">
@@ -71,6 +72,9 @@
         </header>
 
         <main class="content">
+            {% if hc_subscription.show_banner and url_name != 'my_subscription' %}
+            <div class="notice"><strong>{{ hc_subscription.banner_title }}</strong><p>{{ hc_subscription.banner_text }} <a href="{% url 'payments:my_subscription' %}"><b>Open my subscription</b></a></p></div>
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>

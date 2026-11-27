@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from .models import (DocumentCounter, Invoice, InvoicePayment, LabourEstimate, MaterialPurchaseRequest, MaterialReceipt,
-                     Payment, Quotation, Receipt)
+from .models import (DocumentCounter, HandymanSubscription, Invoice, InvoicePayment, LabourEstimate, MaterialPurchaseRequest,
+                     MaterialReceipt, Payment, Quotation, Receipt, SubscriptionReminder)
 
 admin.site.register(LabourEstimate)
 admin.site.register(MaterialPurchaseRequest)
@@ -39,3 +39,13 @@ class ReceiptAdmin(admin.ModelAdmin):
 
 
 admin.site.register(DocumentCounter)
+
+
+@admin.register(HandymanSubscription)
+class HandymanSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('handyman', 'plan', 'expires_on', 'auto_renew', 'cancelled_at')
+    list_filter = ('plan', 'auto_renew')
+    search_fields = ('handyman__username', 'handyman__email')
+
+
+admin.site.register(SubscriptionReminder)
