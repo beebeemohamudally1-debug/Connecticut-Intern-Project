@@ -15,7 +15,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=4">
 {% url 'accounts_admin:users' as users_url %}
 
 <a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
@@ -72,7 +72,7 @@
   <section class="card cd-card vf-decision">
     <div>
       <h2>Verification Decision</h2>
-      <p class="mut vf-hint">Confirm the documents are valid and match the applicant's profile.</p>
+      <p class="mut vf-hint">Confirm the documents are valid and match the applicant's profile. Once approved, the handyman pays a subscription before they are listed.</p>
     </div>
     <form method="post" action="{{ applicant.decide_url }}">
       {% csrf_token %}
@@ -98,6 +98,10 @@
       <div><dt>Decided on</dt><dd>{{ applicant.decided }}</dd></div>
       <div><dt>Review notes</dt><dd>{{ applicant.notes|default:"No notes were added." }}</dd></div>
     </dl>
+    {% if applicant.status == 'Approved' %}
+    {# Subscriptions (payments team): an approved handyman is listed and gets new requests only once it is paid #}
+    <p class="vf-next"><strong>Next step:</strong> the handyman chooses a monthly or yearly subscription. They are listed and receive new requests once it is paid. <a href="{% url 'payments:subscription_list' %}">View Subscriptions</a></p>
+    {% endif %}
   </section>
   {% endif %}
 </div>

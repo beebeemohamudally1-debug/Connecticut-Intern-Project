@@ -17,6 +17,8 @@ from complaints.models import Complaint, ComplaintMessage
 from dashboard.permissions import role_required
 from jobs.models import Job
 from notifications.models import Notification
+from payments.models import Invoice
+from payments.subscriptions import ACTIVE, CANCELLING, LAPSED, NEW, STATE_LABELS, HandymanSubscription
 
 User = get_user_model()
 
@@ -149,14 +151,36 @@ def search(request):
     return render(request, 'accounts/admin_search.html', {'page': page})
 
 
+def _subscription_states():
+    """Each handyman's subscription state (payments team): active, awaiting, lapsed, ... Handymen without one are 'new'."""
+    waiting = set(Invoice.objects.filter(invoice_type=Invoice.SUBSCRIPTION, status=Invoice.ISSUED)
+                  .values_list('subscription_id', flat=True))
+    return {s.handyman_id: HandymanSubscription.compute_state(s.expires_on, s.auto_renew, s.pk in waiting)
+            for s in HandymanSubscription.objects.all()}
+
+
+def _subscription(u):
+    """Handyman Profile: the subscription row (state, plan and the last paid day)."""
+    sub = HandymanSubscription.objects.filter(handyman=u).first()
+    state = sub.state if sub else NEW
+    until = f'{sub.expires_on:%d %b %Y}' if sub and sub.expires_on else ''
+    text = {ACTIVE: f'{sub.get_plan_display()} · until {until}' if sub else '',
+            CANCELLING: f'Ends {until}', LAPSED: f'Lapsed since {until}'}.get(state, STATE_LABELS[state])
+    return {'state': state, 'text': text, 'tone': 'ok' if state in (ACTIVE, CANCELLING) else 'bad' if state == LAPSED else '',
+            'url': reverse('payments:subscription_list')}
+
+
 @role_required('admin')
 def users(request):
     """Manage Users: every customer and handyman, newest first."""
     accounts = (User.objects.filter(role__in=['customer', 'handyman'])
                 .select_related('handyman_profile').order_by('-date_joined'))
+    subs = _subscription_states()
     rows = [{
         'name': _person_name(u), 'initials': _initials(u), 'role': u.get_role_display(),
         'email': u.email, 'status': _account_status(u), 'url': _user_url(u),
+        # an approved handyman who cannot take new requests: no paid subscription
+        'sub_note': STATE_LABELS[subs.get(u.pk, NEW)] if u.role == 'handyman' and subs.get(u.pk, NEW) not in (ACTIVE, CANCELLING) else '',
     } for u in accounts]
     stats = {
         'total': len(rows),
@@ -237,6 +261,7 @@ def handyman_profile(request, pk):
         'areas': areas or (u.region.name if u.region else 'Not recorded'),
         'availability': 'Not recorded',   # no availability field in the backend yet
         'registered': _local_date(u.date_joined),
+        'subscription': _subscription(u),
         'completed': sum(1 for j in jobs if j.status == Job.COMPLETED),
         'assigned': sum(1 for j in jobs if j.is_open),
         'skills': skills,

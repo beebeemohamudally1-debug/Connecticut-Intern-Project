@@ -691,3 +691,11 @@
 .hp-more { margin-top: 8px; font-size: 13px; }
 .hp-none { padding: 16px 0; text-align: center; color: var(--muted); }
 
+/* Handyman Profile: subscription row, opens the Subscriptions page */
+.hp-grid .row a.hp-sub { font-size: 15px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.hp-grid .row a.hp-sub.ok { color: #16866D; }
+.hp-grid .row a.hp-sub.bad { color: #C84C55; }
+.hp-grid .row a.hp-sub:hover { text-decoration: underline; }
+.vf-next { margin: 14px 0 0; padding: 10px 12px; border-radius: 10px; background: #FFF3DF; color: #7A4E0E; font-size: 13.5px; line-height: 1.45; }
+.vf-next a { color: inherit; font-weight: 600; }
+
