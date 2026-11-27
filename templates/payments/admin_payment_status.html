@@ -15,7 +15,7 @@
                  receipt_info (View Receipt pop-up)
     issue_url -> Issue Invoice, '' until the checklist is complete (and no invoice or payment yet)
     purchase  -> the material purchase request (or None), receipts -> id, amount, status, label,
-                 date, image, note; approved_total, material_total, difference, can_update
+                 date, image, note; approved_total, material_total, difference, can_update, same_cost
   Receipts: Approve / Reject post to payments:receipt_action (Reject needs a reason) and come back here.
   BACKEND (payments): "Send Final Material Quotation" is a demo (no action changes an accepted material
   quotation or sends it again yet), and Invoice.issue_job does not look at the receipts yet.
@@ -185,8 +185,10 @@
   <form method="post" action="#" data-demo="Not sent yet: sending the final material quotation is not in the backend (frontend demo only).">
     {% csrf_token %}
     <h2 id="up-title">Send the final material quotation?</h2>
-    <p>The material quotation changes from <strong>{{ page.material_total }}</strong> to <strong>{{ page.approved_total }}</strong>, the actual cost of the approved receipts.</p>
-    <p class="mut">The customer will receive the final material quotation at the actual cost.</p>
+    {% if page.same_cost %}<p>The approved receipts match the material quotation: <strong>{{ page.approved_total }}</strong>. Nothing changes.</p>
+    <p class="mut">The customer will receive the final material quotation as a confirmation of the actual cost.</p>
+    {% else %}<p>The material quotation changes from <strong>{{ page.material_total }}</strong> to <strong>{{ page.approved_total }}</strong>, the actual cost of the approved receipts.</p>
+    <p class="mut">The customer will receive the final material quotation at the actual cost.</p>{% endif %}
     <div class="qd-btns">
       <button class="btn o" type="button" data-close>Cancel</button>
       <button class="btn ps-main" type="submit">Send Quotation</button>
@@ -196,5 +198,5 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/admin_payment_status.js' %}"></script>
+<script src="{% static 'payments/js/admin_payment_status.js' %}?v=4"></script>
 {% endblock %}

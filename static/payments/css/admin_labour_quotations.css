@@ -145,3 +145,6 @@
   .lq-foot { flex-direction: column; align-items: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .lq-stat:hover { transform: none; } }
+/* Prepare Quote in the "Estimate approved" pop-up: main action, orange outline */
+.btn.lq-main { color: var(--orange); background: #fff; border-color: var(--orange); font-weight: 600; text-decoration: none; }
+.btn.lq-main:hover { background: #FFF5EE; filter: none; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25); }

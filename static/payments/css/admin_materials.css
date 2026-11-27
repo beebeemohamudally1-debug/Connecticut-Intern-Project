@@ -61,3 +61,6 @@
   .mq-rform { grid-column: 1 / -1; width: auto; }
   .mq-recon { grid-template-columns: 1fr; }
 }
+
+/* Purchase request pop-up: a bit wider so its four buttons stay on one line */
+.ql-modal.mq-wide { width: min(620px, calc(100% - 32px)); }

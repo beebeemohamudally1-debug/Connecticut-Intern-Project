@@ -166,9 +166,9 @@
     {% if q.status == 'accepted' %}
       {% if q.quotation_type == 'material' %}
       {# Material: the handyman buys the materials and uploads the receipts, then the payment is recorded #}
-      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif receipts %}The handyman has uploaded the receipts. They are checked in Payments.{% else %}The handyman can now buy the materials. Their receipts will show here once they are uploaded.{% endif %}</p>
+      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif receipts %}The handyman has uploaded the receipts. They are checked in Payments.{% else %}Let the handyman know the customer approved, so they can buy the materials and upload the receipts.{% endif %}</p>
       {% else %}
-      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif mats.state == 'none' %}{{ mats.note }} Proceed to check the payment status.{% elif mats.state == 'waiting' %}{{ mats.note }}{% elif other.status == 'accepted' %}The material quotation is accepted too. Proceed to check the payment status.{% else %}Payment comes after the material quotation is accepted too.{% endif %}</p>
+      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif mats.state == 'none' %}{{ mats.note }} Proceed to check the payment status.{% elif mats.state == 'waiting' %}Let the handyman know the customer accepted, so they can send the material request (or one with cost 0 if no materials are needed).{% elif mats.state == 'requested' and not other %}The handyman has already sent a material request. Review it to send the customer the material quotation.{% elif other.status == 'accepted' %}The material quotation is accepted too. Proceed to check the payment status.{% else %}Payment comes after the material quotation is accepted too.{% endif %}</p>
       {% endif %}
     {% elif q.status == 'revision_requested' %}
       <div class="qd-rs-box"><p class="qd-rs-label">Requested changes</p><p>{{ q.customer_note|default:"No details given." }}</p></div>
@@ -176,10 +176,13 @@
     {% else %}
       {# The backend does not store a reason when the customer declines #}
       <div class="qd-rs-box"><p class="qd-rs-label">Reason</p><p class="mut">{{ q.customer_note|default:"No reason given." }}</p></div>
+      <p class="qd-rs-text">Let the handyman know the customer declined, so they don't {% if q.quotation_type == 'material' %}buy the materials{% else %}plan the job{% endif %}.</p>
     {% endif %}
     <div class="qd-btns">
       {% if q.status == 'declined' %}
         <button class="btn o" type="button" data-close>Close</button>
+        {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+        <button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>
         <button class="btn soft-red" type="button" data-close data-seen>Mark as Closed</button>
       {% else %}
         <button class="btn o" type="button" data-close>Later</button>
@@ -188,9 +191,12 @@
           {% if q.quotation_type == 'material' %}
             {# No receipts yet: wait for the handyman. Then it opens this request's receipts pop-up #}
             {% if receipts %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}#rc-{{ q.purchase_request.pk }}" data-seen>View Receipts</a>
-            {% else %}<button class="btn soft-blue" type="button" disabled>Waiting for Receipts</button>{% endif %}
+            {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+            {% else %}<button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>{% endif %}
           {% elif other %}<a class="btn soft-blue" href="{% url 'payments:quotation_detail_admin' other.pk %}" data-seen>Go to Material Quotation</a>
-          {% elif mats.state != 'none' %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}" data-seen>Go to Material Quotations</a>{% endif %}
+          {% elif mats.state == 'requested' %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}#mr-{{ mats.purchase_id }}" data-seen>Review Material Request</a>
+          {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+          {% elif mats.state == 'waiting' %}<button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>{% endif %}
           {% if q.ready_for_payment and other.status == 'accepted' or q.ready_for_payment and q.quotation_type == 'labour' and mats.state == 'none' %}<a class="btn soft-green" href="{% url 'accounts_admin:payment_status' q.request.pk %}" data-seen>Check Payment Status</a>{% endif %}
         {% else %}
           {# BACKEND: enable both once the estimate can be sent back to the handyman and comes back updated #}
@@ -234,5 +240,5 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/quotation_admin_detail.js' %}"></script>
+<script src="{% static 'payments/js/quotation_admin_detail.js' %}?v=2"></script>
 {% endblock %}

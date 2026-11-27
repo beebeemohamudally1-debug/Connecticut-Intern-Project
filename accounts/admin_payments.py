@@ -47,7 +47,8 @@ def materials_state(sr):
 
     Team rule (no backend change): the handyman sends a material request for every job, using the
     existing form. Estimated cost 0 means "no materials needed".
-    Returns {'state', 'label', 'note'} (note: one sentence for the customer response pop-up):
+    Returns {'state', 'label', 'note', 'purchase_id'} (note: one sentence for the customer response
+    pop-up; purchase_id: the material request to open on Material Quotations, when there is one):
       requested -> a real material request is in progress (submitted or forwarded)
       none      -> the latest request has estimated cost 0: the job is labour only
       waiting   -> no request yet, or the last one was rejected
@@ -55,10 +56,10 @@ def materials_state(sr):
     purchase = (sr.material_requests.order_by('-created_at').first()
                 if hasattr(sr, 'material_requests') else None)
     if purchase and purchase.estimated_cost == 0 and purchase.status != MaterialPurchaseRequest.FORWARDED:
-        return {'state': 'none', 'label': 'No materials needed',
+        return {'state': 'none', 'label': 'No materials needed', 'purchase_id': purchase.pk,
                 'note': 'The handyman says no materials are needed, so the job is labour only.'}
     if purchase and purchase.status != MaterialPurchaseRequest.REJECTED:
-        return {'state': 'requested', 'label': 'Material request sent', 'note': ''}
+        return {'state': 'requested', 'label': 'Material request sent', 'purchase_id': purchase.pk, 'note': ''}
     if purchase:
         return {'state': 'waiting', 'label': 'Material request rejected: waiting for a new one',
                 'note': 'The material request was rejected. Payment waits for the handyman\'s new request.'}
@@ -170,8 +171,11 @@ def payment_status(request, request_id):
         'material_total': _money(material.total_amount) if material and materials_used else '',
         'difference': (_money(material.total_amount - approved_total)
                        if material and materials_used and receipts and not waiting else ''),
+        # Send Final Material Quotation: once every receipt is approved, before the invoice. Shown even when
+        # the total is the same, as a confirmation to the customer (same_cost: nothing changes)
         'can_update': bool(material and material.status == Quotation.ACCEPTED and not material.is_paid
-                           and receipts and not waiting and approved_total and material.total_amount != approved_total),
+                           and receipts and not waiting and approved_total and not invoice),
+        'same_cost': bool(material and material.total_amount == approved_total),
         'schedule_url': (reverse('accounts_admin:appointment_schedule', args=['service']) + f'?request={sr.pk}'
                          if all_paid else ''),
         'invoice': inv,

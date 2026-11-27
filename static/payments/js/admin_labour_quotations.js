@@ -69,3 +69,27 @@
 
   render();
 })();
+
+/* After Approve: the page reloads, so the estimate is remembered for one load and a pop-up
+   offers its Prepare quote link (the same link as the row's button). */
+(function () {
+  var KEY = 'hc-approved-estimate';
+  document.querySelectorAll('[data-review] button[value="approve"]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var dlg = btn.closest('dialog');
+      try { sessionStorage.setItem(KEY, dlg.id.replace('est-', '')); } catch (e) {}
+    });
+  });
+
+  var id = null;
+  try { id = sessionStorage.getItem(KEY); sessionStorage.removeItem(KEY); } catch (e) {}
+  var modal = document.getElementById('est-approved');
+  if (!id || !modal || !document.querySelector('.ql-msg')) return;
+  var row = document.querySelector('[data-row][data-estimate="' + id + '"]');
+  var link = row && row.dataset.status === 'ready' && row.querySelector('a[href*="quotations/new"]');
+  if (!link) return;
+  modal.querySelector('[data-approved-text]').textContent =
+    row.querySelector('.lq-id').textContent + ' is ready for a quotation. Prepare it now?';
+  modal.querySelector('[data-approved-link]').href = link.href;
+  modal.showModal();
+})();
