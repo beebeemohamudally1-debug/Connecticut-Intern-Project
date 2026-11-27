@@ -16,6 +16,8 @@
     verified                     -> True when the profile is approved (ACTIVE), False while
                                     it is pending or rejected, None without a profile
     reports_url                  -> Daily Work Reports of the latest job ('' if none)
+    history, history_more        -> Job History pop-up: the 6 newest jobs (ref, service, customer,
+                                    status, date, url to Job Progress) and how many more there are
   Not in the backend yet: availability ("Not recorded"), registration documents, and
   the Suspend / Reactivate / Delete views (still demo only).
   The three pop-ups live in _user_modals.html (screens 05, 06, 07).
@@ -26,7 +28,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_user_detail.css' %}?v=3">
 {% url 'accounts_admin:users' as users_url %}
 
 <a class="back" href="{{ users_url|default:'#' }}">&larr; Back to Manage Users</a>
@@ -44,7 +46,7 @@
     {% else %}
       <button class="btn soft-warn s" type="button" data-open="suspend">Suspend Account</button>
     {% endif %}
-    <a class="btn soft-blue s" href="#">Job history</a>
+    <button class="btn soft-blue s" type="button" data-open="history">Job History</button>
   </div>
 </div>
 
@@ -110,12 +112,38 @@
       <p class="mut">Identity document and qualification records are available for administrator review.</p>
     </div>
     {# Sample pages until registration documents are in the backend: the pending one while not approved #}
-    {% if handyman.verified is False %}{% url 'accounts_admin:handyman_verify' as verify_url %}{% else %}{% url 'accounts_admin:handyman_documents' as verify_url %}{% endif %}
+       {% if handyman.verified is False %}{% url 'accounts_admin:handyman_verify' handyman.pk as verify_url %}{% else %}{% url 'accounts_admin:handyman_documents' handyman.pk as verify_url %}{% endif %}
     <a class="btn soft-blue s" href="{{ verify_url|default:'#' }}">{% if handyman.verified is False %}Review registration{% else %}View documents{% endif %}</a>
   </section>
 </div>
 
 {% include "accounts/_user_modals.html" with person=handyman %}
+
+{# ---------- Job History (read only): the newest jobs, each opens Job Progress ---------- #}
+<dialog class="modal hp-history" id="modal-history" aria-labelledby="modal-history-title">
+  <h2 id="modal-history-title">Job History</h2>
+  <p class="mut">{{ handyman.name }} &bull; {{ handyman.completed }} completed, {{ handyman.assigned }} open</p>
+  {% if handyman.history %}
+  <table class="hp-jobs">
+    <thead><tr><th>Job</th><th>Customer</th><th>Date</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for j in handyman.history %}
+      <tr>
+        <td><strong>{{ j.ref }}</strong><span class="mut">{{ j.service }}</span></td>
+        <td>{{ j.customer }}</td>
+        <td>{{ j.date }}</td>
+        <td><span class="hp-st is-{{ j.status }}">{{ j.status_label }}</span></td>
+        <td><a class="btn o s" href="{{ j.url }}">View</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if handyman.history_more %}<p class="mut hp-more">And {{ handyman.history_more }} older job{{ handyman.history_more|pluralize }}: see Work Progress.</p>{% endif %}
+  {% else %}
+  <p class="hp-none">No jobs yet.</p>
+  {% endif %}
+  <div class="modal-actions"><button class="btn o" type="button" data-close>Close</button></div>
+</dialog>
 {% endblock %}
 
 {% block page_js %}

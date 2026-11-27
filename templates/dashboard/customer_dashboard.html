@@ -1,0 +1,113 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  Customer "Services overview".  All context is OPTIONAL; with none the page shows zeros and empty states.
+  Contract for the backend (suggested names):
+    first_name                     "Emma"
+    active_count, quote_ready_count, upcoming_count, next_visit ("Oct 24 · Morning"), completed_count, feedback_count
+    unread_count                   also drives the sidebar and bell badges
+    recent_requests                list of dicts/objects: reference, title, requested_at, amount (text or number), status_label, status_tone (ok|warn|bad|neutral|info), url
+    updates                        list: title, detail, status_label, status_tone, url
+    categories / regions           optional lists of strings for the two selects
+  Search: [data-cp-search] form calls services:search (JSON) with q + category, results appear in #cp-search-results.
+{% endcomment %}
+{% block title %}Services | HandyConnect{% endblock %}
+{% block page %}customer-dashboard{% endblock %}
+{% block content %}
+{% url 'customer_portal:new_request' as u_new %}
+{% url 'customer_portal:requests' as u_requests %}
+{% url 'services:results' as u_results %}
+{% url 'services:search' as u_search %}
+{% url 'customer_portal:notifications' as u_notifs %}
+<div class="cp-head">
+  <div>
+    <h1>A little help for your home{% if first_name or request.user.first_name %}, {{ first_name|default:request.user.first_name }}{% endif %}.</h1>
+    <p>Keep your home projects, appointments and payments in one place.</p>
+  </div>
+  <div class="cp-head-actions"><a class="cp-btn is-primary" href="{{ u_new }}" data-hook="new-request"><svg class="cp-ic" aria-hidden="true"><use href="#i-plus"/></svg>New service request</a></div>
+</div>
+
+<section class="cp-metrics" aria-label="Your summary" data-hook="metrics">
+  <div class="cp-metric"><div class="cp-metric-top">Active requests<svg class="cp-ic" aria-hidden="true"><use href="#i-clipboard"/></svg></div><strong>{{ active_count|default:0 }}</strong><small>{% if quote_ready_count %}{{ quote_ready_count }} quote{{ quote_ready_count|pluralize }} ready to review{% else %}Nothing waiting on you{% endif %}</small></div>
+  <div class="cp-metric"><div class="cp-metric-top">Upcoming visits<svg class="cp-ic" aria-hidden="true"><use href="#i-calendar"/></svg></div><strong>{{ upcoming_count|default:0 }}</strong><small>{% if next_visit %}Next visit · {{ next_visit }}{% else %}No visits booked yet{% endif %}</small></div>
+  <div class="cp-metric"><div class="cp-metric-top">Completed jobs<svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg></div><strong>{{ completed_count|default:0 }}</strong><small>Trusted help, all year round</small></div>
+  <div class="cp-metric"><div class="cp-metric-top">Private feedback<svg class="cp-ic" aria-hidden="true"><use href="#i-star"/></svg></div><strong>{{ feedback_count|default:0 }}</strong><small>Visible only to you and administrators</small></div>
+</section>
+
+<section class="cp-panel" aria-label="Search services">
+  <form class="cp-filters" method="get" action="{% if u_results %}{{ u_results }}{% else %}{{ u_search }}{% endif %}" data-cp-search data-endpoint="{{ u_search }}" data-results="#cp-search-results" data-hook="service-search" role="search">
+    <div class="cp-field"><label for="cp-q">Search services</label><input class="cp-input" id="cp-q" name="q" type="search" placeholder="Leak repair, painting, cleaning…" autocomplete="off"></div>
+    <div class="cp-field"><label for="cp-cat">Service type</label>
+      <select class="cp-select" id="cp-cat" name="category"><option value="">All service types</option>{% for c in categories %}<option>{{ c }}</option>{% empty %}<option>Plumbing</option><option>Electrical</option><option>Painting</option><option>Cleaning</option><option>Carpentry</option>{% endfor %}</select></div>
+    <div class="cp-field"><label for="cp-region">Service area</label>
+      <select class="cp-select" id="cp-region" name="region">{% for r in regions %}<option>{{ r }}</option>{% empty %}<option>Port Louis</option><option>Curepipe</option><option>Quatre Bornes</option><option>Rose Hill</option><option>Vacoas</option><option>Flic en Flac</option>{% endfor %}</select></div>
+  </form>
+  <div class="cp-shortcuts" id="cp-search-results" aria-live="polite" hidden></div>
+</section>
+
+<div class="cp-sechead"><h2>What can we help with?</h2>{% if u_results %}<a class="cp-link" href="{{ u_results }}">Browse all services →</a>{% endif %}</div>
+<nav class="cp-shortcuts" aria-label="Popular services" data-hook="service-shortcuts">
+  <a class="cp-shortcut" href="{{ u_new }}?category=Plumbing"><svg class="cp-ic" aria-hidden="true"><use href="#i-droplets"/></svg>Plumbing</a>
+  <a class="cp-shortcut" href="{{ u_new }}?category=Electrical"><svg class="cp-ic" aria-hidden="true"><use href="#i-zap"/></svg>Electrical</a>
+  <a class="cp-shortcut" href="{{ u_new }}?category=Painting"><svg class="cp-ic" aria-hidden="true"><use href="#i-paint"/></svg>Painting</a>
+  <a class="cp-shortcut" href="{{ u_new }}?category=Cleaning"><svg class="cp-ic" aria-hidden="true"><use href="#i-sparkles"/></svg>Cleaning</a>
+  <a class="cp-shortcut" href="{{ u_new }}?category=Carpentry"><svg class="cp-ic" aria-hidden="true"><use href="#i-hammer"/></svg>Carpentry</a>
+</nav>
+
+<div class="cp-cols is-main-side">
+  <div class="cp-stack">
+    <section class="cp-panel" aria-labelledby="cp-recent-h">
+      <div class="cp-panel-row"><div><h2 id="cp-recent-h">Your recent requests</h2></div>{% if u_requests %}<a class="cp-link" href="{{ u_requests }}">View all →</a>{% endif %}</div>
+      <p class="cp-panel-sub">A clear view of what’s happening at home.</p>
+      <div class="cp-table-wrap">
+        <table class="cp-table is-stack" data-hook="recent-requests">
+          <thead><tr><th scope="col">Request / service</th><th scope="col">Requested</th><th scope="col">Amount</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+          {% for r in recent_requests %}
+            <tr>
+              <td data-label="Request"><a class="cp-link" href="{{ r.url|default:'#' }}">{{ r.reference }} · {{ r.title }}</a></td>
+              <td data-label="Requested">{{ r.requested_at }}</td>
+              <td data-label="Amount">{{ r.amount|default:"Quote pending" }}</td>
+              <td data-label="Status">{% include "customer/_badge.html" with tone=r.status_tone label=r.status_label %}</td>
+            </tr>
+          {% empty %}
+            <tr class="cp-empty-row"><td colspan="4">No requests yet. Start with “New service request” and we’ll find the right help.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="cp-panel" aria-labelledby="cp-updates-h">
+      <h2 id="cp-updates-h">Updates for you</h2>
+      {% for u in updates %}
+        <div class="cp-update"><svg class="cp-ic" aria-hidden="true"><use href="#i-file"/></svg>
+          <div><strong>{{ u.title }}</strong><span>{{ u.detail }}</span></div>
+          {% if u.status_label %}{% include "customer/_badge.html" with tone=u.status_tone label=u.status_label %}{% endif %}</div>
+        {% if not forloop.last %}<hr class="cp-divider">{% endif %}
+      {% empty %}
+        <p class="cp-small">You’re all caught up.</p>
+      {% endfor %}
+      {% if unread_count %}<hr class="cp-divider"><p class="cp-small">You have {{ unread_count }} unread notification{{ unread_count|pluralize }}. <a class="cp-link" href="{{ u_notifs }}">Open notifications</a></p>{% endif %}
+    </section>
+  </div>
+  <aside class="cp-stack" aria-label="Upcoming visit">
+    <section class="cp-panel" aria-labelledby="cp-next-h" data-hook="next-appointment">
+      <h2 id="cp-next-h">Your next appointment</h2>
+      {% if next_appointment %}
+        {% include "customer/_badge.html" with tone=next_appointment.status_tone label=next_appointment.status_label %}
+        <h3>{{ next_appointment.title }}</h3>
+        <div class="cp-person"><span class="cp-avatar is-lg" data-keep="1">{{ next_appointment.provider_initials }}</span><div><strong>{{ next_appointment.provider_name }}</strong><span>{{ next_appointment.provider_note|default:"Verified provider · Skills checked" }}</span></div></div>
+        <hr class="cp-divider">
+        <dl class="cp-details">
+          <div class="cp-detail"><dt>Date</dt><dd>{{ next_appointment.date }}</dd></div>
+          <div class="cp-detail"><dt>Session</dt><dd>{{ next_appointment.session }}</dd></div>
+          <div class="cp-detail"><dt>Address</dt><dd>{{ next_appointment.address }}</dd></div>
+        </dl>
+        <a class="cp-btn is-light is-block" href="{{ next_appointment.url|default:'#' }}">View appointment</a>
+      {% else %}
+        <div class="cp-empty"><svg class="cp-ic" aria-hidden="true"><use href="#i-calendar"/></svg><strong>No visit booked</strong><p>Once a quote is accepted and paid, your visit appears here.</p></div>
+      {% endif %}
+    </section>
+    <section class="cp-panel"><h2>Home care, made simple</h2><p class="cp-tip">{{ home_tip|default:"Tip: Clear the space around the work area before your provider arrives for a smoother visit." }}</p></section>
+  </aside>
+</div>
+{% endblock %}

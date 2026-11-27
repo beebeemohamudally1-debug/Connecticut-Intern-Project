@@ -1,0 +1,24 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  MY REQUESTS (list).  URL name expected: customer_portal:requests   (GET: q, status)
+  CONTEXT (all optional):
+    requests [{reference, service, requested_at, status_label, status_tone, quote_label, next_label, next_url}]
+    status_choices [(value,label)], f (request.GET)
+  This is the table behind sidebar "Requests". The Job list (jobs:list) shows the live jobs after assignment.
+{% endcomment %}
+{% block title %}Requests | HandyConnect{% endblock %}
+{% block page %}customer-requests{% endblock %}
+{% block content %}
+{% url 'customer_portal:new_request' as u_new %}{% url 'jobs:list' as u_jobs %}
+<div class="cp-head"><div><h1>Your requests</h1><p>Everything you’ve asked for, from first message to finished job.</p></div>
+  <div class="cp-head-actions">{% if u_jobs %}<a class="cp-btn is-light" href="{{ u_jobs }}">Live jobs</a>{% endif %}<a class="cp-btn is-primary" href="{{ u_new }}"><svg class="cp-ic" aria-hidden="true"><use href="#i-plus"/></svg>New service request</a></div></div>
+<section class="cp-panel">
+  <form method="get" class="cp-filters is-4" data-hook="request-filter">
+    <div class="cp-field"><label for="q">Search</label><input class="cp-input" id="q" name="q" type="search" value="{{ f.q }}" placeholder="Request ID or service"></div>
+    <div class="cp-field"><label for="status">Status</label><select class="cp-select" id="status" name="status"><option value="">All</option>{% for v, l in status_choices %}<option value="{{ v }}"{% if f.status == v %} selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <span></span><button class="cp-btn is-light" type="submit">Filter</button></form>
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="request-table"><thead><tr><th scope="col">Request</th><th scope="col">Service</th><th scope="col">Requested</th><th scope="col">Quotation</th><th scope="col">Status</th><th scope="col">Next step</th></tr></thead>
+  <tbody>{% for r in requests %}<tr><td data-label="Request">{{ r.reference }}</td><td data-label="Service">{{ r.service }}</td><td data-label="Requested">{{ r.requested_at }}</td><td data-label="Quotation">{{ r.quote_label|default:"Not issued" }}</td><td data-label="Status">{% include "customer/_badge.html" with tone=r.status_tone label=r.status_label %}</td><td data-label=""><a class="cp-link" href="{{ r.next_url|default:'#' }}">{{ r.next_label|default:"View request" }}</a></td></tr>
+  {% empty %}<tr class="cp-empty-row"><td colspan="6">No requests yet. Start with “New service request”.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% comment %} Customer view of jobs/job_list.html. Same context: jobs, status_choices, f {% endcomment %}
+{% url 'customer_portal:new_request' as u_new %}
+<div class="cp-head"><div><h1>Your requests &amp; jobs</h1><p>Status and progress of your jobs, in one clear list.</p></div>
+  <div class="cp-head-actions"><a class="cp-btn is-primary" href="{{ u_new }}"><svg class="cp-ic" aria-hidden="true"><use href="#i-plus"/></svg>New service request</a></div></div>
+<section class="cp-panel">
+  <form method="get" class="cp-filters is-4" data-hook="job-filter">
+    <div class="cp-field"><label for="q">Search</label><input class="cp-input" id="q" name="q" value="{{ f.q }}" placeholder="Reference or service"></div>
+    <div class="cp-field"><label for="status">Status</label><select class="cp-select" id="status" name="status"><option value="">All</option>{% for v, l in status_choices %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <span></span><button class="cp-btn is-light" type="submit">Filter</button>
+  </form>
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="job-table">
+    <thead><tr><th scope="col">Job</th><th scope="col">Service</th><th scope="col">Handyman</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col"><span class="cp-sr">Open</span></th></tr></thead>
+    <tbody>{% for j in jobs %}<tr>
+      <td data-label="Job">{{ j.reference }}</td><td data-label="Service">{{ j.service_name }}</td>
+      <td data-label="Handyman">{{ j.handyman.get_full_name|default:j.handyman.username }}</td>
+      <td data-label="Due">{{ j.due_date|date:"d/m/Y"|default:"-" }}</td>
+      <td data-label="Status">{% include "customer/_badge.html" with code=j.badge label=j.get_status_display %}{% if j.is_delayed %} {% include "customer/_badge.html" with tone="bad" label="Delayed" %}{% endif %}</td>
+      <td data-label=""><a class="cp-link" href="{% url 'jobs:detail' j.pk %}">Open</a></td></tr>
+    {% empty %}<tr class="cp-empty-row"><td colspan="6">No jobs yet. Start with a new service request.</td></tr>{% endfor %}</tbody></table></div>
+</section>

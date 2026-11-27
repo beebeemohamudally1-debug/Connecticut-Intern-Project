@@ -2,10 +2,13 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from .services import notify_admins
+from .services import notify_admins, notify_user
 from bookings.models import ServiceRequest
 from django.db import transaction
 from .models import Notification
+from complaints.models import Complaint
+from complaints.signals import complaint_submitted
+from notifications.models import Notification
 
 
 User = get_user_model()
@@ -107,14 +110,26 @@ class NotificationTests(TestCase):
             0
         )
 
-    def test_customer_cannot_view_notifications(self):
+    def test_customer_can_view_own_notifications(self):
+        notification = notify_user(
+            recipient=self.customer,
+            notification_type='quotation',
+            title='New Quotation',
+            message='Your quotation is ready.'
+        )
+
         self.client.force_login(self.customer)
 
         response = self.client.get(
             reverse('notifications:notification_list')
         )
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+
+        notifications = response.json()['notifications']
+
+        self.assertEqual(len(notifications), 1)
+        self.assertEqual(notifications[0]['id'], notification.id)
 
     def test_other_admin_cannot_read_notification(self):
         self.client.force_login(self.other_admin)
@@ -217,14 +232,81 @@ class NotificationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    def test_handyman_can_view_own_notifications(self):
+        handyman = User.objects.create_user(
+            username='handyman_test',
+            password='TestPass123!',
+            role='handyman'
+        )
 
+        notification = notify_user(
+            recipient=handyman,
+            notification_type='job',
+            title='New Job Assigned',
+            message='You have been assigned a new job.'
+        )
 
+        self.client.force_login(handyman)
 
+        response = self.client.get(
+            reverse('notifications:notification_list')
+        )
 
-from complaints.models import Complaint
-from complaints.signals import complaint_submitted
-from notifications.models import Notification
+        self.assertEqual(response.status_code, 200)
+        notifications = response.json()['notifications']
 
+        self.assertEqual(len(notifications), 1)
+        self.assertEqual(notifications[0]['id'], notification.id)
+
+    def test_customer_cannot_read_admin_notification(self):
+        self.client.force_login(self.customer)
+
+        response = self.client.post(
+            reverse(
+                'notifications:mark_as_read',
+                args=[self.notification.id]
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        self.notification.refresh_from_db()
+        self.assertFalse(self.notification.is_read)
+
+    def test_customer_mark_all_only_affects_own_notifications(self):
+        notification = notify_user(
+            recipient=self.customer,
+            notification_type='quotation',
+            title='New Quotation',
+            message='Your quotation is ready.'
+        )
+
+        self.client.force_login(self.customer)
+
+        response = self.client.post(
+            reverse('notifications:mark_all_as_read')
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        notification.refresh_from_db()
+        self.notification.refresh_from_db()
+
+        self.assertTrue(notification.is_read)
+        self.assertFalse(self.notification.is_read)
+
+    def test_inactive_user_does_not_receive_notification(self):
+        self.customer.is_active = False
+        self.customer.save(update_fields=['is_active'])
+
+        notification = notify_user(
+            recipient=self.customer,
+            notification_type='job',
+            title='Job Update',
+            message='Your job has been updated.'
+        )
+
+        self.assertIsNone(notification)
 
 
 class ComplaintNotificationSignalTests(TestCase):

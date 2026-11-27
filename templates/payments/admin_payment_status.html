@@ -1,0 +1,202 @@
+{% extends "base_admin.html" %}
+{% load static %}
+{% comment %}
+  Payment Status (admin). View: accounts.admin_payments.payment_status. URL: accounts_admin:payment_status.
+  One service request: what has to be in place before payment (checklist), the quotations with what
+  is owed and paid, and the material receipts. It comes before the payments team's job invoice:
+  Issue Invoice (payments:invoice_issue), then Record payment (payments:invoice_record_payment).
+
+  Data comes from the view as `page`:
+    reference, customer, service, ready (checklist complete), all_paid, schedule_url
+    checks    -> label, detail, ok
+    rows      -> title, ref, amount, status, tone (ok | wait | paid), paid_on, url
+    owed, paid, left
+    invoice   -> the job invoice or None: number, total, status, tone, due, overdue, saved, receipt, pay_url,
+                 receipt_info (View Receipt pop-up)
+    issue_url -> Issue Invoice, '' until the checklist is complete (and no invoice or payment yet)
+    purchase  -> the material purchase request (or None), receipts -> id, amount, status, label,
+                 date, image, note; approved_total, material_total, difference, can_update, same_cost
+  Receipts: Approve / Reject post to payments:receipt_action (Reject needs a reason) and come back here.
+  BACKEND (payments): "Send Final Material Quotation" is a demo (no action changes an accepted material
+  quotation or sends it again yet), and Invoice.issue_job does not look at the receipts yet.
+{% endcomment %}
+
+{% block title %}Payment Status {{ page.reference }} | HandyConnect{% endblock %}
+{% block page %}payments{% endblock %}
+{% block crumb %}Payments{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'payments/css/quotation_admin_detail.css' %}">
+<link rel="stylesheet" href="{% static 'payments/css/admin_payment_status.css' %}">
+
+<a class="back" href="{% url 'payments:quotation_list' %}">&larr; Back to Service Quotations</a>
+<div class="bar">
+  <div>
+    <h1>Payment Status</h1>
+    <p class="sub">{{ page.reference }} &bull; {{ page.customer }} &bull; {{ page.service }}
+      &bull; {% if page.all_paid %}<span class="qd-pill is-paid">Fully paid</span>{% elif page.ready %}<span class="qd-pill is-accepted">{% if page.invoice %}Invoice issued{% else %}Ready to invoice{% endif %}</span>{% else %}<span class="qd-pill is-sent">Not ready yet</span>{% endif %}</p>
+  </div>
+  {% if messages %}<div class="qd-msg" role="status">{% include "payments/_messages.html" %}</div>{% endif %}
+  <div class="qd-msg" role="status" data-demo-msg hidden><div class="card"></div></div>
+  {% if page.schedule_url %}<a class="btn ps-main" href="{{ page.schedule_url }}">Schedule Appointment</a>{% endif %}
+</div>
+
+<div class="ps-top">
+  {# ---------- Quotations and payments ---------- #}
+  <section class="card ps-card">
+    <h2>Quotations</h2>
+    {% if page.rows %}
+    <table class="ps-table">
+      <thead><tr><th>Quotation</th><th class="n">Amount</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in page.rows %}
+        <tr>
+          <td><strong>{{ r.title }}</strong><a class="qd-link ps-ref" href="{{ r.url }}">{{ r.ref }}</a></td>
+          <td class="n">{{ r.amount }}</td>
+          <td><span class="ps-tag is-{{ r.tone }}">{{ r.status }}</span>{% if r.paid_on %}<span class="mut ps-on">{{ r.paid_on }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <dl class="ps-sum">
+      <div><dt>Owed (accepted quotations)</dt><dd>{{ page.owed }}</dd></div>
+      <div><dt>Paid</dt><dd>{{ page.paid }}</dd></div>
+      <div class="ps-left"><dt>Left to pay</dt><dd>{{ page.left }}</dd></div>
+    </dl>
+
+    {# ---------- Job invoice (payments team's invoice pages) ---------- #}
+    <div class="ps-invoice">
+      {% if page.invoice %}
+      <div>
+        <strong>Invoice {{ page.invoice.number }}</strong> <span class="ps-tag is-{{ page.invoice.tone }}">{% if page.invoice.overdue %}Overdue{% else %}{{ page.invoice.status }}{% endif %}</span>
+        <span class="mut ps-on">{{ page.invoice.total }} &bull; {% if page.invoice.receipt %}Receipt {{ page.invoice.receipt }}{% else %}Due {{ page.invoice.due }}{% endif %}{% if page.invoice.saved %} &bull; {{ page.invoice.saved }}{% endif %}</span>
+      </div>
+      {% if page.invoice.pay_url %}<a class="btn soft-green" href="{{ page.invoice.pay_url }}">Record Payment</a>
+      {% else %}<span class="ps-btns">{% if page.invoice.receipt_info %}<button class="btn o" type="button" data-open="modal-receipt">View Receipt</button>{% endif %}<a class="btn o" href="{{ page.invoices_url }}">View Invoices</a></span>{% endif %}
+      {% elif page.issue_url %}
+      <div><strong>No invoice yet</strong><span class="mut ps-on">Everything is checked: issue the job invoice for the customer.</span></div>
+      <a class="btn ps-main" href="{{ page.issue_url }}">Issue Invoice</a>
+      {% else %}
+      <div><strong>No invoice yet</strong><span class="mut ps-on">{% if page.all_paid %}Paid before invoices were used.{% else %}The invoice can be issued once every step is done.{% endif %}</span></div>
+      {% if not page.all_paid %}<button class="btn ps-main" type="button" disabled title="Complete the checklist first">Issue Invoice</button>{% endif %}
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="mut">No quotation for this request yet.</p>
+    {% endif %}
+  </section>
+
+  {# ---------- Checklist ---------- #}
+  <section class="card ps-card">
+    <h2>Before Payment</h2>
+    <ul class="ps-checks">
+      {% for c in page.checks %}
+      <li class="{% if c.ok %}is-ok{% else %}is-wait{% endif %}">
+        <span class="ps-icon" aria-hidden="true">{% if c.ok %}<svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg>{% else %}<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"/></svg>{% endif %}</span>
+        <span><strong>{{ c.label }}</strong><span class="mut">{{ c.detail }}</span></span>
+        <span class="sr-only">{% if c.ok %}Done{% else %}Not done{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="ps-note {% if page.ready or page.all_paid %}is-ok{% endif %}">{% if page.all_paid %}Everything is paid. The service appointment can be scheduled.{% elif page.invoice %}The job invoice is issued. Record the payment once the customer pays.{% elif page.ready %}Everything is checked. Issue the job invoice.{% else %}The job invoice can be issued once every step is done.{% endif %}</p>
+  </section>
+</div>
+
+{# ---------- Material receipts ---------- #}
+{% if page.purchase and page.purchase.status == 'forwarded' %}
+<section class="card ps-card ps-receipts">
+  <div class="ps-head">
+    <h2>Material Receipts</h2>
+    {% if page.material_total %}
+    <dl class="ps-mini">
+      <div><dt>Material quotation</dt><dd>{{ page.material_total }}</dd></div>
+      <div><dt>Approved receipts</dt><dd>{{ page.approved_total }}</dd></div>
+      {% if page.difference %}<div><dt>Difference</dt><dd>{{ page.difference }}</dd></div>{% endif %}
+    </dl>
+    {% endif %}
+    {% if page.can_update %}<button class="btn ps-main ps-update" type="button" data-open="modal-update">Send Final Material Quotation</button>{% endif %}
+  </div>
+  {% if page.receipts %}
+  <table class="ps-table">
+    <thead><tr><th>Receipt</th><th>Uploaded</th><th class="n">Amount</th><th>Status</th><th class="ps-act">Review</th></tr></thead>
+    <tbody>
+      {% for r in page.receipts|slice:":4" %}
+      <tr>
+        <td>{% if r.image %}<a class="qd-link" href="{{ r.image }}" target="_blank" rel="noopener">Receipt {{ forloop.counter }} (view image)</a>{% else %}Receipt {{ forloop.counter }}{% endif %}</td>
+        <td>{{ r.date }}</td>
+        <td class="n">{{ r.amount }}</td>
+        <td><span class="ps-tag is-{{ r.status }}">{{ r.label }}</span>{% if r.note %}<span class="mut ps-on">{{ r.note }}</span>{% endif %}</td>
+        <td class="ps-act">
+          {% if r.status == 'submitted' %}
+          <form method="post" action="{% url 'payments:receipt_action' r.id %}" class="ps-inline">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn soft-green s" type="submit" name="action" value="approve">Approve</button>
+          </form>
+          <button class="btn soft-red s" type="button" data-open="modal-reject" data-receipt="{% url 'payments:receipt_action' r.id %}">Reject</button>
+          {% else %}<span class="mut">Reviewed</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if page.receipts|length > 4 %}<p class="mut ps-more">+ {{ page.receipts|length|add:"-4" }} more receipts</p>{% endif %}
+  {% else %}
+  <p class="mut">No receipts yet. The handyman uploads them after buying the materials.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{# ---------- Reject a receipt (reason needed) ---------- #}
+<dialog class="qd-modal" id="modal-reject" aria-labelledby="rj-title">
+  <form method="post" action="" data-reject-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <input type="hidden" name="action" value="reject">
+    <h2 id="rj-title">Reject this receipt?</h2>
+    <p class="mut">The handyman will see the reason and can upload a new receipt.</p>
+    <label class="ps-field"><span>Reason <span class="ps-req">*</span></span>
+      <textarea class="in" name="note" rows="3" required placeholder="e.g. The amount does not match the image."></textarea></label>
+    <div class="qd-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn soft-red" type="submit">Reject Receipt</button>
+    </div>
+  </form>
+</dialog>
+
+{# ---------- Payment receipt (read only) ---------- #}
+{% if page.invoice.receipt_info %}{% with r=page.invoice.receipt_info %}
+<dialog class="qd-modal" id="modal-receipt" aria-labelledby="rc-title"><form method="dialog">
+  <h2 id="rc-title">Receipt {{ r.number }}</h2>
+  <p class="mut">For invoice {{ page.invoice.number }}, issued {{ r.issued }}.</p>
+  <dl class="ps-rows">
+    <div><dt>Amount paid</dt><dd>{{ r.amount }}</dd></div>
+    <div><dt>Date received</dt><dd>{{ r.received }}</dd></div>
+    <div><dt>Method</dt><dd>{{ r.method }}</dd></div>
+    <div><dt>Reference</dt><dd>{{ r.reference }}</dd></div>
+    <div><dt>Recorded by</dt><dd>{{ r.by }}</dd></div>
+  </dl>
+  <div class="qd-btns"><button class="btn o" type="button" data-close>Close</button></div>
+</form></dialog>
+{% endwith %}{% endif %}
+
+{# ---------- Send the final material quotation at the receipts total (demo) ---------- #}
+<dialog class="qd-modal" id="modal-update" aria-labelledby="up-title">
+  {# BACKEND: post to a view that sets the material quotation's total to the approved receipts total and sends it to the customer, then remove data-demo #}
+  <form method="post" action="#" data-demo="Not sent yet: sending the final material quotation is not in the backend (frontend demo only).">
+    {% csrf_token %}
+    <h2 id="up-title">Send the final material quotation?</h2>
+    {% if page.same_cost %}<p>The approved receipts match the material quotation: <strong>{{ page.approved_total }}</strong>. Nothing changes.</p>
+    <p class="mut">The customer will receive the final material quotation as a confirmation of the actual cost.</p>
+    {% else %}<p>The material quotation changes from <strong>{{ page.material_total }}</strong> to <strong>{{ page.approved_total }}</strong>, the actual cost of the approved receipts.</p>
+    <p class="mut">The customer will receive the final material quotation at the actual cost.</p>{% endif %}
+    <div class="qd-btns">
+      <button class="btn o" type="button" data-close>Cancel</button>
+      <button class="btn ps-main" type="submit">Send Quotation</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'payments/js/admin_payment_status.js' %}?v=4"></script>
+{% endblock %}

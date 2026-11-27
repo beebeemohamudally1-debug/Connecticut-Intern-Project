@@ -97,7 +97,7 @@
       {% for e in estimates %}
       {% with quote=e.quotations.first customer=e.request.customer %}
       {% if e.status == 'submitted' %}{% firstof 'review' as st %}{% elif e.status == 'revision_requested' %}{% firstof 'handyman' as st %}{% elif e.status == 'rejected' %}{% firstof 'rejected' as st %}{% elif quote %}{% firstof 'quoted' as st %}{% else %}{% firstof 'ready' as st %}{% endif %}
-      <tr data-row data-status="{{ st }}" data-customer="{% firstof customer.get_full_name customer.username %}"
+      <tr data-row data-estimate="{{ e.pk }}" data-status="{{ st }}" data-customer="{% firstof customer.get_full_name customer.username %}"
           data-text="{{ e.request.reference|lower }} {% firstof customer.get_full_name customer.username %} {% firstof e.handyman.get_full_name e.handyman.username %} {{ e.request.service_category|lower }}">
         <td data-label="Request"><span class="lq-id">{{ e.request.reference }}</span><span class="lq-sub">Estimate {{ e.pk }}</span></td>
         <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
@@ -125,6 +125,16 @@
     <nav class="lq-pages" aria-label="Pagination" data-pages></nav>
   </div>
 </section>
+
+{# ---------- After Approve: offer to prepare the quotation straight away (admin_labour_quotations.js) ---------- #}
+<dialog class="ql-modal" id="est-approved" aria-labelledby="est-approved-title"><form method="dialog">
+  <h2 id="est-approved-title">Estimate approved</h2>
+  <p class="mut" data-approved-text>The estimate is ready for a quotation.</p>
+  <div class="ql-btns">
+    <button class="btn o" type="button" data-close>Later</button>
+    <a class="btn lq-main" href="#" data-approved-link>Prepare Quote</a>
+  </div>
+</form></dialog>
 
 {# ---------- One pop-up per estimate: review (submitted) or read only (the others) ---------- #}
 {% for e in estimates %}
@@ -166,6 +176,6 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/admin_quotation_lists.js' %}?v=2"></script>
-<script src="{% static 'payments/js/admin_labour_quotations.js' %}"></script>
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}?v=3"></script>
+<script src="{% static 'payments/js/admin_labour_quotations.js' %}?v=2"></script>
 {% endblock %}

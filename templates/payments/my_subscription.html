@@ -1,0 +1,94 @@
+{% extends "dashboard/handyman_base.html" %}
+{% block title %}My subscription | HandyConnect{% endblock %}
+{% block page %}subscription{% endblock %}
+{% block content %}
+<h1 class="page-title">My subscription</h1>
+<p class="page-sub">Your subscription keeps you listed in search and lets you receive new requests. Pay monthly or yearly, offline.</p>
+{% include "payments/_messages.html" %}
+
+<div class="card">
+  <div class="job-top"><h2 style="margin:0">Status</h2><span class="pill {{ state_tone }}">{{ state_label }}</span></div>
+  <dl class="facts">
+    <div><dt>Plan</dt><dd>{% if sub %}{{ sub.get_plan_display }} · MUR {{ sub.price|floatformat:"2g" }}{% else %}Not chosen yet{% endif %}</dd></div>
+    <div><dt>Paid until</dt><dd>{% if sub.expires_on %}{{ sub.expires_on|date:"d/m/Y" }}{% else %}-{% endif %}</dd></div>
+    <div><dt>Listing</dt><dd>{% if sub.is_active %}Visible in search{% else %}Hidden, no new requests{% endif %}</dd></div>
+  </dl>
+  {% if state == 'cancelling' %}
+  <p class="muted small" style="margin:0">You cancelled, so it will not renew. You stay listed until {{ sub.expires_on|date:"d/m/Y" }}. No refund is given.</p>
+  {% elif state == 'cancelled' %}
+  <p class="muted small" style="margin:0">Your subscription ended. Choose a plan below to start again.</p>
+  {% endif %}
+</div>
+
+{% if invoice %}
+<div class="card">
+  <h2>Pay invoice {{ invoice.number }}</h2>
+  <dl class="facts">
+    <div><dt>Amount</dt><dd>MUR {{ invoice.total_amount|floatformat:"2g" }}</dd></div>
+    <div><dt>Pay before</dt><dd>{{ invoice.due_date|date:"d/m/Y" }}{% if invoice.is_overdue %} (overdue){% endif %}</dd></div>
+    <div><dt>Reference</dt><dd>{{ invoice.number }}</dd></div>
+  </dl>
+  <p style="margin:0 0 8px">{{ invoice.payment_instructions|linebreaksbr }}</p>
+  <p class="muted small" style="margin:0">{% if sub.is_active %}Your subscription is extended{% else %}Your subscription starts{% endif %} once the administrator records your payment as cleared.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>{% if sub.is_active %}Plan{% else %}Choose a plan{% endif %}</h2>
+  {% for p in plans %}
+  <form method="post" action="{% url 'payments:subscription_subscribe' %}" class="req">
+    {% csrf_token %}<input type="hidden" name="plan" value="{{ p.code }}">
+    <div>
+      <h3>{{ p.label }} · MUR {{ p.price|floatformat:"2g" }}</h3>
+      <p class="muted small">MUR {{ p.per_month|floatformat:"2g" }} per month{% if p.saving %} · you save MUR {{ p.saving|floatformat:"2g" }}{% endif %}</p>
+    </div>
+    <div class="acts">
+      {% if invoice and invoice.subscription_plan == p.code %}<span class="pill pending">Invoice issued</span>
+      {% elif sub.is_active and sub.plan == p.code and sub.auto_renew %}<span class="pill approved">Current plan</span>
+      {% else %}<button class="btn" type="submit">{% if sub.is_active %}Use this plan{% else %}Subscribe {{ p.label|lower }}{% endif %}</button>{% endif %}
+    </div>
+  </form>
+  {% endfor %}
+</div>
+
+{% if sub and sub.auto_renew and sub.expires_on or invoice and sub.auto_renew %}
+<div class="card">
+  <h2>Cancel subscription</h2>
+  <p class="muted small" style="margin:0 0 12px">You can cancel at any time. There are no refunds{% if sub.is_active %}; you stay listed until {{ sub.expires_on|date:"d/m/Y" }}{% endif %}, and no further invoices are issued.</p>
+  <form method="post" action="{% url 'payments:subscription_cancel' %}">{% csrf_token %}
+    <button class="btn o" type="submit" onclick="return confirm('Cancel your subscription? It will not renew and the fee is not refunded.')">Cancel subscription</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Receipts</h2>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Receipt</th><th>Plan</th><th>Period covered</th><th>Amount</th><th>Paid</th></tr></thead>
+      <tbody>
+      {% for r in receipts %}
+        <tr>
+          <th scope="row"><a href="{% url 'payments:subscription_receipt' r.pk %}">{{ r.number }}</a></th>
+          <td>{{ r.invoice.get_subscription_plan_display }}</td>
+          <td>{{ r.invoice.period_start|date:"d/m/Y" }} to {{ r.invoice.period_end|date:"d/m/Y" }}</td>
+          <td>MUR {{ r.payment.amount|floatformat:"2g" }}</td>
+          <td>{{ r.payment.cleared_at|date:"d/m/Y" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="empty">No payments yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if reminders %}
+<div class="card">
+  <h2>Recent messages</h2>
+  <ul class="notes">
+    {% for m in reminders %}<li><strong>{{ m.subject }}</strong><small>{{ m.created_at|date:"d/m/Y" }}</small></li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

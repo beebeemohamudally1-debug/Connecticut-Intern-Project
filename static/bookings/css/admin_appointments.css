@@ -189,5 +189,14 @@
 .ap-late { color: #B74555; font-weight: 600; }
 .ap-late a { color: inherit; text-decoration: underline; }
 .ap-warn a { color: inherit; font-weight: 600; }
+/* "Notify the handyman" tick box (Schedule, Reschedule, Cancel) */
+.ap-notify { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font-size: 13.5px; color: var(--ink, #1F2A3D); cursor: pointer; white-space: nowrap; }
+.ap-notify input { width: 16px; height: 16px; accent-color: var(--orange); }
+.ql-modal .ap-notify { margin: 4px 0 0; }
+.ap-notify-row { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 4px 0 14px; }
 .ap-h2-link { float: right; margin-top: 3px; font-size: 13px; font-weight: 600; color: #2866B1; text-decoration: none; }
 .ap-h2-link:hover { text-decoration: underline; }
+
+/* Inspection fee invoice buttons (Schedule Inspection, Appointment Details) */
+.ap-fee { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.ap-fee .ap-small { flex-basis: 100%; margin: 0; }

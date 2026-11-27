@@ -2,6 +2,7 @@
 {% block title %}New complaint | HandyConnect{% endblock %}
 {% block page %}complaints{% endblock %}
 {% block content %}
+{% if role == 'customer' %}{% include "customer/_complaint_form.html" %}{% else %}
 {% include "jobs/_messages.html" %}
 <div class="bar"><div><div class="lab"><a href="{% url 'complaints:list' %}">← Complaints</a></div><h1>New complaint</h1>
 <p class="sub">Tell us what went wrong. An administrator will review it and may contact you for more information.</p></div></div>
@@ -9,4 +10,5 @@
 <form method="post" enctype="multipart/form-data">{% csrf_token %}
 {% include "jobs/_form_fields.html" %}
 <button class="btn">Submit complaint</button></form></div>
+{% endif %}
 {% endblock %}

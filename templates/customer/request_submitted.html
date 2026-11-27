@@ -1,0 +1,39 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  REQUEST SUBMITTED (confirmation).  URL name expected: customer_portal:request_submitted  (redirect target after POST)
+  CONTEXT (all optional, shown when given):
+    req {reference, title, status_label, status_tone, description, category, address, preferred_visit, attachment, access_notes, submitted_at, url}
+    requests  [{reference, service, requested_at, status_label, status_tone, next_label, next_url}]
+{% endcomment %}
+{% block title %}Request submitted | HandyConnect{% endblock %}
+{% block page %}customer-request-submitted{% endblock %}
+{% block content %}
+{% url 'customer_portal:requests' as u_requests %}
+<div class="cp-head"><div><h1>Your request is in good hands.</h1><p>{{ req.reference|default:"Your request" }}{% if req.submitted_at %} · Submitted {{ req.submitted_at }}{% endif %}</p></div></div>
+<div class="cp-banner" data-hook="confirmation"><span class="cp-banner-ic"><svg class="cp-ic" aria-hidden="true"><use href="#i-check"/></svg></span>
+  <div class="cp-banner-text"><strong>Request submitted successfully</strong><p>We’re reviewing your request. Expect a fixed MUR quotation within one business day.</p></div>
+  <a class="cp-btn is-light" href="{{ u_requests }}">View all requests</a></div>
+<div class="cp-cols is-main-side">
+  <section class="cp-panel" aria-labelledby="cp-rq-h"><div class="cp-panel-row"><h2 id="cp-rq-h">{{ req.title|default:"Your request" }}</h2>{% include "customer/_badge.html" with tone=req.status_tone|default:"warn" label=req.status_label|default:"Awaiting quote" %}</div>
+    <p class="cp-text-muted">{{ req.description|linebreaksbr }}</p>
+    <dl class="cp-details" data-hook="request-summary">
+      {% if req.category %}<div class="cp-detail"><dt>Category</dt><dd>{{ req.category }}</dd></div>{% endif %}
+      {% if req.address %}<div class="cp-detail"><dt>Address</dt><dd>{{ req.address }}</dd></div>{% endif %}
+      {% if req.preferred_visit %}<div class="cp-detail"><dt>Preferred visit</dt><dd>{{ req.preferred_visit }}</dd></div>{% endif %}
+      {% if req.attachment %}<div class="cp-detail"><dt>Attached file</dt><dd>{{ req.attachment }}</dd></div>{% endif %}
+      {% if req.access_notes %}<div class="cp-detail"><dt>Access instructions</dt><dd>{{ req.access_notes }}</dd></div>{% endif %}
+    </dl></section>
+  <section class="cp-panel"><h2>What happens next?</h2>
+    <div class="cp-timeline">
+      <div class="cp-mile is-done"><svg class="cp-ic" aria-hidden="true"><use href="#i-check-circle"/></svg><div><strong>Request received</strong><span>{{ req.submitted_at|default:"Just now" }} · Your details are saved</span></div></div>
+      <div class="cp-mile is-now"><svg class="cp-ic" aria-hidden="true"><use href="#i-clock"/></svg><div><strong>Administrator review</strong><span>We check the scope and match the right skills.</span></div></div>
+      <div class="cp-mile"><svg class="cp-ic" aria-hidden="true"><use href="#i-circle"/></svg><div><strong>Review your quotation</strong><span>You’ll receive an alert when pricing is ready.</span></div></div>
+      <div class="cp-mile"><svg class="cp-ic" aria-hidden="true"><use href="#i-circle"/></svg><div><strong>Confirm your appointment</strong><span>Accept, pay offline, then await admin confirmation.</span></div></div>
+    </div></section>
+</div>
+{% if requests %}
+<section class="cp-panel"><h2>Your requests</h2><p class="cp-panel-sub">All your home projects, one clear view.</p>
+  <div class="cp-table-wrap"><table class="cp-table is-stack"><thead><tr><th scope="col">Request</th><th scope="col">Service</th><th scope="col">Date requested</th><th scope="col">Status</th><th scope="col">Next step</th></tr></thead>
+  <tbody>{% for r in requests %}<tr><td data-label="Request">{{ r.reference }}</td><td data-label="Service">{{ r.service }}</td><td data-label="Requested">{{ r.requested_at }}</td><td data-label="Status">{% include "customer/_badge.html" with tone=r.status_tone label=r.status_label %}</td><td data-label="Next step"><a class="cp-link" href="{{ r.next_url|default:'#' }}">{{ r.next_label|default:"View request" }}</a></td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+{% endblock %}

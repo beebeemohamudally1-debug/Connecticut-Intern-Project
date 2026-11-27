@@ -5,7 +5,7 @@
 
   Data comes from the view as `page`:
     page.stats    -> all, review, forwarded, accepted
-    page.rows     -> ref, customer, service, handyman, sample, state, label, created (YYYY-MM-DD),
+    page.rows     -> ref, customer, service, handyman, sample, state, label, stage (accepted only), created (YYYY-MM-DD),
                      created_label, url
     page.services -> service names for the Service filter
   state is worked out from ServiceRequest.status and the handyman's answer
@@ -22,7 +22,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
-<link rel="stylesheet" href="{% static 'bookings/css/admin_service_requests.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_service_requests.css' %}?v=3">
 
 <div class="bar">
   <div>
@@ -54,7 +54,7 @@
     <div class="lq-stat-top"><p class="lq-stat-label">Accepted</p>
       <span class="lq-chip"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></div>
     <p class="lq-stat-num">{{ page.stats.accepted|stringformat:"02d" }}</p>
-    <p class="lq-stat-hint">Ready for assessment</p>
+    <p class="lq-stat-hint">Handyman accepted</p>
   </div>
 </section>
 
@@ -110,7 +110,7 @@
         <td data-label="Service">{{ r.service }}</td>
         <td data-label="Handyman selected">{% if r.handyman %}{{ r.handyman }}{% if r.sample %} <span class="sr-sample" title="Sample: the backend does not store the customer's choice yet">Sample</span>{% endif %}{% else %}<span class="mut">Not chosen</span>{% endif %}</td>
         <td data-label="Received">{{ r.created_label }}</td>
-        <td data-label="Status"><span class="b sr-st is-{{ r.state }}">{{ r.label }}</span></td>
+        <td data-label="Status"><span class="b sr-st is-{{ r.state }}">{{ r.label }}</span>{% if r.stage %}<span class="sr-stage">{{ r.stage }}</span>{% endif %}</td>
         <td data-label=""><a class="btn o s" href="{{ r.url }}">View</a></td>
       </tr>
       {% endfor %}

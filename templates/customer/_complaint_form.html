@@ -1,0 +1,32 @@
+{% comment %} Customer view of complaints/complaint_form.html. Context: form (ComplaintForm: job, subject, description, evidence).
+   Design-only extras are rendered if the backend adds these form fields: category, incident_date, preferred_outcome, confirm. {% endcomment %}
+{% url 'complaints:list' as u_list %}
+<div class="cp-head"><div><h1>Tell us what isn’t right.</h1><p>We’ll listen, look into it, and keep you updated privately.</p></div></div>
+<div class="cp-notice"><svg class="cp-ic" aria-hidden="true"><use href="#i-shield"/></svg><div><strong>A private, impartial process</strong><p>Your messages go only to the administrator handling the case. The other party cannot see this conversation.</p></div></div>
+<div class="cp-cols is-form-side">
+  <form method="post" enctype="multipart/form-data" class="cp-stack" novalidate data-cp-form-steps data-hook="complaint-form">
+    {% csrf_token %}
+    <section class="cp-panel"><h2>Complaint details</h2>
+      {% if form.non_field_errors %}<div class="cp-notice is-bad"><svg class="cp-ic" aria-hidden="true"><use href="#i-alert"/></svg><div><p>{{ form.non_field_errors|join:" " }}</p></div></div>{% endif %}
+      <div class="cp-field"><label for="{{ form.job.id_for_label }}">Related job <span class="cp-req" aria-hidden="true">*</span></label>{{ form.job }}{% for e in form.job.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>
+      {% if form.category or form.incident_date %}<div class="cp-form-row">
+        {% if form.category %}<div class="cp-field"><label for="{{ form.category.id_for_label }}">Concern category <span class="cp-req" aria-hidden="true">*</span></label>{{ form.category }}{% for e in form.category.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>{% endif %}
+        {% if form.incident_date %}<div class="cp-field"><label for="{{ form.incident_date.id_for_label }}">Date of incident <span class="cp-req" aria-hidden="true">*</span></label>{{ form.incident_date }}{% for e in form.incident_date.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>{% endif %}</div>{% endif %}
+      <div class="cp-field"><label for="{{ form.subject.id_for_label }}">Subject <span class="cp-req" aria-hidden="true">*</span></label>{{ form.subject }}{% for e in form.subject.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>
+      <div class="cp-field"><label for="{{ form.description.id_for_label }}">What happened? <span class="cp-req" aria-hidden="true">*</span></label>{{ form.description }}{% for e in form.description.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>
+      {% if form.preferred_outcome %}<div class="cp-field"><label for="{{ form.preferred_outcome.id_for_label }}">Preferred outcome</label>{{ form.preferred_outcome }}</div>{% endif %}
+      <div class="cp-field"><span class="cp-label">Attach evidence</span>
+        <label class="cp-upload" data-cp-upload data-max-mb="5"><svg class="cp-ic" aria-hidden="true"><use href="#i-upload"/></svg><span>Attach evidence · JPG, PNG or PDF · Up to 5 MB</span><span class="cp-upload-names"></span>
+          <input type="file" name="{{ form.evidence.html_name }}" id="{{ form.evidence.id_for_label }}" accept=".jpg,.jpeg,.png,.pdf"></label>
+        {% for e in form.evidence.errors %}<p class="cp-error">{{ e }}</p>{% endfor %}</div>
+    </section>
+    {% if form.confirm %}<label class="cp-check">{{ form.confirm }}<span>I confirm this information is accurate to the best of my knowledge.</span></label>{% endif %}
+    <div class="cp-actions"><button class="cp-btn is-primary" type="submit">Submit complaint</button><a class="cp-btn is-light" href="{{ u_list }}">Cancel</a></div>
+  </form>
+  <aside class="cp-stack">
+    <section class="cp-panel"><h2>What happens next?</h2>
+      <div><strong>1. We acknowledge your case</strong><p class="cp-small">You’ll receive a complaint ID and a Pending status.</p></div>
+      <div><strong>2. We investigate privately</strong><p class="cp-small">An administrator may ask for more details within one business day.</p></div>
+      <div><strong>3. We share a resolution</strong><p class="cp-small">Track updates in Complaints and Notifications.</p></div></section>
+  </aside>
+</div>
