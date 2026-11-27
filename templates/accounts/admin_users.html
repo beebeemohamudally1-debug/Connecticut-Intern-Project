@@ -5,7 +5,7 @@
 
   Data comes from the view as `page`:
     page.stats   -> total, customers, handymen, pending
-    page.users   -> name, initials, role, email, status, url
+    page.users   -> name, initials, role, email, status, url, sub_note (approved handyman without a paid subscription)
   Connected: accounts/admin_views.py users (every customer and handyman,
   newest first). status is 'Suspended' (user.is_suspended or not is_active), else
   for a handyman 'Pending' or 'Rejected' from accounts.HandymanProfile.status, else
@@ -22,7 +22,7 @@
 {% block crumb %}Users{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'accounts/css/admin_users.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/admin_users.css' %}?v=2">
 
 <div class="bar">
   <div>
@@ -105,7 +105,7 @@
         <td data-label="Role">{{ u.role }}</td>
         <td data-label="Email" class="um-email">{{ u.email }}</td>
         <td data-label="Status">
-          <span class="b {% if u.status == 'Active' %}gr{% elif u.status == 'Suspended' or u.status == 'Rejected' %}re{% elif u.status == 'Pending' %}ye{% endif %}">{{ u.status }}</span>
+          <span class="b {% if u.status == 'Active' %}gr{% elif u.status == 'Suspended' or u.status == 'Rejected' %}re{% elif u.status == 'Pending' %}ye{% endif %}">{{ u.status }}</span>{% if u.status == 'Active' and u.sub_note %}<span class="u-sub">{{ u.sub_note }}</span>{% endif %}
         </td>
         <td data-label="Actions">
           <a class="btn o s" href="{{ u.url|default:'#' }}">{% if u.status == 'Pending' %}Verify{% else %}View{% endif %}<span class="sr-only"> {{ u.name }}</span></a>

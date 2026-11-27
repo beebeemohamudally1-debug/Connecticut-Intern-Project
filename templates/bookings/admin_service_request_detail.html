@@ -77,7 +77,8 @@
   <div>
     <h2>Next Action</h2>
     <p class="mut">
-      {% if page.state == 'review' and not page.handyman_ok %}{{ page.handyman }} is not an approved handyman yet, so the request cannot be forwarded. Approve their registration first, or the customer chooses another handyman.
+      {% if page.state == 'review' and page.handyman_block == 'subscription' %}{{ page.handyman }}'s subscription is not active, so they cannot take new requests. Forward it once they have paid, or the customer chooses another handyman. <a href="{{ page.subscriptions_url }}">View Subscriptions</a>
+      {% elif page.state == 'review' and page.handyman_block %}{{ page.handyman }} is not an approved handyman yet, so the request cannot be forwarded. Approve their registration first, or the customer chooses another handyman.
       {% elif page.state == 'review' %}Forward the request to the selected handyman.
       {% elif page.state == 'forwarded' %}Waiting for {{ page.handyman }} to accept or reject the request.
       {% elif page.state == 'accepted' %}{{ page.quotation_step.0 }}
@@ -88,7 +89,7 @@
     </p>
   </div>
   <div class="sr-actions">
-    {% if page.state == 'review' and not page.handyman_ok %}<button class="btn o sr-main" type="button" disabled title="{{ page.handyman }} is not approved yet">Forward Request</button>
+    {% if page.state == 'review' and page.handyman_block %}<button class="btn o sr-main" type="button" disabled title="{% if page.handyman_block == 'subscription' %}{{ page.handyman }}'s subscription is not active{% else %}{{ page.handyman }} is not approved yet{% endif %}">Forward Request</button>
     {% elif page.state == 'review' %}<button class="btn o sr-main" type="button" data-open="modal-forward">Forward Request</button>
     {% elif page.state == 'accepted' and page.quotation_step.2 %}<a class="btn o sr-main" href="{{ page.quotation_step.2 }}">{{ page.quotation_step.1 }}</a>
     {% elif page.state == 'rejected' %}<button class="btn o sr-main" type="button" data-open="modal-notify">Notify Customer</button>

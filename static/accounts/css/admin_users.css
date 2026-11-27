@@ -237,3 +237,5 @@
   .um-card { padding: 20px 16px; }
   .um-table td { height: auto; }
 }
+/* Manage Users: an approved handyman without a paid subscription (payments team) */
+.u-sub { display: block; margin-top: 3px; font-size: 11.5px; color: #C84C55; white-space: nowrap; }

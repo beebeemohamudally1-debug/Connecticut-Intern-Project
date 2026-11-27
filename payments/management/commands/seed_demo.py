@@ -78,6 +78,14 @@ class Command(BaseCommand):
 
     def reset(self):
         demo = {'request__customer__username__startswith': 'demo_'}
+        # Handyman subscriptions (payments team): their invoices have no service request
+        from payments.subscriptions import HandymanSubscription, SubscriptionReminder
+        subs = HandymanSubscription.objects.filter(handyman__username__startswith='demo_')
+        Receipt.objects.filter(invoice__subscription__in=subs).delete()
+        InvoicePayment.objects.filter(invoice__subscription__in=subs).delete()
+        Invoice.objects.filter(subscription__in=subs).delete()
+        SubscriptionReminder.objects.filter(subscription__in=subs).delete()
+        subs.delete()
         # Invoices (payments team) point to the quotations, so they go first: receipt, payment, invoice
         Receipt.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
         InvoicePayment.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
@@ -120,6 +128,7 @@ class Command(BaseCommand):
         self.user('demo_jean', 'handyman', 'Jean', 'Laval', '5 220 4810', active=False)
         self.profile_requests(admin, handymen)
         self.skills(handymen)
+        self.subscriptions(admin, handymen)
 
         # (key, service, customer, handyman, labour, breakdown, estimate status, quotation status)
         rows = [
@@ -280,6 +289,9 @@ class Command(BaseCommand):
              'Leaking tap and damaged pipe connection beneath the bathroom sink.'),
             ('Tap replacement', 0, None, 'reviewing', None, '', 28, 'afternoon', 'Rose Hill',
              'Kitchen mixer tap is loose and drips constantly.'),
+            # Sent to Alex, then withdrawn; his subscription has lapsed since, so it cannot be forwarded to him again
+            ('Garden tap fitting', 2, 1, 'reviewing', 'withdrawn', '', 30, 'morning', 'Moka',
+             'Fit an outdoor tap on the garden wall.'),
             ('Electrical repair', 1, 0, 'assigned', 'sent', '', 29, 'morning', 'Curepipe',
              'Two sockets in the living room stopped working.'),
             ('Carpentry', 2, 1, 'assigned', 'rejected', 'Unavailable on the requested date.', 26, 'afternoon', 'Vacoas',
@@ -295,7 +307,7 @@ class Command(BaseCommand):
             if h is not None:
                 ServiceRequestAssignment.objects.create(
                     service_request=req, handyman=handymen[h], status=answer, sent_by=admin, response_note=note,
-                    responded_at=timezone.now() if answer != 'sent' else None)
+                    responded_at=timezone.now() if answer not in ('sent', 'withdrawn') else None)
 
     def complaints(self, admin, jobs):
         """Demo complaints in every status, with private messages, a photo and a status log."""
@@ -369,6 +381,7 @@ class Command(BaseCommand):
             ('paid_2', A.TYPE_SERVICE, 0, 3, 'afternoon', A.STATUS_PENDING, ''),         # paid, waiting for the customer: Confirm works
             ('paid_3', A.TYPE_SERVICE, 1, -4, 'morning', A.STATUS_COMPLETED, 'Door rehung and tested with the customer.'),
             ('paid_4', A.TYPE_SERVICE, 0, 6, 'morning', A.STATUS_CONFIRMED, ''),
+            ('accepted', A.TYPE_SERVICE, 0, 4, 'morning', A.STATUS_PENDING, ''),         # not paid: Confirm and Reschedule stay locked
             ('needs_review_3', A.TYPE_INSPECTION, 1, 2, 'morning', A.STATUS_PENDING, ''),          # clashes with the one above
             ('needs_review', A.TYPE_INSPECTION, 0, 1, 'afternoon', A.STATUS_PENDING, ''),
             ('estimate_revision', A.TYPE_INSPECTION, 0, 5, 'morning', A.STATUS_CONFIRMED, ''),
@@ -389,6 +402,21 @@ class Command(BaseCommand):
                 invoice = Invoice.issue_inspection(admin, ServiceRequest.objects.get(pk=self.ids[key]['request']),
                                                    today, 'Site visit to check the work before the quotation.')
                 invoice.record_payment(admin, amount=invoice.total_amount, date_received=today, method='cash', clear=True)
+
+    def subscriptions(self, admin, handymen):
+        """Handyman subscriptions: Marcus paid monthly (listed), Alex lapsed a few days ago (cannot take new
+        requests until he pays). Jean (suspended) and Amir (pending approval) have none."""
+        from payments.subscriptions import HandymanSubscription
+        today = timezone.localdate()
+        for handyman, lapsed in [(handymen[0], False), (handymen[1], True)]:
+            sub = HandymanSubscription.for_handyman(handyman)
+            invoice = sub.subscribe('monthly', by=handyman)
+            invoice.record_payment(admin, amount=invoice.total_amount, date_received=today, method='bank_transfer',
+                                   reference='DEMO-SUB', clear=True)
+            if lapsed:   # last month's payment, which ran out 4 days ago
+                start, end = today - timedelta(days=34), today - timedelta(days=4)
+                Invoice.objects.filter(pk=invoice.pk).update(period_start=start, period_end=end)
+                HandymanSubscription.objects.filter(pk=sub.pk).update(expires_on=end)
 
     def profile_requests(self, admin, handymen):
         """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""

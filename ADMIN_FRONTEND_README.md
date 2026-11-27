@@ -1,9 +1,9 @@
 # Admin pages (frontend)
 
-This file lists the admin pages built so far. **The admin frontend is still in progress:** some sections still require backend integration, including Manage Services, Manage Skills and Payments.
+This file lists the admin pages built so far. **The admin frontend is still in progress:** some sections still require backend integration, including Manage Skills and Payments.
 
 There are two kinds of pages:
-- **Sample-data pages:** the Manage Services pages, which use demonstration data in the frontend. Their actions show demo messages until backend integration is completed.
+- **Sample-data pages:** none now. **Manage Services** is connected to the backend too (see its section).
 - **Service Quotations**, **Material Quotations**, **Private Feedback**, **Reports**, **Complaints**, **Work Progress**, **Manage Users** (with Registration Verification), **Appointments** (saving still needed), **Service Requests** (forwarding still needed) and **Admin Profile** (see their own sections below): connected to the **payments**, **reviews**, **reports**, **complaints**, **jobs**, **accounts** and **bookings** apps, so they **already use the real backend**.
 
 ## Try it
@@ -30,6 +30,7 @@ It creates:
 - service requests in every stage: not forwarded yet (with a sample chosen handyman), forwarded (no answer), rejected by the handyman (with a reason) and cancelled, next to the accepted ones
 - phone numbers, two suspended accounts, and approved / pending / rejected skill and service changes for the handymen
 - once the services app is there: 15 skills (3 inactive), handyman profiles with skills and areas, and skill requests to add, change and remove (`--reset` also deletes the demo skills, including the names used by the older version)
+- handyman subscriptions (payments team): Marcus paid monthly, Alex lapsed a few days ago, Jean and Amir none. New requests show Marcus as the sample chosen handyman (the only one a customer can choose); "Garden tap fitting" was sent to Alex and withdrawn, and cannot be forwarded to him again until he pays
 
 At the end it prints the links to open. To delete the demo data and create it again:
 ```
@@ -60,7 +61,7 @@ What is **missing** on each page. The names each template uses are in the commen
 | Admin Dashboard | Connected | Nothing |
 | Notifications | Connected | Notifications for estimates, quotations and appointments (only complaints and service requests send them) |
 | Logout, Navbar search | Connected | Nothing |
-| Manage Users, Customer Details, Handyman Profile | Connected | Handyman availability (shows "Not recorded") |
+| Manage Users, Customer Details, Handyman Profile | Connected | Handyman availability (shows "Not recorded"). Subscriptions come from the payments team |
 | Registration Verification | Connected | Nothing |
 | Admin Profile | Connected | Nothing |
 | Reports | Connected | Nothing |
@@ -73,7 +74,7 @@ What is **missing** on each page. The names each template uses are in the commen
 | Service Requests | Connected, forwarding not saved | Forwarding to a handyman; the handyman chosen by the customer (sample for now); notifications; exact time and attachments |
 | Appointments | Connected, actions not saved | Saving Schedule, Confirm, Reschedule and Cancel; the customer's answer; handyman availability; notifications (Notify Handyman is a demo) |
 | Manage Skills | Connected, actions not saved | Saving a skill, Deactivate / Reactivate, Approve / Reject requests; description and dates; a handyman page to request skill changes |
-| Manage Services | Demo data only | All of the backend (see Manage Services) |
+| Manage Services | Connected | See Manage Services |
 
 ## Service Quotations (connected to the backend)
 Built on the existing `payments` pages, so they use the real views, forms and models. Labour quotations only; material quotations are a separate section. Needs an account with `role = 'admin'`.
@@ -248,11 +249,18 @@ The admin pages stay in the admin portal (the jobs app's own `job_list.html` and
 - Customer Details: the address is `user.address` (or the latest service request's address when it is empty). The counts and recent requests come from `bookings.ServiceRequest` (each request id opens Service Request Details); completed jobs from `jobs.Job`.
 - Handyman Profile: skills, services and service areas come from `accounts.HandymanProfile` (areas fall back to `user.region`); **Verified** when the profile is approved. A handyman without a profile falls back to the approved `bookings.HandymanProfileRequest` changes. Completed and assigned jobs come from `jobs.Job`; **View Daily Work Report** opens the reports of the latest job.
 
+**Subscriptions (payments team, connected)**
+- Handymen are listed and receive new requests only while their subscription is paid (`payments/subscriptions.py`). The **Subscriptions** page in the sidebar is the payments team's (`payments:subscription_list`).
+- **Handyman Profile:** a **Subscription** row in Job Summary (plan and paid-until date, "Lapsed since …", "Awaiting payment" or "Not subscribed"), opening the Subscriptions page.
+- **Manage Users:** an approved handyman without a paid subscription shows "Not subscribed", "Awaiting payment" or "Lapsed" under the status.
+- **Registration Verification:** the decision card says the handyman pays a subscription before being listed; once approved, a **Next step** note links to Subscriptions.
+- **Admin Dashboard:** a **Handyman Subscriptions** task counts the approved handymen without a paid subscription (`dashboard/services.py`).
+
 **Account actions and registration verification (connected)**
 1. **Suspend, Reactivate and Delete** (`accounts/_user_modals.html`) post to `accounts/admin_actions.py`. Suspend and Delete log the person out; Delete is a soft delete (`is_active = False`), so their jobs, complaints and payments stay.
 2. **Registration Verification** (`accounts/admin_verification.py`): **Review registration** (pending) and **View documents** open `users/handyman/<id>/verify/` with the real application and its uploaded documents (opened through `handyman_document_file`, admins only). **Approve** / **Reject** post to `handyman_decide`; a note is required to reject.
 3. **Availability:** no field, so the profile shows "Not recorded".
-4. **Job history:** no page for one handyman's jobs, so the button links to `#`.
+4. **Job history:** a pop-up with the handyman's latest 6 jobs, each opening its Work Progress page.
 5. **Approved skill and service requests:** approving a `HandymanProfileRequest` should also update `HandymanProfile.skills` / `.services`, so the profile shows the change.
 
 ## Appointments (connected to the backend, saving still needed)
@@ -315,10 +323,10 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
   - **Needs review:** not sent to a handyman yet (or the last one was withdrawn).
   - **Forwarded:** sent, no answer yet. **Accepted** / **Rejected:** the handyman's answer, with their note as "Details".
   - **Booked**, **Completed**, **Cancelled:** the request status.
-- The **handyman** shown is the one the customer chose. Once the request is sent, it is the handyman it was sent to (real data). Before that the backend has no field for the customer's choice, so a **sample** handyman is shown with a "Sample" tag (`_chosen` in `bookings/views.py`).
+- The **handyman** shown is the one the customer chose. Once the request is sent, it is the handyman it was sent to (real data). Before that the backend has no field for the customer's choice, so a **sample** handyman is shown with a "Sample" tag (`_chosen` in `bookings/views.py`). The sample is only picked from handymen a customer can choose: approved, not suspended and with a paid subscription (`_sample_handymen`).
 - **List:** number cards (All, Needs review, Forwarded, Accepted: "Handyman accepted"), search, service / status / date filters, 5 rows per page. **Accepted** rows also show the stage they have reached under the status (for example "Estimate to review", "Quote sent", "Awaiting payment", "Ready to schedule", "Service booked").
 - **Details:** Request Information, Handyman Response and Next Action:
-  - Needs review: **Forward Request** pop-up: "Send SR-… to <handyman>, selected by the customer" (demo). The button is greyed out, with a note, when the handyman is not approved yet, suspended or inactive.
+  - Needs review: **Forward Request** pop-up: "Send SR-… to <handyman>, selected by the customer" (demo). The button is greyed out, with a note, when the handyman is not approved yet, suspended or inactive, or has no paid subscription (with a **View Subscriptions** link).
   - Accepted: the button follows where the request stands (`_quotation_step` in `bookings/views.py`):
     - No estimate yet: **Schedule Inspection**, or **View Inspection** once it is scheduled.
     - Estimate: **Review Estimate** / **View Estimate** (opens that estimate's pop-up on the Labour estimates tab, `#est-<id>`). Rejected: wait for a new estimate or forward the request to another handyman.
@@ -421,4 +429,3 @@ Built from the low-fi and the high-fi (screens 08 to 14). Views in `accounts/adm
    - Schedule, Reschedule, Confirm and Cancel on the Appointments pages (see Appointments)
    - Forward Request and Notify Customer on Service Request Details (see Service Requests)
 2. **Lists:** search, filters and page buttons work in the browser on the rows sent. If you paginate on the server, send one page at a time and swap the page buttons for links. The search box on the page must then search on the server too.
-3. **Manage Services:** connect the six completed frontend pages to the services backend, including service management and handyman service request approval / rejection. See the Manage Services section above.

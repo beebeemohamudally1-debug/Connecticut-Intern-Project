@@ -17,6 +17,7 @@ from dashboard.permissions import role_required
 from jobs.models import Job
 from accounts.models import HandymanProfile
 from payments.models import LabourEstimate, Quotation, request_payment_state
+from payments.subscriptions import has_active_subscription, subscribed_handymen
 
 from .models import Appointment, ServiceRequest, ServiceRequestAssignment
 
@@ -52,7 +53,9 @@ def _state(sr, latest):
 
 
 def _sample_handymen():
-    return list(User.objects.filter(role='handyman', is_active=True).order_by('pk'))
+    """Handymen a customer can choose: approved, not suspended and with a paid subscription (listed in search)."""
+    return list(subscribed_handymen().filter(is_suspended=False, handyman_profile__status=HandymanProfile.STATUS_ACTIVE)
+                .order_by('pk'))
 
 
 def _chosen(sr, latest, sample_handymen):
@@ -68,6 +71,16 @@ def _chosen(sr, latest, sample_handymen):
     if not sample_handymen:
         return None, False
     return sample_handymen[sr.pk % len(sample_handymen)], True
+
+
+def _forward_block(handyman):
+    """Why the request cannot be forwarded to this handyman ('' when it can): not approved, or no paid subscription."""
+    if handyman is None:
+        return 'none'
+    if not (handyman.is_active and not getattr(handyman, 'is_suspended', False)
+            and HandymanProfile.objects.filter(user=handyman, status=HandymanProfile.STATUS_ACTIVE).exists()):
+        return 'approval'
+    return '' if has_active_subscription(handyman) else 'subscription'
 
 
 def _preferred(sr):
@@ -198,9 +211,9 @@ def admin_request_detail(request, pk):
             'on': f'{timezone.localtime(latest.responded_at):%d %b %Y}' if latest and latest.responded_at else '',
         },
         'handyman_pk': handyman.pk if handyman else '',
-        # Only an approved, active handyman can receive the request
-        'handyman_ok': bool(handyman and handyman.is_active and not getattr(handyman, 'is_suspended', False)
-                            and HandymanProfile.objects.filter(user=handyman, status=HandymanProfile.STATUS_ACTIVE).exists()),
+        # Only an approved, active handyman with a paid subscription can receive the request
+        'handyman_block': _forward_block(handyman),
+        'subscriptions_url': reverse('payments:subscription_list'),
         # Accepted: the next step is the labour estimate / service quotation
         'quotation_step': _quotation_step(sr) if state == 'accepted' else None,
         'appointment_url': reverse('accounts_admin:appointment_detail', args=[appointment.pk]) if appointment else '',
