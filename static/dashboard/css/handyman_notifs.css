@@ -65,4 +65,17 @@ thead th{background:var(--tag);font-weight:500;border:0}tbody th{color:var(--ink
 .notes{list-style:none;margin:0 0 16px;padding:0}.notes li{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}.notes small{display:block;color:var(--muted);font-size:11px}
 .note{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:10px;margin-bottom:10px;list-style:none}.note.unread{background:var(--info)}
 .note div{flex:1}.note strong{display:block;font-size:13px}.note p{margin:4px 0;font-size:12px;color:var(--muted)}.note small{font-size:11px;color:var(--muted)}
-.done{background:#eaf5ee;border-radius:12px;padding:16px;margin-bottom:16px}.done h3{margin:0 0 4px}.done .ok{color:var(--green);font-size:12px;font-weight:600
+.done{background:#eaf5ee;border-radius:12px;padding:16px;margin-bottom:16px}.done h3{margin:0 0 4px}.done .ok{color:var(--green);font-size:12px;font-weight:600}
+
+.nav a{display:flex;align-items:center;gap:12px}.nav a svg{flex-shrink:0;opacity:.85}.nav a.active svg{color:var(--orange);opacity:1}
+.help-card,.help-card:hover{background:none;padding:0 6px}.help-card b{color:var(--orange)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+a.user:hover .uname{text-decoration:underline}a.user:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:8px}
+
+.user-menu{position:relative}.user{background:none;border:0;font:inherit;color:inherit;cursor:pointer;padding:0}.user .chev{color:var(--muted)}
+.menu{position:absolute;right:0;top:calc(100% + 10px);min-width:210px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(20,48,77,.14);padding:6px;z-index:30}
+.menu-who{display:flex;flex-direction:column;gap:2px;margin:0;padding:8px 12px;font-size:13px}.menu-who span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0 6px}.menu form{margin:0}
+.menu a,.menu button{display:flex;align-items:center;width:100%;padding:10px 12px;border:0;background:none;border-radius:8px;font:inherit;font-size:13px;color:var(--ink);text-align:left;cursor:pointer}
+.menu a:hover,.menu button:hover,.menu a:focus-visible,.menu button:focus-visible{background:var(--tag)}.menu .out{color:var(--danger);font-weight:600}

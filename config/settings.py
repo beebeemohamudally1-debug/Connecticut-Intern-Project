@@ -84,6 +84,7 @@ TEMPLATES = [
                 'customer_portal.context.unread',
                 'customer_portal.context.unread',
                 'payments.context.handyman_subscription',
+                'dashboard.context_processors.handyman_user',
             ],
         },
     },
@@ -153,3 +154,5 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'accounts:login'
+LOGOUT_REDIRECT_URL = 'accounts:login'     # where people land after logging out
+# HANDYMAN_LOGOUT_URL = '/accounts/logout/'  # only if Log out gives a 404
