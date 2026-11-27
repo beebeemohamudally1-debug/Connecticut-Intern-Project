@@ -26,7 +26,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
-<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=3">
 
 <a class="back" href="{{ page.list_url }}">&larr; Back to Appointments</a>
 <div class="bar ap-bar">
@@ -113,6 +113,7 @@
   </label>
   <div class="ap-slot-foot">
     <p class="ap-avail" data-availability aria-live="polite"></p>
+    <label class="ap-notify"><input type="checkbox" name="notify_handyman" checked {% if not page.request or page.locked %}disabled{% endif %}> Notify the handyman too</label>
     <button class="btn o ap-main" type="submit" {% if not page.request or page.locked %}disabled{% endif %}>Send to Customer</button>
   </div>
 </form>

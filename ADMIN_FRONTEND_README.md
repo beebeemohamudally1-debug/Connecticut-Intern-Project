@@ -71,7 +71,7 @@ What is **missing** on each page. The names each template uses are in the commen
 | Complaints | Connected | Notifications open the shared complaint page; no assigned admin, category, priority or internal notes |
 | Work Progress | Connected | `WorkEvidence` has no link to its report (photos are matched by day) |
 | Service Requests | Connected, forwarding not saved | Forwarding to a handyman; the handyman chosen by the customer (sample for now); notifications; exact time and attachments |
-| Appointments | Connected, actions not saved | Saving Schedule, Confirm, Reschedule and Cancel; the customer's answer; handyman availability; notifications |
+| Appointments | Connected, actions not saved | Saving Schedule, Confirm, Reschedule and Cancel; the customer's answer; handyman availability; notifications (Notify Handyman is a demo) |
 | Manage Skills | Connected, actions not saved | Saving a skill, Deactivate / Reactivate, Approve / Reject requests; description and dates; a handyman page to request skill changes |
 | Manage Services | Demo data only | All of the backend (see Manage Services) |
 
@@ -274,7 +274,14 @@ Built from the low-fi and high-fi, with the same pieces as Service Quotations. O
 - **Conflicts:** only **confirmed** appointments block a slot (the model's unique rule). The schedule and reschedule pages check the slot while you choose it and show the "Handyman Booking Conflict" pop-up. On Details, **Confirm** is greyed out while the slot clashes.
 - **No double booking:** a request that already has a pending or confirmed appointment of that type is left out of the request picker. Opened directly (for example from Service Quotation Details), the page says "Already scheduled", links to that appointment and disables the form.
 - **Date passed:** a Pending appointment whose date has passed shows "Date passed" in the list and a warning on Details (reschedule or cancel it).
-- **Cancel** asks for a reason (required in the pop-up).
+- **Cancel** asks for a reason (required in the pop-up) and has **Notify <customer>** and **Notify <handyman>** tick boxes.
+- **Paid first:** **Confirm** on Details is greyed out until it is paid, with a "Not paid yet" line: an inspection waits for its fee invoice, a service for both quotations (with a **View Payment Status** link). **Send Proposal** on Reschedule is locked the same way for an unpaid **service** appointment (an inspection is paid once its time is agreed, so it can be rescheduled).
+- **Details** also shows:
+  - a **Customer response** row: "Waiting for the customer" while Pending, "Agreed" once Confirmed or Completed.
+  - **View Job Progress** (Work Progress) on a confirmed or completed service appointment.
+  - Material payment: **Not received** when the job needs materials but there is no material quotation yet ("-" when no materials are needed).
+  - The inspection fee buttons (**Issue Inspection Invoice**, **Record Payment**) only while the appointment is **Pending**: the fee is paid before it is confirmed, so they are hidden once it is Confirmed, Cancelled or Completed.
+- **Notify:** the "Appointment Confirmed" pop-up has **Notify <customer>** and **Notify <handyman>** tick boxes (both ticked) and **Send Notification**; Schedule and Reschedule have a "Notify the handyman too" tick box (demo for now).
 - Appointment ids are shown as `APT-1000 + id`. Slots are Morning (08:00 - 12:00) and Afternoon (13:00 - 17:00).
 - **Schedule Appointment** on Service Quotation Details opens the service schedule page for that request.
 - `templates/base_admin.html`: the sidebar **Appointments** link opens the list.
@@ -287,10 +294,11 @@ Built from the low-fi and high-fi, with the same pieces as Service Quotations. O
    - **Cancel:** set it to Cancelled and keep the reason (the pop-up sends `reason`; the model has no field for it yet). Then set the Cancel form's `action` and remove `data-demo`.
    - **Request status:** set the service request to **Booked** once its appointment is confirmed.
 2. **Inspection fee (connected):** Schedule Inspection and Appointment Details show the payments team's inspection fee invoice (none / issued / paid with receipt) with **Issue Inspection Invoice** or **Record Payment**; the links add `?next=<this page>`. An inspection can only be scheduled once the fee is paid (their rule: "The visit can be scheduled only after the fee is cleared").
-3. **Proposal and customer answer:** there is no stored proposal, and the customer cannot accept or refuse it, so the Customer Confirmation card only shows that it is waiting.
+   - **Back to this page (payments):** `inspection_invoice_issue` and `invoice_record_payment` in `payments/views.py` always go to the invoice list after saving. Changing their `return redirect('payments:invoice_list')` to `return redirect(request.GET.get('next') or 'payments:invoice_list')` brings the admin back to the page they came from (the sidebar Invoices links have no `next`, so they still go to the list).
+3. **Proposal and customer answer:** there is no stored proposal, and the customer cannot accept or refuse it, so the Customer Confirmation card and the **Customer response** row are worked out from the status.
 4. **Handyman availability:** no working hours or days off, so availability only checks confirmed appointments.
 5. **Exact times:** only Morning and Afternoon slots exist.
-6. **Notifications** to the customer and handyman when an appointment is scheduled, confirmed, rescheduled or cancelled.
+6. **Notifications** to the customer and handyman when an appointment is scheduled, confirmed, rescheduled or cancelled. Then set the "Appointment Confirmed" pop-up's Notify form `action` and remove `data-demo` (it sends `notify_customer` and `notify_handyman`), and read `notify_handyman` from the Schedule and Reschedule forms (the proposal itself goes to the customer) and `notify_customer` / `notify_handyman` from the Cancel form.
 7. **Status history:** no log, so the history is built from `created_at`, `confirmed_at` and the current status.
 8. **Inspection before service (team decision):** a service can be scheduled without a completed inspection. In our flow the quotation comes after the inspection, so this is left open. Add a check if the team wants it strict.
 
@@ -308,10 +316,14 @@ Built from the low-fi (FR-A-4) and the high-fi (screens 15 to 20), in the **book
   - **Forwarded:** sent, no answer yet. **Accepted** / **Rejected:** the handyman's answer, with their note as "Details".
   - **Booked**, **Completed**, **Cancelled:** the request status.
 - The **handyman** shown is the one the customer chose. Once the request is sent, it is the handyman it was sent to (real data). Before that the backend has no field for the customer's choice, so a **sample** handyman is shown with a "Sample" tag (`_chosen` in `bookings/views.py`).
-- **List:** number cards (All, Needs review, Forwarded, Accepted), search, service / status / date filters, 5 rows per page.
+- **List:** number cards (All, Needs review, Forwarded, Accepted: "Handyman accepted"), search, service / status / date filters, 5 rows per page. **Accepted** rows also show the stage they have reached under the status (for example "Estimate to review", "Quote sent", "Awaiting payment", "Ready to schedule", "Service booked").
 - **Details:** Request Information, Handyman Response and Next Action:
-  - Needs review: **Forward Request** pop-up: "Send SR-… to <handyman>, selected by the customer" (demo).
-  - Accepted: the next step is the quotation (FR-A-9 part A), so the button follows where it stands: no button while waiting for the handyman's labour estimate, **Review Estimate** / **View Estimate** (opens that estimate's pop-up on the Labour estimates tab, `#est-<id>`), **Prepare Quotation** (estimate approved) or **View Quotation**.
+  - Needs review: **Forward Request** pop-up: "Send SR-… to <handyman>, selected by the customer" (demo). The button is greyed out, with a note, when the handyman is not approved yet, suspended or inactive.
+  - Accepted: the button follows where the request stands (`_quotation_step` in `bookings/views.py`):
+    - No estimate yet: **Schedule Inspection**, or **View Inspection** once it is scheduled.
+    - Estimate: **Review Estimate** / **View Estimate** (opens that estimate's pop-up on the Labour estimates tab, `#est-<id>`). Rejected: wait for a new estimate or forward the request to another handyman.
+    - Estimate approved: **Prepare Quotation**. Then **View Quotation** with what to do next (draft: send it; sent: waiting for the customer; changes asked; declined).
+    - Quotation accepted: **Check Payment Status** until it is paid, then **Schedule Service**, then **View Appointment**.
   - Rejected: **Notify Customer** pop-up (demo).
   - Booked: **View Appointment** and **View Job**. Completed: **View Job**.
   - `?response=1` opens the "Handyman Accepted / Rejected" pop-up straight away (for links from notifications).

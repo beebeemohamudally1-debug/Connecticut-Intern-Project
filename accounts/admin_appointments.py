@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from bookings.models import Appointment, ServiceRequest, ServiceRequestAssignment
+from jobs.models import Job
 from dashboard.permissions import role_required
 from urllib.parse import urlencode
 
@@ -65,7 +66,7 @@ def _payment_checks(sr):
 
     def paid(q, needed):
         if not q:
-            return ('-', not needed)
+            return ('Not received', False) if needed else ('-', True)
         return ('Received', True) if q.is_paid else ('Not yet received', False)
 
     rows = [
@@ -179,6 +180,16 @@ def _history(a):
     return steps
 
 
+def _payment_block(a, sr, checks=None, fee=None):
+    """Why this appointment cannot be confirmed or re-proposed yet ('' when it can):
+    an inspection needs its fee invoice paid, a service needs every payment check done."""
+    if a.appointment_type == Appointment.TYPE_INSPECTION:
+        fee = fee or _inspection_fee(sr, '')
+        return '' if fee['row']['ok'] else 'The inspection fee must be paid first.'
+    checks = checks or _payment_checks(sr)
+    return '' if checks['ready'] else 'The quotations must be fully paid first.'
+
+
 @role_required('admin')
 def appointment_detail(request, pk):
     """Appointment Details, with the Confirm, Reschedule and Cancel pop-ups."""
@@ -186,6 +197,10 @@ def appointment_detail(request, pk):
     sr = a.service_request
     conflict = _conflict(a.handyman, a.appointment_date, a.time_slot, exclude=a)
     checks = _payment_checks(sr) if a.appointment_type == Appointment.TYPE_SERVICE else None
+    fee = _inspection_fee(sr, request.get_full_path()) if a.appointment_type == Appointment.TYPE_INSPECTION else None
+    job = (Job.objects.filter(service_request=sr).order_by('-pk').first()
+           if a.appointment_type == Appointment.TYPE_SERVICE
+           and a.status in (Appointment.STATUS_CONFIRMED, Appointment.STATUS_COMPLETED) else None)
     page = {
         **_row(a),
         'service_address': sr.service_address or '-', 'notes': a.notes,
@@ -201,7 +216,16 @@ def appointment_detail(request, pk):
         'can_change': a.status in (Appointment.STATUS_PENDING, Appointment.STATUS_CONFIRMED),
         'reschedule_url': reverse('accounts_admin:appointment_reschedule', args=[a.pk]),
         'list_url': reverse('accounts_admin:appointments'),
-        'fee': _inspection_fee(sr, request.get_full_path()) if a.appointment_type == Appointment.TYPE_INSPECTION else None,
+        'fee': fee,
+        # BACKEND (bookings): the Appointment model has no field for the customer's answer yet;
+        # pending = waiting for the customer to agree, confirmed / completed = agreed
+        'customer_response': {Appointment.STATUS_PENDING: 'Waiting for the customer',
+                              Appointment.STATUS_CANCELLED: '-'}.get(a.status, 'Agreed'),
+        # Confirmed service appointment: its job on Work Progress
+        'job_url': reverse('accounts_admin:work_progress_job', args=[job.pk]) if job else '',
+        # Confirm stays locked until paid (inspection: the fee; service: both quotations)
+        'payment_block': _payment_block(a, sr, checks, fee),
+        'payment_url': reverse('accounts_admin:payment_status', args=[sr.pk]) if checks else '',
     }
     return render(request, 'bookings/admin_appointment_detail.html', {'page': page})
 
@@ -302,7 +326,8 @@ def appointment_schedule(request, kind):
             else:
                 # BACKEND: create the Pending appointment here (service_request, handyman, appointment_type,
                 # appointment_date, time_slot, notes), then redirect to its Appointment Details page.
-                messages.info(request, 'The slot is free. Not saved yet: scheduling is not in the backend (frontend demo only).')
+                messages.info(request, 'The slot is free. Not saved yet: scheduling and notifying the customer and handyman '
+                                       'are not in the backend (frontend demo only).')
 
     page = {
         'kind': kind, 'kind_label': TYPE_LABEL[kind],
@@ -340,7 +365,11 @@ def appointment_reschedule(request, pk):
     sr = a.service_request
     form = {'date': '', 'slot': '', 'notes': 'Original slot unavailable; alternative proposed.'}
     conflict = None
-    if request.method == 'POST':
+    # A service time is only proposed once the quotations are paid (inspections are paid after the time is agreed)
+    block = _payment_block(a, sr) if a.appointment_type == Appointment.TYPE_SERVICE else ''
+    if request.method == 'POST' and block:
+        messages.error(request, block)
+    elif request.method == 'POST':
         form = {k: request.POST.get(k, '').strip() for k in form}
         try:
             day = date.fromisoformat(form['date'])
@@ -358,7 +387,8 @@ def appointment_reschedule(request, pk):
             else:
                 # BACKEND: save the proposed date and slot (and the customer's answer once it exists),
                 # then redirect to Appointment Details.
-                messages.info(request, 'The slot is free. Not saved yet: rescheduling is not in the backend (frontend demo only).')
+                messages.info(request, 'The slot is free. Not saved yet: rescheduling and notifying the customer and handyman '
+                                       'are not in the backend (frontend demo only).')
     page = {
         **_row(a), 'when': _when(a), 'form': form, 'conflict': conflict,
         'preferred': f'{sr.preferred_date:%d %b %Y} · {sr.get_preferred_slot_display()}' if sr.preferred_date else '-',
@@ -368,5 +398,8 @@ def appointment_reschedule(request, pk):
         'slots': [(k, f'{k.title()} ({v})') for k, v in SLOT_TIMES.items()],
         'today': timezone.localdate().isoformat(),
         'detail_url': reverse('accounts_admin:appointment_detail', args=[a.pk]),
+        'payment_block': block,
+        'payment_url': (reverse('accounts_admin:payment_status', args=[sr.pk])
+                        if a.appointment_type == Appointment.TYPE_SERVICE else ''),
     }
     return render(request, 'bookings/admin_appointment_reschedule.html', {'page': page})

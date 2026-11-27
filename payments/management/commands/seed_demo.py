@@ -141,6 +141,9 @@ class Command(BaseCommand):
             ('ready_invoice', 'Bathroom tap replacement', 1, 0, '1600', 'Remove old taps\nFit new mixer tap\nTest for leaks', 'approved', 'accepted'),
             ('accepted_waiting', 'Gate repair', 0, 0, '2800', 'Fix hinges\nRealign gate\nOil lock', 'approved', 'accepted'),
             ('paid', 'Water heater service', 3, 1, '2400', 'Drain tank\nReplace element\nTest', 'approved', 'paid'),
+            ('paid_2', 'Kitchen sink unblocking', 0, 0, '1400', 'Clear the drain\nReplace the trap\nTest the flow', 'approved', 'paid'),
+            ('paid_3', 'Bedroom door rehang', 2, 1, '1700', 'Remove the door\nFit new hinges\nRehang and adjust', 'approved', 'paid'),
+            ('paid_4', 'Outdoor light fitting', 1, 0, '1100', 'Fit the outdoor light\nConnect to the switch\nTest', 'approved', 'paid'),
             ('declined', 'Roof gutter cleaning', 3, 0, '5700', 'Clear gutters\nFlush downpipes', 'approved', 'declined'),
             ('cancelled', 'Shower installation', 0, 1, '4200', 'Remove old unit\nInstall shower\nSeal and test', 'approved', 'cancelled'),
         ]
@@ -198,6 +201,14 @@ class Command(BaseCommand):
         # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
         self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True,
                       receipts=[('1150', 'approved'), ('690', 'approved')])
+        # More paid requests for service appointments: sink and outdoor light with materials, door labour only.
+        self.material(admin, handymen[0], 'paid_2', '1 sink trap\n1 drain cleaner', '450', paid=True,
+                      receipts=[('430', 'approved')])
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['paid_3']['request'], handyman=handymen[1],
+            items='No materials needed', estimated_cost=Decimal('0'))
+        self.material(admin, handymen[0], 'paid_4', '1 outdoor wall light\n3 m outdoor cable', '1250', paid=True,
+                      receipts=[('1240', 'approved')])
         # Material Quotations: one request in every other stage
         MaterialPurchaseRequest.objects.create(
             request_id=self.ids['changes_requested']['request'], handyman=handymen[1],
@@ -244,7 +255,8 @@ class Command(BaseCommand):
         for key, status, h, days in [('paid', Job.COMPLETED, 1, 6), ('accepted', Job.ASSIGNED, 0, -3),
                                      ('accepted_waiting', Job.ASSIGNED, 0, -5),
                                      ('changes_requested', Job.IN_PROGRESS, 1, -1),
-                                     ('cancelled', Job.CANCELLED, 1, 2)]:
+                                     ('cancelled', Job.CANCELLED, 1, 2),
+                                     ('paid_3', Job.COMPLETED, 1, 4), ('paid_4', Job.ASSIGNED, 0, -6)]:
             req = ServiceRequest.objects.get(pk=self.ids[key]['request'])
             job = Job.objects.create(
                 service_request=req, customer=req.customer, handyman=handymen[h],
@@ -354,6 +366,9 @@ class Command(BaseCommand):
         rows = [
             # key, type, handyman, days from today, slot, status, note
             ('paid', A.TYPE_SERVICE, 1, 2, 'morning', A.STATUS_CONFIRMED, 'The handyman will call 30 minutes before arriving.'),
+            ('paid_2', A.TYPE_SERVICE, 0, 3, 'afternoon', A.STATUS_PENDING, ''),         # paid, waiting for the customer: Confirm works
+            ('paid_3', A.TYPE_SERVICE, 1, -4, 'morning', A.STATUS_COMPLETED, 'Door rehung and tested with the customer.'),
+            ('paid_4', A.TYPE_SERVICE, 0, 6, 'morning', A.STATUS_CONFIRMED, ''),
             ('needs_review_3', A.TYPE_INSPECTION, 1, 2, 'morning', A.STATUS_PENDING, ''),          # clashes with the one above
             ('needs_review', A.TYPE_INSPECTION, 0, 1, 'afternoon', A.STATUS_PENDING, ''),
             ('estimate_revision', A.TYPE_INSPECTION, 0, 5, 'morning', A.STATUS_CONFIRMED, ''),
@@ -369,6 +384,11 @@ class Command(BaseCommand):
             A.objects.create(service_request_id=self.ids[key]['request'], handyman=handymen[h], appointment_type=kind,
                              appointment_date=today + timedelta(days=days), time_slot=slot, status=status, notes=note,
                              confirmed_by=admin if done else None, confirmed_at=timezone.now() if done else None)
+            if done and kind == A.TYPE_INSPECTION:
+                # An inspection is confirmed only once its fee is paid: a paid fee invoice with its receipt
+                invoice = Invoice.issue_inspection(admin, ServiceRequest.objects.get(pk=self.ids[key]['request']),
+                                                   today, 'Site visit to check the work before the quotation.')
+                invoice.record_payment(admin, amount=invoice.total_amount, date_received=today, method='cash', clear=True)
 
     def profile_requests(self, admin, handymen):
         """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""

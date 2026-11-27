@@ -215,7 +215,7 @@ def _approved_values(u, kind):
 def handyman_profile(request, pk):
     """Handyman Profile: account, jobs, and the skills, services and areas of the HandymanProfile."""
     u = get_object_or_404(User.objects.select_related('region'), pk=pk, role='handyman')
-    jobs = list(Job.objects.filter(handyman=u))
+    jobs = list(Job.objects.filter(handyman=u).select_related('customer'))
     latest = jobs[0] if jobs else None          # newest first
     profile = _profile(u)
     if profile:
@@ -242,6 +242,14 @@ def handyman_profile(request, pk):
         'skills': skills,
         'services': services,
         'reports_url': reverse('accounts_admin:work_progress_reports', args=[latest.pk]) if latest else '',
+        # Job history pop-up: the newest jobs, each opening its Job Progress page (Work Progress)
+        'history': [{
+            'ref': j.reference, 'service': j.service_name, 'customer': _person_name(j.customer),
+            'status': j.status, 'status_label': j.get_status_display(),
+            'date': timezone.localtime(j.completed_at or j.scheduled_start or j.created_at).strftime('%d %b %Y'),
+            'url': reverse('accounts_admin:work_progress_job', args=[j.pk]),
+        } for j in jobs[:6]],
+        'history_more': max(len(jobs) - 6, 0),
     }
     return render(request, 'accounts/admin_handyman_profile.html', {'handyman': handyman})
 
