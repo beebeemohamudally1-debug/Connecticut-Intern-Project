@@ -8,12 +8,7 @@
 
 {% block content %}
 
-{% comment %}
-TODO: BACKEND INTEGRATION
-Load service change requests submitted by handymen.
-Replace sample records with database records.
-Connect request review actions and pagination.
-{% endcomment %}
+
 
 <div style="margin-bottom: 20px;">
     <a href="{% url 'accounts_admin:manage_services' %}"
@@ -43,7 +38,7 @@ Connect request review actions and pagination.
         <select id="changeFilter" aria-label="Filter by change type">
             <option value="all">All Changes</option>
             <option value="add">Add</option>
-            <option value="change">Change</option>
+            <option value="modify">Modify</option>
             <option value="remove">Remove</option>
         </select>
 
@@ -75,84 +70,49 @@ Connect request review actions and pagination.
             </thead>
 
             <tbody>
+                {% for service_request in service_requests %}
+                    <tr data-change="{{ service_request.action }}"
+                        data-status="{{ service_request.status }}">
 
-                <tr data-change="add" data-status="pending">
-                    <td>SR-001</td>
-                    <td>Marcus Reed</td>
-                    <td>Add</td>
-                    <td>Pipe leak repair</td>
-                    <td>20 Nov 2026</td>
-                    <td>
-                        <span class="request-status pending">
-                            Pending
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'accounts_admin:review_service_request' 1 %}"
+                        <td>SR-{{ service_request.pk|stringformat:"03d" }}</td>
+
+                        <td>
+                            {{ service_request.handyman.get_full_name|default:service_request.handyman.username }}
+                        </td>
+
+                        <td>
+                            {{ service_request.get_action_display }}
+                        </td>
+
+                        <td>
+                            {{ service_request.requested_value|default:service_request.current_value }}
+                        </td>
+
+                        <td>
+                            {{ service_request.submitted_at|date:"d M Y" }}
+                        </td>
+
+                        <td>
+                            <span class="request-status {{ service_request.status }}">
+                                {{ service_request.get_status_display }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <a href="{% url 'accounts_admin:review_service_request' service_request.pk %}"
                             class="btn o s">
-                            Review
-                        </a>
-                    </td>
-                </tr>
 
-                <tr data-change="change" data-status="approved">
-                    <td>SR-002</td>
-                    <td>Sofia Martinez</td>
-                    <td>Change</td>
-                    <td>Electrical repair</td>
-                    <td>21 Nov 2026</td>
-                    <td>
-                        <span class="request-status approved">
-                            Approved
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'accounts_admin:review_service_request' 2 %}"
-                            class="btn o s">
-                            View
-                        </a>
-                    </td>
-                </tr>
+                                {% if service_request.status == 'pending' %}
+                                    Review
+                                {% else %}
+                                    View
+                                {% endif %}
 
-                <tr data-change="remove" data-status="rejected">
-                    <td>SR-003</td>
-                    <td>James Carter</td>
-                    <td>Remove</td>
-                    <td>Interior wall painting</td>
-                    <td>22 Nov 2026</td>
-                    <td>
-                        <span class="request-status rejected">
-                            Rejected
-                        </span>
-                    </td>
-                    <td>
-                        <a href="{% url 'accounts_admin:review_service_request' 3 %}"
-                            class="btn o s">
-                            View
-                        </a>
-                        
-                    </td>
-                </tr>
+                            </a>
+                        </td>
 
-                <tr data-change="add" data-status="pending">
-                    <td>SR-004</td>
-                    <td>Ethan Taylor</td>
-                    <td>Add</td>
-                    <td>Shelf installation</td>
-                    <td>23 Nov 2026</td>
-                    <td>
-                        <span class="request-status pending">
-                            Pending
-                        </span>
-                    </td>
-                    <td>
-                       <a href="{% url 'accounts_admin:review_service_request' 4 %}"
-                            class="btn o s">
-                            Review
-                        </a>
-                    </td>
-                </tr>
-
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -162,13 +122,21 @@ Connect request review actions and pagination.
         No matching requests found.
     </p>
 
-    <div class="request-pagination">
-        <span id="requestCount">Showing 4 requests</span>
+   <div class="request-pagination">
+        <span id="requestCount">Showing 0 requests</span>
 
         <div>
-            <button class="btn o s" disabled>Previous</button>
-            <button class="btn s" disabled>1</button>
-            <button class="btn o s" disabled>Next</button>
+            <button type="button" class="btn o s" id="previousRequestPage">
+                Previous
+            </button>
+
+            <span id="requestPageInfo" style="align-self: center;">
+                1 / 1
+            </span>
+
+            <button type="button" class="btn o s" id="nextRequestPage">
+                Next
+            </button>
         </div>
     </div>
 
@@ -251,56 +219,83 @@ Connect request review actions and pagination.
     const statusFilter = document.getElementById('statusFilter');
     const clearFilters = document.getElementById('clearFilters');
 
-    const requestRows = document.querySelectorAll(
-        '#requestsTable tbody tr'
+    const requestRows = Array.from(
+        document.querySelectorAll('#requestsTable tbody tr')
     );
+
+    const previousPage = document.getElementById('previousRequestPage');
+    const nextPage = document.getElementById('nextRequestPage');
+
+    const pageSize = 5;
+    let currentPage = 1;
 
     function filterRequests() {
         const search = requestSearch.value.toLowerCase().trim();
         const change = changeFilter.value;
         const status = statusFilter.value;
 
-        let visibleCount = 0;
-
-        requestRows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-
-            const matchesSearch = text.includes(search);
-
-            const matchesChange =
-                change === 'all' || row.dataset.change === change;
-
-            const matchesStatus =
-                status === 'all' || row.dataset.status === status;
-
-            const visible =
-                matchesSearch && matchesChange && matchesStatus;
-
-            row.hidden = !visible;
-
-            if (visible) {
-                visibleCount++;
-            }
+        const filteredRows = requestRows.filter(row => {
+            return row.textContent.toLowerCase().includes(search)
+                && (change === 'all' || row.dataset.change === change)
+                && (status === 'all' || row.dataset.status === status);
         });
 
-        document.getElementById('noRequests').style.display =
-            visibleCount === 0 ? 'block' : 'none';
+        const totalPages = Math.max(
+            1, Math.ceil(filteredRows.length / pageSize)
+        );
+
+        currentPage = Math.min(currentPage, totalPages);
+
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+
+        requestRows.forEach(row => row.hidden = true);
+
+        filteredRows.slice(start, end).forEach(row => {
+            row.hidden = false;
+        });
 
         document.getElementById('requestCount').textContent =
-            `Showing ${visibleCount} request${visibleCount === 1 ? '' : 's'}`;
+            filteredRows.length
+                ? `Showing ${start + 1}-${Math.min(end, filteredRows.length)} of ${filteredRows.length} requests`
+                : 'Showing 0 requests';
+
+        document.getElementById('requestPageInfo').textContent =
+            `${currentPage} / ${totalPages}`;
+
+        document.getElementById('noRequests').style.display =
+            filteredRows.length ? 'none' : 'block';
+
+        previousPage.disabled = currentPage === 1;
+        nextPage.disabled = currentPage === totalPages;
     }
 
-    requestSearch.addEventListener('input', filterRequests);
-    changeFilter.addEventListener('change', filterRequests);
-    statusFilter.addEventListener('change', filterRequests);
+    function resetPage() {
+        currentPage = 1;
+        filterRequests();
+    }
+
+    requestSearch.addEventListener('input', resetPage);
+    changeFilter.addEventListener('change', resetPage);
+    statusFilter.addEventListener('change', resetPage);
 
     clearFilters.addEventListener('click', () => {
         requestSearch.value = '';
         changeFilter.value = 'all';
         statusFilter.value = 'all';
+        resetPage();
+    });
 
+    previousPage.addEventListener('click', () => {
+        currentPage--;
         filterRequests();
     });
-</script>
 
+    nextPage.addEventListener('click', () => {
+        currentPage++;
+        filterRequests();
+    });
+
+    filterRequests();
+</script>
 {% endblock %}

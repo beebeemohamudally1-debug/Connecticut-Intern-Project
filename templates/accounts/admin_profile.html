@@ -12,10 +12,10 @@
     email     -> user.email
     role      -> 'Administrator'
     status    -> 'Active' if user.is_active
-  Connected: accounts/admin_views.py profile (admin only).
-  Saving is NOT connected yet: there is no profile update view. When one
-  exists, set the form's action to it, remove data-demo, and read
-  `full_name` and `email` from the POST.
+  Connected: accounts/admin_views.py profile (admin only). A POST saves
+  `full_name` and `email`; errors come back as `errors`.
+  Change Password opens the forgot-password pages (accounts:forgot_password):
+  a code is emailed, then the new password is set.
 {% endcomment %}
 
 {% block title %}Admin Profile | HandyConnect{% endblock %}
@@ -32,9 +32,7 @@
   </div>
 </div>
 
-{# BACKEND: remove data-demo when the profile update view exists (see the comment at the top). #}
-<form class="card profile" method="post" action="" novalidate data-profile-form
-      data-demo="Profile changes are not saved yet (frontend demo only).">
+<form class="card profile" method="post" action="" novalidate data-profile-form>
   {% csrf_token %}
 
   <div class="profile-head">
@@ -59,8 +57,8 @@
         </dt>
         <dd>
           <span data-view>{{ admin.name }}</span>
-          <input class="in" id="full-name" name="full_name" type="text" value="{{ admin.name }}" aria-describedby="full-name-error" data-edit hidden>
-          <p class="field-error" id="full-name-error" data-error hidden></p>
+          <input class="in{% if errors.full_name %} invalid{% endif %}" id="full-name" name="full_name" type="text" value="{{ values.full_name }}" data-saved="{{ admin.name }}" aria-describedby="full-name-error" data-edit hidden>
+          <p class="field-error" id="full-name-error" data-error{% if not errors.full_name %} hidden{% endif %}>{{ errors.full_name }}</p>
         </dd>
       </div>
 
@@ -69,10 +67,10 @@
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
           <label for="email">Email Address:<span class="req" data-edit-only hidden> *</span></label>
         </dt>
-        <dd>
+       <dd>
           <span data-view>{{ admin.email }}</span>
-          <input class="in" id="email" name="email" type="email" value="{{ admin.email }}" aria-describedby="email-error" data-edit hidden>
-          <p class="field-error" id="email-error" data-error hidden></p>
+          <input class="in{% if errors.email %} invalid{% endif %}" id="email" name="email" type="email" value="{{ values.email }}" data-saved="{{ admin.email }}" aria-describedby="email-error" data-edit hidden>
+          <p class="field-error" id="email-error" data-error{% if not errors.email %} hidden{% endif %}>{{ errors.email }}</p>
         </dd>
       </div>
 
@@ -101,8 +99,8 @@
   </div>
 
   <div class="profile-foot">
-    {# Point this to the change-password page when the authentication pages exist. #}
-    <a class="btn o orange" href="#">
+    {# No change-password page for logged-in users yet, so this uses the forgot-password pages #}
+    <a class="btn o orange" href="{% url 'accounts:forgot_password' %}">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
       Change Password
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
@@ -111,4 +109,22 @@
 </form>
 {% endblock %}
 
-{% block page_js %}<script src="{% static 'accounts/js/admin_profile.js' %}" defer></script>{% endblock %}
+{% block page_js %}<script src="{% static 'accounts/js/admin_profile.js' %}" defer></script>
+{% if errors %}<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var edit = document.querySelector('[data-edit-toggle]');
+  if (!edit) { return; }
+  edit.click();   /* reopen the boxes so the message sits under the field */
+  document.querySelectorAll('[data-edit]').forEach(function (input) {
+    var typed = input.value;
+    input.defaultValue = input.getAttribute('data-saved');   /* Cancel restores the saved value */
+    input.value = typed;
+  });
+});
+</script>{% endif %}
+{% if saved %}<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var toast = document.querySelector('[data-toast]');
+  if (toast) { toast.textContent = 'Profile updated.'; toast.hidden = false; setTimeout(function () { toast.hidden = true; }, 3500); }
+});
+</script>{% endif %}{% endblock %}

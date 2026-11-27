@@ -1,7 +1,11 @@
+from datetime import timedelta
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models, transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
@@ -346,3 +350,272 @@ class MaterialReceipt(models.Model):
 
     def reject(self, by, note):
         self._review(by, self.REJECTED, note)
+
+
+# ================================================= invoices, receipts, numbering
+# An Invoice sits on top of the quotations. It does not replace them:
+#   * a JOB invoice bundles the accepted labour quotation and the accepted material quotation
+#   * an INSPECTION invoice is the fixed fee for a visit before a job can be priced
+# When an administrator clears the full payment, one Payment row is also written for each
+# quotation, so Quotation.is_paid, request_payment_state() and bookings.Appointment.clean()
+# keep working exactly as before.
+
+def inspection_fee():
+    """The fixed inspection fee in MUR. Override with INSPECTION_FEE in settings.py."""
+    return Decimal(str(getattr(settings, 'INSPECTION_FEE', '500.00')))
+
+
+def default_payment_instructions():
+    """Set PAYMENT_BANK_NAME and PAYMENT_ACCOUNT_NUMBER in settings.py to fill the placeholders."""
+    bank = getattr(settings, 'PAYMENT_BANK_NAME', '[BANK NAME]')
+    account = getattr(settings, 'PAYMENT_ACCOUNT_NUMBER', '[ACCOUNT NUMBER]')
+    return (f"Pay by bank transfer to {bank}, account {account}, "
+            "using the invoice number as the reference.")
+
+
+def default_due_date():
+    return timezone.localdate() + timedelta(days=5)
+
+
+def invoice_quotations(service_request):
+    """(labour, material) quotations to bill for a request. material may be None."""
+    quotations = service_request.quotations
+    labour = quotations.filter(quotation_type=Quotation.LABOUR, status=Quotation.ACCEPTED).order_by('-created_at').first()
+    material = (quotations.filter(quotation_type=Quotation.MATERIAL)
+                .exclude(status__in=[Quotation.CANCELLED, Quotation.DECLINED]).order_by('-created_at').first())
+    return labour, material
+
+
+class DocumentCounter(models.Model):
+    """Last number used per prefix and year, so INV-2026-0001, INV-2026-0002, ... never repeat."""
+
+    prefix = models.CharField(max_length=8)
+    year = models.PositiveIntegerField()
+    last = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['prefix', 'year'], name='one_counter_per_prefix_and_year')]
+
+    def __str__(self):
+        return f"{self.prefix}-{self.year}: {self.last}"
+
+    @classmethod
+    def next_number(cls, prefix):
+        year = timezone.localdate().year
+        with transaction.atomic():
+            counter, _ = cls.objects.get_or_create(prefix=prefix, year=year)
+            cls.objects.filter(pk=counter.pk).update(last=F('last') + 1)   # atomic in the database
+            counter.refresh_from_db()
+        return f"{prefix}-{year}-{counter.last:04d}"
+
+
+class Invoice(models.Model):
+    """What the customer has to pay: a job invoice (INV) or an inspection fee (INS)."""
+
+    JOB, INSPECTION, SUBSCRIPTION = 'job', 'inspection', 'subscription'
+    TYPE_CHOICES = [(JOB, 'Job invoice'), (INSPECTION, 'Inspection fee'), (SUBSCRIPTION, 'Handyman subscription')]
+    PREFIXES = {JOB: 'INV', INSPECTION: 'INS', SUBSCRIPTION: 'SUB'}
+    PLAN_CHOICES = [('monthly', 'Monthly'), ('yearly', 'Yearly')]
+    ISSUED, PAID, CANCELLED = 'issued', 'paid', 'cancelled'
+    STATUS_CHOICES = [(ISSUED, 'Awaiting payment'), (PAID, 'Paid'), (CANCELLED, 'Cancelled')]
+
+    number = models.CharField(max_length=20, unique=True, editable=False)
+    invoice_type = models.CharField(max_length=12, choices=TYPE_CHOICES, default=JOB)
+    # Job and inspection invoices belong to a service request. Subscription invoices belong to a subscription.
+    request = models.ForeignKey('bookings.ServiceRequest', null=True, blank=True, on_delete=models.PROTECT, related_name='invoices')
+    subscription = models.ForeignKey('payments.HandymanSubscription', null=True, blank=True, on_delete=models.PROTECT, related_name='invoices')
+    subscription_plan = models.CharField(max_length=10, blank=True, choices=PLAN_CHOICES)
+    period_start = models.DateField(null=True, blank=True)     # subscription: first and last day this payment covers
+    period_end = models.DateField(null=True, blank=True)
+    labour_quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.PROTECT, related_name='labour_invoices')
+    material_quotation = models.ForeignKey(Quotation, null=True, blank=True, on_delete=models.PROTECT, related_name='material_invoices')
+    # Amounts are copied when the invoice is issued, so later edits cannot change a sent invoice
+    labour_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)    # MUR
+    materials_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.TextField(blank=True)                    # inspection invoices: why a visit is needed
+    payment_instructions = models.TextField(blank=True)
+    due_date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=ISSUED)
+    issued_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name='invoices_issued')   # empty = issued by the system
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-issued_at']
+        constraints = [
+            # One live (issued or paid) invoice per request and type. A cancelled one can be replaced.
+            models.UniqueConstraint(
+                fields=['request', 'invoice_type'],
+                condition=Q(status__in=['issued', 'paid']),
+                name='one_live_invoice_per_request_and_type',
+            ),
+            # A subscription has at most one unpaid invoice at a time.
+            models.UniqueConstraint(
+                fields=['subscription'],
+                condition=Q(invoice_type='subscription', status='issued'),
+                name='one_open_invoice_per_subscription',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.number} - MUR {self.total_amount}"
+
+    @property
+    def is_inspection(self):
+        return self.invoice_type == self.INSPECTION
+
+    @property
+    def is_subscription(self):
+        return self.invoice_type == self.SUBSCRIPTION
+
+    @property
+    def is_overdue(self):
+        return self.status == self.ISSUED and self.due_date < timezone.localdate()
+
+    @property
+    def handyman(self):
+        """The handyman who accepted the request (or who owns the subscription), if any."""
+        if self.is_subscription:
+            return self.subscription.handyman
+        from bookings.models import ServiceRequestAssignment      # local import avoids a circular import
+        assignment = (ServiceRequestAssignment.objects.filter(service_request=self.request, status='accepted')
+                      .select_related('handyman').first())
+        return assignment.handyman if assignment else None
+
+    # ---- issuing ----
+    @classmethod
+    def _create(cls, by, service_request, invoice_type, due_date, **fields):
+        _require_role(by, 'admin', "Only an administrator can issue an invoice.")
+        if service_request.status == 'cancelled':
+            raise ValidationError("The request is cancelled.")
+        if due_date < timezone.localdate():
+            raise ValidationError("The payment deadline cannot be in the past.")
+        if cls.objects.filter(request=service_request, invoice_type=invoice_type,
+                              status__in=[cls.ISSUED, cls.PAID]).exists():
+            raise ValidationError("An invoice of this type already exists for this request.")
+        with transaction.atomic():
+            invoice = cls(request=service_request, invoice_type=invoice_type, due_date=due_date, issued_by=by, **fields)
+            invoice.number = DocumentCounter.next_number(cls.PREFIXES[invoice_type])
+            invoice.save()
+        return invoice
+
+    @classmethod
+    def issue_job(cls, by, service_request, due_date, payment_instructions=''):
+        """Bill the accepted labour quotation plus the accepted material quotation (if there is one)."""
+        labour, material = invoice_quotations(service_request)
+        if labour is None:
+            raise ValidationError("The labour quotation has not been accepted by the customer.")
+        if material is not None and material.status != Quotation.ACCEPTED:
+            raise ValidationError("The material quotation has not been accepted by the customer yet.")
+        for quotation in (labour, material):
+            if quotation is not None and quotation.is_paid:
+                raise ValidationError("A quotation on this request has already been paid.")
+        materials = material.total_amount if material else Decimal('0')
+        return cls._create(
+            by, service_request, cls.JOB, due_date,
+            labour_quotation=labour, material_quotation=material,
+            labour_amount=labour.total_amount, materials_amount=materials,
+            total_amount=labour.total_amount + materials,
+            payment_instructions=payment_instructions or default_payment_instructions(),
+        )
+
+    @classmethod
+    def issue_inspection(cls, by, service_request, due_date, reason):
+        """Bill the fixed inspection fee for a visit before the job can be priced."""
+        if not (reason or '').strip():
+            raise ValidationError("Please give the reason for the inspection.")
+        fee = inspection_fee()
+        return cls._create(
+            by, service_request, cls.INSPECTION, due_date,
+            total_amount=fee, reason=reason, payment_instructions=default_payment_instructions(),
+        )
+
+    # ---- payment ----
+    def record_payment(self, by, *, amount, date_received, method, reference='', received=True, clear=False):
+        """Save the offline payment. With clear=True the invoice is paid and a receipt is issued."""
+        _require_role(by, 'admin', "Only an administrator can record a payment.")
+        if self.status != self.ISSUED:
+            raise ValidationError("A payment can only be recorded for an invoice that is awaiting payment.")
+        if amount is None or amount <= 0:
+            raise ValidationError("The amount must be greater than zero.")
+        if clear:
+            if not received:
+                raise ValidationError("Mark the payment as received before clearing it.")
+            if amount != self.total_amount:
+                raise ValidationError("Cleared is available only when the full total is received.")
+        with transaction.atomic():            # a failure while clearing rolls everything back
+            payment = getattr(self, 'invoice_payment', None) or InvoicePayment(invoice=self)
+            payment.amount, payment.date_received = amount, date_received
+            payment.method, payment.reference, payment.received = method, reference, received
+            payment.recorded_by = by
+            payment.status = InvoicePayment.CLEARED if clear else InvoicePayment.PENDING
+            payment.cleared_at = timezone.now() if clear else None
+            payment.save()
+            if clear:
+                self._mark_paid(by, payment)
+        return payment
+
+    def _mark_paid(self, by, payment):
+        if self.invoice_type == self.JOB:
+            # Keep the existing payment ledger in step: one Payment per quotation
+            for quotation in (self.labour_quotation, self.material_quotation):
+                if quotation is None:
+                    continue
+                if quotation.is_paid:
+                    raise ValidationError("A quotation on this invoice has already been paid.")
+                Payment(quotation=quotation, amount=quotation.total_amount, date_received=payment.date_received,
+                        method=payment.method, reference=payment.reference, recorded_by=by).save()
+        if self.invoice_type == self.SUBSCRIPTION:
+            # Paying extends the handyman's listing: the receipt shows the period that is now covered
+            self.period_start, self.period_end = self.subscription.activate_after_payment(self.subscription_plan or None)
+            self.save(update_fields=['period_start', 'period_end'])
+        self.status = self.PAID
+        self.save(update_fields=['status'])
+        Receipt.objects.create(invoice=self, payment=payment, number=DocumentCounter.next_number('RCT'))
+
+    def cancel(self, by):
+        _require_role(by, 'admin', "Only an administrator can cancel an invoice.")
+        if self.status != self.ISSUED:
+            raise ValidationError("Only an invoice that is awaiting payment can be cancelled.")
+        self.status = self.CANCELLED
+        self.save(update_fields=['status'])
+
+
+class InvoicePayment(models.Model):
+    """The offline payment an administrator records against an invoice. It can be saved first
+    and cleared later; clearing needs the full total."""
+
+    PENDING, CLEARED = 'pending', 'cleared'
+    STATUS_CHOICES = [(PENDING, 'Saved, not cleared'), (CLEARED, 'Cleared')]
+
+    invoice = models.OneToOneField(Invoice, on_delete=models.PROTECT, related_name='invoice_payment')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    date_received = models.DateField()
+    method = models.CharField(max_length=15, choices=Payment.METHOD_CHOICES)
+    reference = models.CharField(max_length=60, blank=True)
+    received = models.BooleanField(default=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    recorded_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='invoice_payments_recorded')
+    created_at = models.DateTimeField(auto_now_add=True)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.invoice.number} - MUR {self.amount} ({self.get_status_display()})"
+
+
+class Receipt(models.Model):
+    """Issued automatically when an invoice payment is cleared."""
+
+    number = models.CharField(max_length=20, unique=True, editable=False)
+    invoice = models.OneToOneField(Invoice, on_delete=models.PROTECT, related_name='receipt')
+    payment = models.OneToOneField(InvoicePayment, on_delete=models.PROTECT, related_name='receipt')
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-issued_at']
+
+    def __str__(self):
+        return f"{self.number} for {self.invoice.number}"
+
+from .payouts import HandymanPayout  # noqa: E402,F401
+from .subscriptions import HandymanSubscription, SubscriptionReminder  # noqa: E402,F401

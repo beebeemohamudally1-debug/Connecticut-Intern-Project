@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'notifications',
     'reports',
     'reviews',
+    'customer_portal',
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -65,6 +66,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'payments.middleware.SubscriptionOnboardingMiddleware'
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -79,6 +81,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'customer_portal.context.unread',
+                'customer_portal.context.unread',
+                'payments.context.handyman_subscription',
+                'dashboard.context_processors.handyman_user',
             ],
         },
     },
@@ -144,8 +150,9 @@ MAILERS = {
     },
 }
 
-
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = 'accounts:login'
+LOGOUT_REDIRECT_URL = 'accounts:login'     # where people land after logging out
+# HANDYMAN_LOGOUT_URL = '/accounts/logout/'  # only if Log out gives a 404

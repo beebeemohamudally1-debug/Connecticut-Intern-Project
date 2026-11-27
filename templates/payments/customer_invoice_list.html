@@ -1,0 +1,21 @@
+{% extends "base_customer.html" %}
+{% block title %}Customer · My invoices | HandyConnect{% endblock %}
+{% block page %}invoices{% endblock %}
+{% block content %}
+{% include "payments/_messages.html" %}
+<div class="bar"><div><div class="lab">Your account</div><h1>My invoices</h1><p class="sub">Invoices, inspection fees and receipts.</p></div></div>
+<div class="card">
+  {% for invoice in invoices %}
+  <div class="row">
+    <span><a href="{% url 'payments:invoice_detail' invoice.pk %}">{{ invoice.number }}</a> · {{ invoice.get_invoice_type_display }}
+      <span class="mut">· {{ invoice.request.reference }} · due {{ invoice.due_date|date:"d/m/Y" }}</span></span>
+    <span>MUR {{ invoice.total_amount|floatformat:"2g" }}
+      <span class="b{% if invoice.status == 'issued' %} ye{% endif %}">{% if invoice.is_overdue %}Overdue{% else %}{{ invoice.get_status_display }}{% endif %}</span>
+      {% if invoice.receipt %}<a href="{% url 'payments:receipt_detail' invoice.receipt.pk %}">Receipt</a>{% endif %}
+    </span>
+  </div>
+  {% empty %}
+  <p class="sub">You have no invoices yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

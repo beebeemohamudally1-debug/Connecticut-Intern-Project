@@ -20,9 +20,11 @@
     accepted  -> quotation approved, no receipt waiting
     declined  -> the customer declined, or the quotation was cancelled
     rejected  -> the admin rejected the purchase request
+    none      -> estimated cost 0: the handyman says no materials are needed (team rule, see
+                 accounts.admin_payments.materials_state). Not forwarded: the job is labour only.
   Forward / Reject post to payments:material_request_action (action forward |
-  reject, total, note). Receipts are only shown here (view only): they are reviewed in the payments section, not on this page. (payments:receipt_action, action approve |
-  reject, note). The note is needed to reject.
+  reject, total, note). Receipts are only shown here (view only): they are approved or rejected on the
+  Payment Status page (accounts_admin:payment_status), which the Receipts pop-up links to.
   The number cards, search, filters and pages work in the browser on the rows sent.
 {% endcomment %}
 
@@ -33,7 +35,7 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'payments/css/admin_labour_quotations.css' %}">
 <link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
-<link rel="stylesheet" href="{% static 'payments/css/admin_materials.css' %}?v=3">
+<link rel="stylesheet" href="{% static 'payments/css/admin_materials.css' %}?v=4">
 
 <div class="bar">
   <div>
@@ -91,6 +93,7 @@
         <option value="accepted">Approved</option>
         <option value="declined">Declined</option>
         <option value="rejected">Rejected</option>
+        <option value="none">No materials needed</option>
       </select>
     </label>
     <label><span class="sr-only">Date</span>
@@ -119,7 +122,7 @@
     <tbody>
       {% for p in purchase_requests %}
       {% with q=p.quotation customer=p.request.customer %}
-      {% if p.status == 'submitted' %}{% firstof 'admin' as st %}{% elif p.status == 'rejected' %}{% firstof 'rejected' as st %}{% elif not q or q.status == 'declined' or q.status == 'cancelled' %}{% firstof 'declined' as st %}{% elif q.status != 'accepted' %}{% firstof 'customer' as st %}{% elif p.receipts_waiting %}{% firstof 'receipts' as st %}{% else %}{% firstof 'accepted' as st %}{% endif %}
+      {% if p.estimated_cost == 0 and p.status != 'forwarded' %}{% firstof 'none' as st %}{% elif p.status == 'submitted' %}{% firstof 'admin' as st %}{% elif p.status == 'rejected' %}{% firstof 'rejected' as st %}{% elif not q or q.status == 'declined' or q.status == 'cancelled' %}{% firstof 'declined' as st %}{% elif q.status != 'accepted' %}{% firstof 'customer' as st %}{% elif p.receipts_waiting %}{% firstof 'receipts' as st %}{% else %}{% firstof 'accepted' as st %}{% endif %}
       <tr data-row data-status="{{ st }}"
           data-date="{% firstof q.responded_at|date:'Y-m-d' p.reviewed_at|date:'Y-m-d' p.created_at|date:'Y-m-d' %}"
           data-text="{{ p.request.reference }} mr-{{ p.pk }} {% if q %}q-{{ q.pk }} {% endif %}{% firstof customer.get_full_name customer.username %} {% firstof p.handyman.get_full_name p.handyman.username %} {{ p.request.service_category }}">
@@ -127,7 +130,7 @@
         <td data-label="Customer">{% firstof customer.get_full_name customer.username %}</td>
         <td data-label="Handyman">{% firstof p.handyman.get_full_name p.handyman.username %}</td>
         <td data-label="Stage">
-          <span class="b lq-{% if st == 'admin' %}review{% elif st == 'customer' %}pending{% elif st == 'receipts' %}revision{% elif st == 'declined' %}cancelled{% else %}{{ st }}{% endif %}">{% if st == 'admin' %}Admin review{% elif st == 'customer' %}{% if q.status == 'revision_requested' %}Changes requested{% else %}With customer{% endif %}{% elif st == 'receipts' %}Receipts uploaded{% elif st == 'accepted' %}{% if q.is_paid %}Paid{% else %}Approved{% endif %}{% elif st == 'declined' %}{% if q.status == 'cancelled' %}Cancelled{% else %}Declined{% endif %}{% else %}Rejected{% endif %}</span>
+          <span class="b lq-{% if st == 'admin' %}review{% elif st == 'customer' %}pending{% elif st == 'receipts' %}revision{% elif st == 'declined' %}cancelled{% elif st == 'none' %}accepted{% else %}{{ st }}{% endif %}">{% if st == 'none' %}No materials{% elif st == 'admin' %}Admin review{% elif st == 'customer' %}{% if q.status == 'revision_requested' %}Changes requested{% else %}With customer{% endif %}{% elif st == 'receipts' %}Receipts uploaded{% elif st == 'accepted' %}{% if q.is_paid %}Paid{% else %}Approved{% endif %}{% elif st == 'declined' %}{% if q.status == 'cancelled' %}Cancelled{% else %}Declined{% endif %}{% else %}Rejected{% endif %}</span>
         </td>
         <td data-label="Amount"><span class="lq-amt">MUR {% if q %}{{ q.total_amount|floatformat:"2g" }}{% else %}{{ p.estimated_cost|floatformat:"2g" }}{% endif %}</span><span class="lq-sub">{% if q %}Quotation Q-{{ q.pk }}{% else %}Handyman estimate{% endif %}</span></td>
         <td data-label="Updated">{% firstof q.responded_at|date:"d M Y" p.reviewed_at|date:"d M Y" p.created_at|date:"d M Y" %}</td>
@@ -155,10 +158,10 @@
 {# ---------- Purchase request pop-ups: review (submitted) or read only (rejected) ---------- #}
 {% for p in purchase_requests %}
 {% if p.status != 'forwarded' %}
-<dialog class="ql-modal" id="mr-{{ p.pk }}" aria-labelledby="mr-{{ p.pk }}-title">
+<dialog class="ql-modal mq-wide" id="mr-{{ p.pk }}" aria-labelledby="mr-{{ p.pk }}-title">
   <form method="post" action="{% url 'payments:material_request_action' p.pk %}" data-review>
     {% csrf_token %}
-    <h2 id="mr-{{ p.pk }}-title">{% if p.status == 'submitted' %}Review material purchase request{% else %}Material purchase request{% endif %}</h2>
+    <h2 id="mr-{{ p.pk }}-title">{% if p.estimated_cost == 0 %}No materials needed{% elif p.status == 'submitted' %}Review material purchase request{% else %}Material purchase request{% endif %}</h2>
     <dl class="ql-ctx">
       <div><dt>Request</dt><dd>{{ p.request.reference }}</dd></div>
       <div><dt>Customer</dt><dd>{% firstof p.request.customer.get_full_name p.request.customer.username %}</dd></div>
@@ -169,19 +172,29 @@
       <ul class="mq-items">{% for line in p.items.splitlines %}{% if line.strip %}<li>{{ line }}</li>{% endif %}{% endfor %}</ul>
       <p class="mq-est">Estimated cost <strong>MUR {{ p.estimated_cost|floatformat:"2g" }}</strong></p>
     </div>
-    {% if p.status == 'submitted' %}
+    {% if p.estimated_cost == 0 %}
+    {# Cost 0 = no materials needed: nothing to forward, the job is labour only #}
+    <p class="mut">The handyman says no materials are needed, so the job is labour only. There is nothing to send to the customer.</p>
+    <div class="ql-btns">
+      <button class="btn o" type="button" data-close>Close</button>
+      <a class="btn soft-green" href="{% url 'accounts_admin:payment_status' p.request.pk %}">View Payment Status</a>
+    </div>
+    {% elif p.status == 'submitted' %}
     <div class="mq-total">
-      <label class="ql-label" for="total-{{ p.pk }}">Material cost sent to the customer (MUR)</label>
-      <input class="in" id="total-{{ p.pk }}" name="total" type="number" min="0.01" step="0.01" value="{{ p.estimated_cost|stringformat:'s' }}">
-      <p class="mut">The customer approves this quotation before the materials are bought. No margin is added.</p>
+      {# The handyman's estimate, not editable: no margin on materials, and the real cost comes from the receipts later #}
+      <input type="hidden" name="total" value="{{ p.estimated_cost|stringformat:'s' }}">
+      <p class="mut">Approving sends the estimated cost to the customer as it is (no margin). The real cost comes from the receipts later. If the estimate is wrong, reject it with a reason and the handyman sends a new one.</p>
+      {# BACKEND: no "send back to the handyman" for material requests yet (only submitted / forwarded / rejected), so Reject with a reason is used #}
     </div>
     <label class="ql-label" for="mr-note-{{ p.pk }}">Reason <span class="mut">(needed to reject)</span></label>
-    <textarea class="in" id="mr-note-{{ p.pk }}" name="note" rows="2" placeholder="Why the purchase is rejected."></textarea>
+    <textarea class="in" id="mr-note-{{ p.pk }}" name="note" rows="2" placeholder="Why the purchase is rejected, or what should change."></textarea>
     <p class="ql-error" data-error hidden>Please add a reason first.</p>
     <div class="ql-btns">
       <button class="btn o" type="button" data-close>Close</button>
       <button class="btn soft-red" name="action" value="reject">Reject</button>
-      <button class="btn soft-green" name="action" value="forward">Approve and send to customer</button>
+      {# BACKEND: enable once a material request can be sent back to the handyman (only submitted / forwarded / rejected exist) #}
+      <button class="btn soft-warn" type="button" disabled title="Not in the backend yet: reject with a reason for now">Ask to Revise</button>
+      <button class="btn soft-green" name="action" value="forward">Approve and Send</button>
     </div>
     {% else %}
     <div class="ql-break">
@@ -225,11 +238,12 @@
       <div><dt>Material quotation</dt><dd>MUR {{ p.quotation.total_amount|floatformat:"2g" }}</dd></div>
       <div class="{% if p.difference < 0 %}over{% endif %}"><dt>Difference</dt><dd>MUR {{ p.difference|floatformat:"2g" }}</dd></div>
     </dl>
-    {% if p.receipts_waiting %}<p class="mut mq-note">{{ p.receipts_waiting }} receipt{{ p.receipts_waiting|pluralize }} still to be checked in Payments. A negative difference means more was spent than quoted.</p>{% endif %}
+    {% if p.receipts_waiting %}<p class="mut mq-note">{{ p.receipts_waiting }} receipt{{ p.receipts_waiting|pluralize }} still to be checked on the Payment Status page. A negative difference means more was spent than quoted.</p>{% endif %}
 
     <div class="ql-btns">
       <button class="btn o" type="button" data-close>Close</button>
-      {# Payments are the payments team's section. Once both quotations are paid, schedule the service #}
+      {# Receipts review, the job invoice and payment start from the Payment Status page #}
+      <a class="btn soft-green" href="{% url 'accounts_admin:payment_status' p.request.pk %}">View Payment Status</a>
       {% if p.ready_to_schedule %}<a class="btn soft-blue" href="{% url 'accounts_admin:appointment_schedule' 'service' %}?request={{ p.request.pk }}">Schedule Appointment</a>{% endif %}
     </div>
   </div>
@@ -239,6 +253,6 @@
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
+<script src="{% static 'payments/js/admin_quotation_lists.js' %}?v=3"></script>
 <script src="{% static 'payments/js/admin_materials.js' %}"></script>
 {% endblock %}

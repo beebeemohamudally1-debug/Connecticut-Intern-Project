@@ -34,6 +34,10 @@ class Service(models.Model):
     category = models.ForeignKey(ServiceCategory, on_delete=models.PROTECT, related_name='services')
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
+    image = models.ImageField(
+        upload_to='service_images/',
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
 
     objects = ServiceQuerySet.as_manager()

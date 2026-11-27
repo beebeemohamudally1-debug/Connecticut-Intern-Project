@@ -107,3 +107,10 @@ thead th{background:var(--tag);font-weight:500;border:0}tbody th{color:var(--ink
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
 a.user:hover .uname{text-decoration:underline}a.user:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:8px}
+
+.user-menu{position:relative}.user{background:none;border:0;font:inherit;color:inherit;cursor:pointer;padding:0}.user .chev{color:var(--muted)}
+.menu{position:absolute;right:0;top:calc(100% + 10px);min-width:210px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(20,48,77,.14);padding:6px;z-index:30}
+.menu-who{display:flex;flex-direction:column;gap:2px;margin:0;padding:8px 12px;font-size:13px}.menu-who span{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0 6px}.menu form{margin:0}
+.menu a,.menu button{display:flex;align-items:center;width:100%;padding:10px 12px;border:0;background:none;border-radius:8px;font:inherit;font-size:13px;color:var(--ink);text-align:left;cursor:pointer}
+.menu a:hover,.menu button:hover,.menu a:focus-visible,.menu button:focus-visible{background:var(--tag)}.menu .out{color:var(--danger);font-weight:600}

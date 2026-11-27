@@ -674,3 +674,20 @@
 @media (max-width: 1023px) {
   .hp-grid.vf .vf-decision .hp-facts.one > div { padding: 10px 0; }
 }
+
+/* Job History pop-up (Handyman Profile) */
+.modal.hp-history { width: min(760px, calc(100% - 32px)); text-align: left; }
+.hp-history h2 { margin-top: 0; }
+.hp-jobs { width: 100%; margin: 12px 0 4px; border-collapse: collapse; font-size: 14px; }
+.hp-jobs th { padding: 8px 10px; font-size: 12px; font-weight: 600; text-align: left; text-transform: uppercase; color: var(--muted); background: var(--grey-bg); }
+.hp-jobs td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.hp-jobs td .mut { display: block; font-size: 12px; }
+.hp-jobs td:last-child { text-align: right; }
+.hp-st { display: inline-block; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 999px; }
+.hp-st.is-assigned { color: #2563EB; background: #E8F0FE; }
+.hp-st.is-in_progress { color: #8A3A0B; background: #FFE6D5; }
+.hp-st.is-completed { color: #16866D; background: #DDF3EC; }
+.hp-st.is-cancelled { color: #C84C55; background: #F8E1E1; }
+.hp-more { margin-top: 8px; font-size: 13px; }
+.hp-none { padding: 16px 0; text-align: center; color: var(--muted); }
+

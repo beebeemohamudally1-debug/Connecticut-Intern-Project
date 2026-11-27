@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Notifications | HandyConnect</title>
     <link rel="stylesheet" href="{% static 'dashboard/css/handyman_notifs.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notification_dropdown.css' %}">
+    <style>.notification-dropdown > .bell{background:transparent;border:0;padding:0;cursor:pointer}</style>
 </head>
 <body data-page="notifications" data-uid="{{ hc_uid|default:'guest' }}">
 <div class="layout">
@@ -36,23 +38,43 @@
         <header class="topbar">
             <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman workspace</a> / Notifications</div>
             <div class="topbar-right">
-                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-                    <span class="badge" id="bell-count" hidden>0</span>
-                </a>
-                <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
+                {% url 'dashboard:notifications' as handyman_notifications_url %}
+                {% include "notifications/_dropdown.html" with bell_class="bell" badge_class="badge" notifications_url=handyman_notifications_url %}
+                <div class="user-menu"><button type="button" class="user" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu-list"><span class="avatar">{{ hc_initials|default:"U" }}</span><span class="uname">{{ hc_name|default:"User" }}</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="menu" id="user-menu-list" role="menu" hidden><p class="menu-who"><strong>{{ hc_name|default:"User" }}</strong><span>{{ request.user.email }}</span></p><hr><a role="menuitem" href="{% url 'dashboard:handyman_profile' %}">My profile</a><form method="post" action="{{ hc_logout_url|default:'/logout/' }}">{% csrf_token %}<button type="submit" role="menuitem" class="out">Log out</button></form></div></div>
             </div>
         </header>
 
         <main class="content">
-<h1 class="page-title" id="title"></h1><p class="page-sub" id="sub"></p>
-<div class="tabs" role="group" aria-label="Filter">
-    <button class="tab active" data-f="all">All</button><button class="tab" data-f="unread">Unread</button>
-    <button class="tab" data-f="appointment">Appointments</button><button class="tab" data-f="job">Job in progress</button><button class="tab" data-f="complaint">Complaints</button>
-    <button class="btn-o" id="all" style="margin-left:auto">Mark all as read</button>
-</div>
-<section class="card"><ul style="padding:0;margin:0" id="list"></ul><p class="empty" id="none" hidden>Nothing to show here.</p></section>
-</main>
+            <h1 class="page-title">Notifications</h1>
+            <p class="page-sub" id="sub">{{ unread_count }} unread &middot; Times shown in Mauritius Time</p>
+            <div class="notice" id="err" role="alert" hidden><strong>Could not update your notifications</strong><p>Please check your connection and try again.</p></div>
+            <div class="tabs" role="group" aria-label="Filter">
+                <button type="button" class="tab active" data-f="all">All</button>
+                <button type="button" class="tab" data-f="unread">Unread</button>
+                <button type="button" class="tab" data-f="appointment">Appointments</button>
+                <button type="button" class="tab" data-f="job">Job in progress</button>
+                <button type="button" class="tab" data-f="complaint">Complaints</button>
+                <button type="button" class="btn-o" id="all" style="margin-left:auto" data-url="{% url 'notifications:mark_all_as_read' %}">Mark all as read</button>
+            </div>
+            <form id="notification-csrf" hidden>{% csrf_token %}</form>
+            <section class="card">
+                <ul style="padding:0;margin:0" id="list">
+                    {% for n in notifications %}
+                    <li class="note{% if not n.is_read %} unread{% endif %}" data-kind="{{ n.kind }}">
+                        <div>
+                            <strong>{{ n.title }}</strong>
+                            <p>{{ n.message }}</p>
+                            <small>{{ n.when }} &middot; {% if n.is_read %}Read{% else %}Unread{% endif %}</small>
+                        </div>
+                        {% if not n.is_read %}
+                        <button type="button" class="btn-o mark-read" data-url="{% url 'notifications:mark_as_read' n.id %}">Mark read</button>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="empty" id="none" {% if notifications %}hidden{% endif %}>Nothing to show here.</p>
+            </section>
+        </main>
     </div>
 </div>
 
@@ -124,40 +146,65 @@
     };
 
     HC.badge();
+    try {   /* show the saved profile name and photo in the header of every page */
+        var pf = JSON.parse(localStorage.getItem('hc:' + uid + ':profile') || 'null');
+        var av = document.querySelector('.user .avatar'), nm = document.querySelector('.user .uname');
+        if (pf && !Array.isArray(pf)) {
+            if (pf.photo && av) { av.textContent = ''; av.style.background = 'url(' + pf.photo + ') center/cover'; }
+            if (pf.first && nm) nm.textContent = (pf.first + ' ' + (pf.last || '')).trim();
+        }
+    } catch (e) {}
+    var um = document.querySelector('.user-menu');   /* name menu: My profile + Log out */
+    if (um) {
+        var ub = um.querySelector('.user'), mn = um.querySelector('.menu');
+        var closeMenu = function () { mn.hidden = true; ub.setAttribute('aria-expanded', 'false'); };
+        ub.addEventListener('click', function (e) {
+            e.stopPropagation(); var open = mn.hidden; mn.hidden = !open; ub.setAttribute('aria-expanded', String(open));
+            if (open) { var f = mn.querySelector('a, button'); if (f) f.focus(); }
+        });
+        document.addEventListener('click', function (e) { if (!um.contains(e.target)) closeMenu(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !mn.hidden) { closeMenu(); ub.focus(); } });
+    }
 })();
 
 </script>
+<script src="{% static 'js/notification_dropdown.js' %}" defer></script>
 <script>
-(function () {
-    var f = 'all';
-    function render() {
-        var all = HC.get('notifications'), n = all.filter(function (x) { return !x.read; }).length;
-        document.getElementById('title').textContent = n ? 'You\u2019re up to date. Almost.' : 'You\u2019re all caught up.';
-        document.getElementById('sub').textContent = n + ' unread \u00b7 Times shown in Mauritius Time';
-        var ul = document.getElementById('list'); ul.innerHTML = '';
-        var shown = all.filter(function (x) { return f === 'all' || (f === 'unread' ? !x.read : x.type === f); });
-        shown.forEach(function (x) {
-            var li = HC.el('li', 'note' + (x.read ? '' : ' unread')), d = document.createElement('div');
-            d.appendChild(HC.el('strong', '', x.title)); d.appendChild(HC.el('p', '', x.text)); d.appendChild(HC.el('small', '', x.time + ' \u00b7 ' + (x.read ? 'Read' : 'Unread')));
-            li.appendChild(d);
-            if (!x.read) {
-                var b = HC.el('button', 'btn-o', 'Mark read'); b.type = 'button';
-                b.onclick = function () { x.read = true; HC.set('notifications', all); HC.badge(); render(); };
-                li.appendChild(b);
-            }
-            ul.appendChild(li);
+document.addEventListener('DOMContentLoaded', function () {
+    var csrfToken = document.querySelector('#notification-csrf input[name="csrfmiddlewaretoken"]').value;
+    var tabs = document.querySelectorAll('.tab'), notes = document.querySelectorAll('#list .note');
+
+    function applyFilter(filter) {
+        var visible = 0;
+        notes.forEach(function (note) {
+            var show = filter === 'all' || (filter === 'unread' && note.classList.contains('unread')) || note.dataset.kind === filter;
+            note.hidden = !show; if (show) visible++;
         });
-        document.getElementById('none').hidden = shown.length > 0; HC.badge();
+        document.getElementById('none').hidden = visible > 0;
     }
-    document.getElementById('all').onclick = function () {
-        var all = HC.get('notifications'); all.forEach(function (x) { x.read = true; }); HC.set('notifications', all); render();
-    };
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-        t.onclick = function () { document.querySelector('.tab.active').classList.remove('active'); t.classList.add('active'); f = t.dataset.f; render(); };
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active'); applyFilter(tab.dataset.f);
+        });
     });
-    render();
-})();
+
+    async function markRead(button) {
+        button.disabled = true; document.getElementById('err').hidden = true;
+        try {
+            var response = await fetch(button.dataset.url, { method: 'POST', credentials: 'same-origin', headers: { 'X-CSRFToken': csrfToken } });
+            if (!response.ok || response.redirected) throw new Error('Unable to update notification');
+            window.location.reload();
+        } catch (error) {
+            document.getElementById('err').hidden = false; button.disabled = false;
+        }
+    }
+    document.querySelectorAll('.mark-read').forEach(function (b) { b.addEventListener('click', function () { markRead(b); }); });
+    document.getElementById('all').addEventListener('click', function () { markRead(this); });
+    applyFilter('all');
+});
 </script>
+
 
 </body>
 </html>

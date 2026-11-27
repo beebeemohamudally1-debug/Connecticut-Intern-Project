@@ -1,0 +1,59 @@
+{% load static %}
+{% comment %}
+  Customer portal shell, opening half. Closed by _shell_bottom.html.
+  Pages never include this directly: extend "base_customer.html" and fill {% block content %}.
+  Optional context (all safe to omit): unread_count, user_display_name, user_initials.
+  Sidebar links that need backend routes use `{% url ... as x %}` so a missing route shows "#" instead of crashing.
+{% endcomment %}
+{% url 'dashboard:customer_dashboard' as u_home %}
+{% url 'customer_portal:requests' as u_requests %}
+{% url 'payments:my_quotations' as u_quotes %}
+{% url 'customer_portal:appointments' as u_appts %}
+{% url 'payments:payment_history' as u_pay %}
+{% url 'reviews:my_reviews' as u_feedback %}
+{% url 'complaints:list' as u_complaints %}
+{% url 'customer_portal:notifications' as u_notifs %}
+{% url 'customer_portal:profile' as u_profile %}
+{% url 'customer_portal:history' as u_history %}
+{% url 'customer_portal:new_request' as u_new %}
+{% url 'accounts:logout' as u_logout %}
+{% firstof user_display_name request.user.get_full_name request.user.first_name request.user.email request.user.username as display %}
+<div class="cp" id="cp-root" data-cp-shell>
+  <a class="cp-skip" href="#cp-main">Skip to main content</a>
+  {% include "customer/_icons.html" %}
+  <aside class="cp-side" id="cp-side" aria-label="Customer navigation">
+    <a class="cp-brand" href="{{ u_home }}"><span class="cp-brand-mark"><svg class="cp-ic" aria-hidden="true"><use href="#i-house"/></svg></span>HandyConnect</a>
+    <div class="cp-role"><small>WORKSPACE</small><strong>Customer portal</strong></div>
+    <nav class="cp-nav" aria-label="Main">
+      <a href="{{ u_home }}" data-nav="services"{% if request.resolver_match.namespace == 'dashboard' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-grid"/></svg>Services</a>
+      <a href="{{ u_requests }}" data-nav="requests"{% if request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'requests' or request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'new_request' or request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'request_submitted' or request.resolver_match.namespace == 'jobs' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-clipboard"/></svg>Requests</a>
+      <a href="{{ u_quotes }}" data-nav="quotations"{% if request.resolver_match.url_name == 'my_quotations' or request.resolver_match.url_name == 'quotation_detail' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-file"/></svg>Quotations</a>
+      <a href="{{ u_appts }}" data-nav="appointments"{% if request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'appointments' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-calendar"/></svg>Appointments</a>
+      <a href="{{ u_pay }}" data-nav="payments"{% if request.resolver_match.namespace == 'payments' and request.resolver_match.url_name != 'my_quotations' and request.resolver_match.url_name != 'quotation_detail' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-card"/></svg>Payments</a>
+      <a href="{{ u_feedback }}" data-nav="feedback"{% if request.resolver_match.namespace == 'reviews' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-star"/></svg>Private feedback</a>
+      <a href="{{ u_complaints }}" data-nav="complaints"{% if request.resolver_match.namespace == 'complaints' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-flag"/></svg>Complaints</a>
+      <a href="{{ u_notifs }}" data-nav="notifications"{% if request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'notifications' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-bell"/></svg>Notifications{% if unread_count %}<span class="cp-count">{{ unread_count }}</span>{% endif %}</a>
+      <a href="{{ u_profile }}" data-nav="profile"{% if request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'profile' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-user"/></svg>Profile</a>
+      <a href="{{ u_history }}" data-nav="history"{% if request.resolver_match.namespace == 'customer_portal' and request.resolver_match.url_name == 'history' %} class="is-active" aria-current="page"{% endif %}><svg class="cp-ic" aria-hidden="true"><use href="#i-history"/></svg>History</a>
+    </nav>
+    <div class="cp-support">Need a hand?<br><a href="mailto:support@handyconnect.example" data-hook="help-link">Help &amp; support ↗</a><small>HandyConnect © 2026</small></div>
+  </aside>
+  <div class="cp-scrim" data-cp-close-nav></div>
+  <div class="cp-work">
+    <header class="cp-top">
+      <button type="button" class="cp-burger" data-cp-open-nav aria-controls="cp-side" aria-expanded="false" aria-label="Open menu"><svg class="cp-ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <div class="cp-crumb">Customer workspace &nbsp;/&nbsp; <b><span data-cp-crumb>{{ crumb|default:'Portal' }}</span></b></div>
+      <div class="cp-account">
+        {% include "notifications/_dropdown.html" with bell_class="cp-bell" badge_class="cp-bell-count" notifications_url=u_notifs %}
+        <details class="cp-user" data-cp-menu>
+          <summary aria-label="Account menu"><span class="cp-avatar" data-cp-initials>{% firstof user_initials display|slice:":2" %}</span><span class="cp-user-name">{{ display }}</span><svg class="cp-ic" aria-hidden="true"><use href="#i-chev-down"/></svg></summary>
+          <div class="cp-menu">
+            <a href="{{ u_profile }}"><svg class="cp-ic" aria-hidden="true"><use href="#i-user"/></svg>Profile &amp; security</a>
+            <form method="post" action="{{ u_logout }}">{% csrf_token %}<button type="submit"><svg class="cp-ic" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</button></form>
+          </div>
+        </details>
+      </div>
+    </header>
+    <main class="cp-main" id="cp-main" tabindex="-1">
+      <div class="cp-page">
+        {% if messages %}<ul class="cp-msgs" role="status">{% for m in messages %}<li class="{{ m.tags }}"><span>{{ m }}</span><button type="button" aria-label="Dismiss" data-cp-dismiss>&times;</button></li>{% endfor %}</ul>{% endif %}

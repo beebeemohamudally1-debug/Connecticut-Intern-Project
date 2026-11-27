@@ -10,10 +10,10 @@ from django.views.decorators.http import require_POST
 
 from bookings.models import ServiceRequest, ServiceRequestAssignment
 
-from .forms import (LabourEstimateForm, MaterialReceiptForm, MaterialRequestForm, NoteForm, PaymentForm,
-                    QuotationForm)
-from .models import (LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation,
-                     request_payment_state)
+from .forms import (InspectionInvoiceForm, InvoiceIssueForm, InvoicePaymentForm, LabourEstimateForm,
+                    MaterialReceiptForm, MaterialRequestForm, NoteForm, PaymentForm, QuotationForm)
+from .models import (Invoice, LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation, Receipt,
+                     inspection_fee, invoice_quotations, request_payment_state)
 
 
 def role_required(role):
@@ -124,7 +124,7 @@ def quotation_create(request, request_id):
             _form_error(form, error)
         else:
             messages.success(request, 'Quotation sent to the customer.' if 'send' in request.POST else 'Quotation saved as a draft.')
-            return redirect('payments:quotation_list')
+            return redirect('payments:quotation_detail_admin', pk=quotation.pk)
     return render(request, 'payments/quotation_form.html', {'form': form, 'service_request': service_request, 'estimate': estimate})
 
 
@@ -270,7 +270,7 @@ def estimate_submit(request, request_id):
         messages.success(request, 'Estimate sent to the administrator.')
         return redirect('payments:my_estimates')
     return _form_page(request, form, title='Labour estimate', subtitle=f'Request {service_request.reference}',
-                      base='base_handyman.html', nav='requests', button='Send estimate', back='payments:my_estimates')
+                      base='dashboard/handyman_base.html', nav='requests', button='Send estimate', back='payments:my_estimates')
 
 
 @role_required('handyman')
@@ -283,7 +283,7 @@ def estimate_resubmit(request, pk):
             return redirect('payments:my_estimates')
     extra = f"Administrator's note: {estimate.admin_note}" if estimate.admin_note else ''
     return _form_page(request, form, title='Revise estimate', subtitle=f'Request {estimate.request.reference}',
-                      base='base_handyman.html', nav='requests', button='Send revised estimate', back='payments:my_estimates', extra=extra)
+                      base='dashboard/handyman_base.html', nav='requests', button='Send revised estimate', back='payments:my_estimates', extra=extra)
 
 
 @role_required('handyman')
@@ -306,7 +306,7 @@ def material_request_submit(request, request_id):
         messages.success(request, 'Purchase request sent to the administrator.')
         return redirect('payments:my_materials')
     return _form_page(request, form, title='Material purchase request', subtitle=f'Request {service_request.reference}',
-                      base='base_handyman.html', nav='materials', button='Send request', back='payments:my_materials')
+                      base='dashboard/handyman_base.html', nav='materials', button='Send request', back='payments:my_materials')
 
 
 @role_required('handyman')
@@ -325,7 +325,7 @@ def receipt_upload(request, pk):
             messages.success(request, 'Receipt uploaded for review.')
             return redirect('payments:my_materials')
     return _form_page(request, form, title='Upload receipt', subtitle=f'Request {purchase.request.reference}',
-                      base='base_handyman.html', nav='materials', button='Upload receipt', back='payments:my_materials')
+                      base='dashboard/handyman_base.html', nav='materials', button='Upload receipt', back='payments:my_materials')
 
 
 # ================================================================== customer
@@ -355,3 +355,122 @@ def payment_history(request):
     payments = (Payment.objects.filter(quotation__request__customer=request.user)
                 .select_related('quotation', 'quotation__request').order_by('-date_received'))
     return render(request, 'payments/payment_history.html', {'payments': payments})
+
+
+# ======================================================= admin: invoices
+@role_required('admin')
+def invoice_list(request):
+    invoices = Invoice.objects.select_related('request', 'request__customer', 'invoice_payment', 'receipt')
+    # Requests whose labour quotation the customer accepted but that have no live job invoice yet.
+    # This is how the admin reaches "Issue invoice", which needs a request.
+    already_invoiced = Invoice.objects.filter(invoice_type=Invoice.JOB,
+                                              status__in=[Invoice.ISSUED, Invoice.PAID]).values('request')
+    ready = (ServiceRequest.objects
+             .filter(quotations__quotation_type=Quotation.LABOUR, quotations__status=Quotation.ACCEPTED)
+             .exclude(pk__in=already_invoiced).exclude(status='cancelled')
+             .select_related('customer').distinct())
+    return render(request, 'payments/admin_invoice_list.html', {'invoices': invoices, 'ready': ready})
+
+
+@role_required('admin')
+def invoice_issue(request, request_id):
+    """Issue the job invoice for a request whose quotations the customer accepted."""
+    service_request = get_object_or_404(ServiceRequest, pk=request_id)
+    labour, material = invoice_quotations(service_request)
+    form = InvoiceIssueForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            invoice = Invoice.issue_job(request.user, service_request, **form.cleaned_data)
+        except ValidationError as error:
+            _form_error(form, error)
+        else:
+            messages.success(request, f'Invoice {invoice.number} issued.')
+            return redirect('payments:invoice_list')
+    total = (labour.total_amount if labour else 0) + (material.total_amount if material else 0)
+    return render(request, 'payments/admin_issue_invoice.html', {
+        'form': form, 'service_request': service_request, 'labour': labour, 'material': material, 'total': total,
+    })
+
+
+@role_required('admin')
+def inspection_invoice_issue(request, request_id):
+    """Issue the fixed inspection fee for a job that cannot be priced from photos."""
+    service_request = get_object_or_404(ServiceRequest, pk=request_id)
+    form = InspectionInvoiceForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            invoice = Invoice.issue_inspection(request.user, service_request, **form.cleaned_data)
+        except ValidationError as error:
+            _form_error(form, error)
+        else:
+            messages.success(request, f'Inspection invoice {invoice.number} issued.')
+            return redirect('payments:invoice_list')
+    assignment = (ServiceRequestAssignment.objects.filter(service_request=service_request, status='accepted')
+                  .select_related('handyman').first())
+    return render(request, 'payments/admin_inspection_invoice.html', {
+        'form': form, 'service_request': service_request, 'fee': inspection_fee(),
+        'handyman': assignment.handyman if assignment else None,
+    })
+
+
+@role_required('admin')
+def invoice_record_payment(request, pk):
+    invoice = get_object_or_404(Invoice.objects.select_related(
+        'request', 'request__customer', 'labour_quotation', 'material_quotation'), pk=pk)
+    if invoice.status != Invoice.ISSUED:
+        messages.error(request, 'This invoice is not awaiting payment.')
+        return redirect('payments:invoice_list')
+    saved = getattr(invoice, 'invoice_payment', None)       # an earlier "save without clearing"
+    initial = {'amount': invoice.total_amount, 'date_received': timezone.localdate(), 'received': 'yes'}
+    if saved:
+        initial.update(amount=saved.amount, date_received=saved.date_received, method=saved.method,
+                       reference=saved.reference, received='yes' if saved.received else 'no')
+    form = InvoicePaymentForm(request.POST or None, initial=initial)
+    if request.method == 'POST' and form.is_valid():
+        data = form.cleaned_data
+        clear = request.POST.get('action') == 'clear'
+        try:
+            invoice.record_payment(request.user, amount=data['amount'], date_received=data['date_received'],
+                                   method=data['method'], reference=data['reference'],
+                                   received=data['received'] == 'yes', clear=clear)
+        except ValidationError as error:
+            _form_error(form, error)
+        else:
+            messages.success(request, 'Payment cleared. The receipt was issued.' if clear else 'Payment saved without clearing.')
+            return redirect('payments:invoice_list')
+    return render(request, 'payments/admin_record_payment.html', {'form': form, 'invoice': invoice})
+
+
+@role_required('admin')
+@require_POST
+def invoice_cancel(request, pk):
+    invoice = get_object_or_404(Invoice, pk=pk)
+    _run(request, lambda: invoice.cancel(request.user), f'Invoice {invoice.number} cancelled.')
+    return redirect('payments:invoice_list')
+
+
+# ======================================================= customer: invoices
+@role_required('customer')
+def my_invoices(request):
+    invoices = (Invoice.objects.filter(request__customer=request.user).exclude(status=Invoice.CANCELLED)
+                .select_related('request', 'receipt'))
+    return render(request, 'payments/customer_invoice_list.html', {'invoices': invoices})
+
+
+@role_required('customer')
+def invoice_detail(request, pk):
+    invoice = get_object_or_404(
+        Invoice.objects.exclude(status=Invoice.CANCELLED).select_related(
+            'request', 'labour_quotation', 'material_quotation', 'receipt'),
+        pk=pk, request__customer=request.user)          # customers only ever see their own
+    template = 'payments/customer_inspection_fee.html' if invoice.is_inspection else 'payments/customer_invoice.html'
+    return render(request, template, {'invoice': invoice})
+
+
+@role_required('customer')
+def receipt_detail(request, pk):
+    receipt = get_object_or_404(
+        Receipt.objects.select_related('invoice', 'invoice__request', 'invoice__request__customer',
+                                       'invoice__labour_quotation', 'invoice__material_quotation', 'payment'),
+        pk=pk, invoice__request__customer=request.user)
+    return render(request, 'payments/customer_receipt.html', {'receipt': receipt, 'invoice': receipt.invoice})

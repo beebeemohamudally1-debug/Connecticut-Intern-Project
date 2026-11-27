@@ -17,7 +17,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
-<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=3">
 
 <a class="back" href="{{ page.detail_url }}">&larr; Back to Appointment</a>
 <div class="bar ap-bar">
@@ -49,6 +49,9 @@
   </section>
 </div>
 
+{% if page.payment_block %}
+<p class="ap-warn" role="alert"><strong>Not paid yet:</strong> {{ page.payment_block }} A new time can be proposed once it is.{% if page.payment_url %} <a href="{{ page.payment_url }}">View Payment Status</a>{% endif %}</p>
+{% endif %}
 <form class="card ap-box ap-slot" method="post" data-slot-form data-handyman="{{ page.handyman_pk }}">
   {% csrf_token %}
   <h2>Suggest Another Time Slot</h2>
@@ -67,7 +70,9 @@
   </div>
   <div class="ap-slot-foot">
     <p class="ap-avail" data-availability aria-live="polite"></p>
-    <button class="btn o ap-main" type="submit">Send Proposal</button>
+    <label class="ap-notify"><input type="checkbox" name="notify_handyman" checked{% if page.payment_block %} disabled{% endif %}> Notify {{ page.handyman }} too</label>
+    {% if page.payment_block %}<button class="btn o ap-main" type="button" disabled title="{{ page.payment_block }}">Send Proposal</button>
+    {% else %}<button class="btn o ap-main" type="submit">Send Proposal</button>{% endif %}
   </div>
 </form>
 {{ page.busy|json_script:"busy-data" }}

@@ -1,0 +1,44 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  CUSTOMER NOTIFICATIONS.  URL names expected: customer_portal:notifications (GET), customer_portal:notifications_read_all (POST)
+  CONTEXT:
+    notifications [{id, title, detail, when ("Oct 27 · 3:30 PM"), unread(bool), kind: appointment|complaint|payment|quotation|feedback|request|job, url}]
+    unread_count (also drives sidebar + bell)
+    prefs {email: bool, sms: bool, news: bool}   preferences_url
+  Tabs filter client-side by kind ("unread" is derived from .unread).  Clicking a row follows its url
+  (the backend may mark it read on that GET, or POST per item to  customer_portal:notification_read  pk).
+{% endcomment %}
+{% block title %}Notifications | HandyConnect{% endblock %}
+{% block page %}customer-notifications{% endblock %}
+{% block content %}
+{% url 'customer_portal:notifications_read_all' as u_readall %}
+<div class="cp-head"><div><h1>{% if unread_count %}You’re up to date. Almost.{% else %}You’re all caught up.{% endif %}</h1><p>{{ unread_count|default:0 }} unread notification{{ unread_count|default:0|pluralize }} · Important updates, all in one place.</p></div></div>
+<div class="cp-bar-controls">
+  <div class="cp-tabs" role="group" aria-label="Filter notifications" data-cp-tabs="cp-notif-list">
+    <button type="button" data-filter="all" aria-selected="true">All notifications</button><button type="button" data-filter="unread" aria-selected="false">Unread</button><button type="button" data-filter="appointment" aria-selected="false">Appointments</button><button type="button" data-filter="complaint" aria-selected="false">Complaints</button></div>
+  <form method="post" action="{{ u_readall }}">{% csrf_token %}<button class="cp-btn is-light" type="submit" data-cp-keep>Mark all as read</button></form>
+</div>
+<div class="cp-cols is-wide-side" style="grid-template-columns:minmax(0,1fr) 290px">
+  <section class="cp-panel" id="cp-notif-list" aria-labelledby="cp-na-h"><div><h2 id="cp-na-h">Recent activity</h2><p class="cp-small" style="margin-top:4px">Newest first · Times shown in Mauritius Time</p></div>
+    <div class="cp-events" data-hook="notification-list">
+    {% for n in notifications %}
+      <a class="cp-event{% if n.unread %} is-unread{% endif %}" href="{{ n.url|default:'#' }}" data-cp-tab="{{ n.kind }}{% if n.unread %} unread{% endif %}">
+        <span class="cp-event-ic"><svg class="cp-ic" aria-hidden="true"><use href="#i-{% if n.kind == 'appointment' %}calendar{% elif n.kind == 'complaint' %}flag{% elif n.kind == 'payment' %}card{% elif n.kind == 'quotation' %}file{% elif n.kind == 'feedback' %}star{% elif n.kind == 'job' %}wrench{% else %}clipboard{% endif %}"/></svg></span>
+        <span class="cp-event-body"><strong>{{ n.title }}</strong><p>{{ n.detail }}</p><small>{{ n.when }} · {% if n.unread %}Unread{% else %}Read{% endif %}</small></span>
+        {% if n.unread %}<span class="cp-dot" role="img" aria-label="Unread"></span>{% endif %}
+      </a>
+    {% empty %}
+      <div class="cp-empty"><svg class="cp-ic" aria-hidden="true"><use href="#i-bell"/></svg><strong>Nothing new yet</strong><p>Quotation, payment, appointment and complaint updates will appear here.</p></div>
+    {% endfor %}
+    <p class="cp-small" data-cp-tab-empty hidden>No notifications in this view.</p>
+    </div></section>
+  <aside class="cp-stack">
+    <section class="cp-panel"><h2>Stay in the loop</h2><p class="cp-small">Critical appointment and complaint updates always appear here.</p>
+      <div class="cp-toggle-row"><span>Email notifications</span><span class="cp-pill{% if not prefs.email %} is-off{% endif %}">{% if prefs.email %}On{% else %}Off{% endif %}</span></div>
+      <div class="cp-toggle-row"><span>SMS reminders</span><span class="cp-pill{% if not prefs.sms %} is-off{% endif %}">{% if prefs.sms %}On{% else %}Off{% endif %}</span></div>
+      <div class="cp-toggle-row"><span>Product news</span><span class="cp-pill{% if not prefs.news %} is-off{% endif %}">{% if prefs.news %}On{% else %}Off{% endif %}</span></div>
+      {% url 'customer_portal:profile' as u_prof %}<a class="cp-btn is-light is-block" href="{{ preferences_url|default:u_prof }}#preferences">Manage preferences</a></section>
+    <p class="cp-tiny">Private messages are visible only to you and the administrator assigned to the case.</p>
+  </aside>
+</div>
+{% endblock %}

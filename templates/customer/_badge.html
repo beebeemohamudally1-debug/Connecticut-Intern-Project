@@ -1,0 +1,4 @@
+{% comment %}
+  Status pill.  {% include "customer/_badge.html" with tone="ok" label="Completed" %}
+  tone: ok | warn | bad | neutral | info (default).  Or pass the project's own code instead: code="gr|ye|re|bl" (what Job.badge / Complaint.badge return).  icon="check" optional.
+{% endcomment %}<span class="cp-badge{% if tone == 'ok' or code == 'gr' %} is-ok{% elif tone == 'warn' or code == 'ye' %} is-warn{% elif tone == 'bad' or code == 're' %} is-bad{% elif tone == 'neutral' %} is-neutral{% endif %}">{% if icon %}<svg class="cp-ic" aria-hidden="true"><use href="#i-{{ icon }}"/></svg>{% endif %}{{ label }}</span>

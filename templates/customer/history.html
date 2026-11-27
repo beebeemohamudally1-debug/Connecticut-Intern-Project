@@ -1,0 +1,38 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  HISTORY: every job, payment and feedback record (only the customer's own).  URL name expected: customer_portal:history
+  GET filters: q, area, from, to  (the form just submits GET; backend filters).
+  CONTEXT (all optional):
+    f (request.GET)   service_areas [str]
+    records   [{request_ref, service, quotation_label ("QT-2084 · Accepted"), appointment_label, progress_label, url}]
+    payments  [{job_ref, amount, paid_label ("Oct 23 · Bank transfer"), status_label, status_tone, receipt_url, receipt_label}]
+    feedback  [{job_ref, eligibility, feedback_label, url}]
+    instructions_url   (offline payment instructions)
+{% endcomment %}
+{% block title %}History | HandyConnect{% endblock %}
+{% block page %}customer-history{% endblock %}
+{% block content %}
+<div class="cp-head"><div><h1>Every job. Every payment. Your history.</h1><p>Only your own records · Offline payments verified by the service team</p></div></div>
+<form method="get" class="cp-filters is-4" role="search" data-hook="history-filter">
+  <div class="cp-field"><label for="h-q">Search your records</label><input class="cp-input" id="h-q" name="q" type="search" value="{{ f.q }}" placeholder="Request, quotation, appointment or payment ID…"></div>
+  <div class="cp-field"><label for="h-area">Service type / area</label><select class="cp-select" id="h-area" name="area"><option value="">All services · All areas</option>{% for a in service_areas %}<option{% if f.area == a %} selected{% endif %}>{{ a }}</option>{% endfor %}</select></div>
+  <div class="cp-field"><label for="h-from">Date range</label><div class="cp-form-row" style="gap:8px"><input class="cp-input" id="h-from" name="from" type="date" value="{{ f.from }}" aria-label="From date"><input class="cp-input" name="to" type="date" value="{{ f.to }}" aria-label="To date"></div></div>
+  <button class="cp-btn is-light" type="submit">Apply</button>
+</form>
+<section class="cp-panel"><h2>Requests &amp; appointments</h2>
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="history-requests"><thead><tr><th scope="col">Request / service</th><th scope="col">Quotation</th><th scope="col">Appointment</th><th scope="col">Progress</th></tr></thead>
+  <tbody>{% for r in records %}<tr><td data-label="Request"><a class="cp-link" href="{{ r.url|default:'#' }}">{{ r.request_ref }} · {{ r.service }}</a></td><td data-label="Quotation">{{ r.quotation_label|default:"Not issued" }}</td><td data-label="Appointment">{{ r.appointment_label|default:"Not confirmed" }}</td><td data-label="Progress">{{ r.progress_label }}</td></tr>
+  {% empty %}<tr class="cp-empty-row"><td colspan="4">No records match.</td></tr>{% endfor %}</tbody></table></div>
+  <p class="cp-tiny">AM = Morning 09:00–12:00 · PM = Afternoon 13:00–17:00</p></section>
+<section class="cp-panel"><h2>Offline payment history</h2>
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="history-payments"><thead><tr><th scope="col">Job / payment</th><th scope="col" class="is-num">Amount · MUR</th><th scope="col">Paid date / method</th><th scope="col">Status</th><th scope="col"><span class="cp-sr">Receipt</span></th></tr></thead>
+  <tbody>{% for p in payments %}<tr><td data-label="Job">{{ p.job_ref }}</td><td class="is-num is-strong" data-label="Amount">{{ p.amount }}</td><td data-label="Paid">{{ p.paid_label|default:"—" }}</td><td data-label="Status">{% include "customer/_badge.html" with tone=p.status_tone label=p.status_label %}</td><td data-label="">{% if p.receipt_url %}<a class="cp-link" href="{{ p.receipt_url }}">{{ p.receipt_label|default:"View receipt" }}</a>{% endif %}</td></tr>
+  {% empty %}<tr class="cp-empty-row"><td colspan="5">No payments recorded yet.</td></tr>{% endfor %}</tbody></table></div>
+  {% if instructions_url %}<div><a class="cp-btn is-primary" href="{{ instructions_url }}">Offline payment instructions</a></div>{% endif %}
+  <p class="cp-small">Only full, verified payments unlock appointment confirmation. Cash and bank transfers are handled offline; no payment gateway is used.</p></section>
+<section class="cp-panel"><h2>Private feedback eligibility</h2>
+  <div class="cp-table-wrap"><table class="cp-table is-stack" data-hook="history-feedback"><thead><tr><th scope="col">Job</th><th scope="col">Eligibility</th><th scope="col">Feedback</th></tr></thead>
+  <tbody>{% for r in feedback %}<tr><td data-label="Job">{{ r.job_ref }}</td><td data-label="Eligibility">{{ r.eligibility }}</td><td data-label="Feedback">{% if r.url %}<a class="cp-link" href="{{ r.url }}">{{ r.feedback_label }}</a>{% else %}{{ r.feedback_label }}{% endif %}</td></tr>
+  {% empty %}<tr class="cp-empty-row"><td colspan="3">Feedback unlocks once a job is completed.</td></tr>{% endfor %}</tbody></table></div>
+  <p class="cp-small">Feedback and ratings are private to you and authorised administrators.</p></section>
+{% endblock %}

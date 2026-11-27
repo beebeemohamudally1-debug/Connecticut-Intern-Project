@@ -1,5 +1,5 @@
 {% extends "base_admin.html" %}
-{% load static %}
+{% load static admin_materials %}
 {% comment %}
   Service Quotations - Service Quotation Details (admin). View: payments.views.quotation_detail_admin
   Context: quotation (with request, request.customer and labour_estimate), other (the other
@@ -8,6 +8,10 @@
   Material quotation only: receipts (the handyman's MaterialReceipt list), used for the
   "Waiting for Receipts" / "View Receipts" button.
   Payment comes after BOTH quotations are accepted, and Schedule Appointment after both are paid.
+  No materials (labour quotation): mats = request|materials_state (accounts/templatetags/admin_materials.py).
+  When mats.state is 'none' the job is labour only, so payment and scheduling need the labour quotation
+  only. Team rule: the handyman sends a material request with estimated cost 0 for "no materials
+  needed"; with no request yet, the page waits for one (mats.state 'waiting').
   Works for labour and material quotations. A material quotation goes back to Material Quotations
   (payments:admin_materials) and lights up that sidebar item.
   Material flow (FR-A-9): the customer approves the material quotation, the handyman buys the materials
@@ -19,7 +23,8 @@
     (there is no activity log, so "sent" has no date).
   - Buttons follow the model rules: Send / Re-issue (draft, revised), Edit / Revise
     (draft, revised, revision_requested), Cancel (not cancelled, declined or paid),
-    Record payment (ready_for_payment).
+    Payment status (ready_for_payment): opens the admin Payment Status page (accounts_admin:payment_status),
+    where the receipts are checked and the job invoice is issued and paid.
   - Customer response prompt (accepted, revision_requested, declined): opens by itself once per
     answer in this browser (localStorage), and from "View response". There is no "closed" status
     or decline reason in the backend, so "Mark as Closed" only stops the prompt opening again.
@@ -37,6 +42,7 @@
 {% block crumb %}{% if quotation.quotation_type == 'material' %}Material Quotations{% else %}Service Quotations{% endif %}{% endblock %}
 
 {% block content %}
+{% with mats=quotation.request|materials_state %}
 <link rel="stylesheet" href="{% static 'payments/css/quotation_admin_detail.css' %}">
 
 {% with q=quotation customer=quotation.request.customer est=quotation.labour_estimate  %}
@@ -100,19 +106,20 @@
         {% elif q.status != 'cancelled' and q.status != 'declined' %}
         <div><dt>Payment readiness</dt><dd>
           {% if q.status != 'accepted' %}<span class="mut">{{ q.readiness_issue }}</span>
-          {% elif not other %}<span class="mut">Waiting for the {% if q.quotation_type == 'labour' %}material{% else %}service{% endif %} quotation</span>
+          {% elif q.quotation_type == 'labour' and mats.state == 'none' %}{% if q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'accounts_admin:payment_status' q.request.pk %}">View payment status</a>{% else %}<span class="mut">{{ q.readiness_issue }}</span>{% endif %}
+          {% elif not other %}<span class="mut">{% if q.quotation_type == 'labour' and mats.state == 'waiting' %}Waiting for the material request{% else %}Waiting for the {% if q.quotation_type == 'labour' %}material{% else %}service{% endif %} quotation{% endif %}</span>
           {% elif other.status != 'accepted' %}<span class="mut">{% if q.quotation_type == 'labour' %}Material{% else %}Service{% endif %} quotation not accepted yet</span>
-          {% elif q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'payments:payment_record' q.pk %}">Record payment</a>
+          {% elif q.ready_for_payment %}Ready <a class="qd-link" href="{% url 'accounts_admin:payment_status' q.request.pk %}">View payment status</a>
           {% else %}<span class="mut">{{ q.readiness_issue }}</span>{% endif %}
         </dd></div>
         {% endif %}
         {% if q.status == 'accepted' %}
-        <div><dt>{% if q.quotation_type == 'labour' %}Material quotation{% else %}Service quotation{% endif %}</dt><dd>{% if other %}<a class="qd-link" href="{% url 'payments:quotation_detail_admin' other.pk %}">Q-{{ other.pk }}</a> {% if other.status == 'sent' %}Awaiting customer{% elif other.status == 'accepted' %}{% if other.is_paid %}Paid{% elif other.quotation_type == 'material' %}Approved{% else %}Accepted{% endif %}{% else %}{{ other.get_status_display }}{% endif %}{% else %}<span class="mut">Not issued yet</span>{% endif %}</dd></div>
-        <div><dt>Whole request</dt><dd>{% if request_payment == 'paid' and other.status == 'accepted' %}Paid{% elif request_payment == 'partial' %}Partly paid{% else %}Not paid{% endif %}</dd></div>
+        <div><dt>{% if q.quotation_type == 'labour' %}Material quotation{% else %}Service quotation{% endif %}</dt><dd>{% if q.quotation_type == 'labour' and mats.state == 'none' %}<span class="mut">{{ mats.label }}</span>{% elif other %}<a class="qd-link" href="{% url 'payments:quotation_detail_admin' other.pk %}">Q-{{ other.pk }}</a> {% if other.status == 'sent' %}Awaiting customer{% elif other.status == 'accepted' %}{% if other.is_paid %}Paid{% elif other.quotation_type == 'material' %}Approved{% else %}Accepted{% endif %}{% else %}{{ other.get_status_display }}{% endif %}{% else %}<span class="mut">Not issued yet</span>{% endif %}</dd></div>
+        <div><dt>Whole request</dt><dd>{% if request_payment == 'paid' and other.status == 'accepted' or request_payment == 'paid' and mats.state == 'none' %}Paid{% elif request_payment == 'partial' %}Partly paid{% else %}Not paid{% endif %}</dd></div>
         {% endif %}
       </dl>
       {% if q.customer_note %}<p class="qd-asked"><strong>Customer asked:</strong> {{ q.customer_note }}</p>{% endif %}
-      {% if request_payment == 'paid' and q.status == 'accepted' and other.status == 'accepted' %}<a class="btn soft-blue qd-wide" href="{% url 'accounts_admin:appointment_schedule' 'service' %}?request={{ q.request.pk }}">Schedule Appointment</a>{% endif %}
+      {% if request_payment == 'paid' and q.status == 'accepted' and other.status == 'accepted' or request_payment == 'paid' and q.status == 'accepted' and q.quotation_type == 'labour' and mats.state == 'none' %}<a class="btn soft-blue qd-wide" href="{% url 'accounts_admin:appointment_schedule' 'service' %}?request={{ q.request.pk }}">Schedule Appointment</a>{% endif %}
     </section>
   </div>
 </div>
@@ -131,8 +138,8 @@
       {% elif q.status == 'revised' %}<li class="done"><span class="qd-dot"></span><strong>Customer asked for changes</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li><li class="current"><span class="qd-dot"></span><strong>Revised, waiting to be re-issued</strong><span>In progress</span></li>
       {% elif q.status == 'accepted' %}<li class="done"><span class="qd-dot"></span><strong>{% if q.quotation_type == 'material' %}Approved{% else %}Accepted{% endif %} by customer</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li>
         {% if q.is_paid %}<li class="done"><span class="qd-dot"></span><strong>Payment received ({{ q.payment.get_method_display|lower }})</strong><span>{{ q.payment.date_received|date:"d M Y" }}</span></li>
-        {% elif other.status == 'accepted' %}<li class="current"><span class="qd-dot"></span><strong>Awaiting payment</strong><span>In progress</span></li>
-        {% else %}<li class="current"><span class="qd-dot"></span><strong>Waiting for the {% if q.quotation_type == 'labour' %}material{% else %}service{% endif %} quotation</strong><span>Before payment</span></li>{% endif %}
+        {% elif other.status == 'accepted' or q.quotation_type == 'labour' and mats.state == 'none' %}<li class="current"><span class="qd-dot"></span><strong>Awaiting payment</strong><span>In progress</span></li>
+        {% else %}<li class="current"><span class="qd-dot"></span><strong>{% if q.quotation_type == 'labour' and mats.state == 'waiting' %}Waiting for the handyman's material request{% else %}Waiting for the {% if q.quotation_type == 'labour' %}material{% else %}service{% endif %} quotation{% endif %}</strong><span>Before payment</span></li>{% endif %}
       {% elif q.status == 'declined' %}<li class="stop"><span class="qd-dot"></span><strong>Declined by customer</strong><span>{{ q.responded_at|date:"d M Y" }}</span></li>
       {% elif q.status == 'cancelled' %}<li class="stop"><span class="qd-dot"></span><strong>Quotation cancelled</strong><span></span></li>{% endif %}
     {% endif %}
@@ -159,9 +166,9 @@
     {% if q.status == 'accepted' %}
       {% if q.quotation_type == 'material' %}
       {# Material: the handyman buys the materials and uploads the receipts, then the payment is recorded #}
-      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif receipts %}The handyman has uploaded the receipts. They are checked in Payments.{% else %}The handyman can now buy the materials. Their receipts will show here once they are uploaded.{% endif %}</p>
+      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif receipts %}The handyman has uploaded the receipts. They are checked in Payments.{% else %}Let the handyman know the customer approved, so they can buy the materials and upload the receipts.{% endif %}</p>
       {% else %}
-      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif other.status == 'accepted' %}The material quotation is accepted too. Proceed to check the payment status.{% else %}Payment comes after the material quotation is accepted too.{% endif %}</p>
+      <p class="qd-rs-text">{% if q.is_paid %}The payment has already been recorded.{% elif mats.state == 'none' %}{{ mats.note }} Proceed to check the payment status.{% elif mats.state == 'waiting' %}Let the handyman know the customer accepted, so they can send the material request (or one with cost 0 if no materials are needed).{% elif mats.state == 'requested' and not other %}The handyman has already sent a material request. Review it to send the customer the material quotation.{% elif other.status == 'accepted' %}The material quotation is accepted too. Proceed to check the payment status.{% else %}Payment comes after the material quotation is accepted too.{% endif %}</p>
       {% endif %}
     {% elif q.status == 'revision_requested' %}
       <div class="qd-rs-box"><p class="qd-rs-label">Requested changes</p><p>{{ q.customer_note|default:"No details given." }}</p></div>
@@ -169,10 +176,13 @@
     {% else %}
       {# The backend does not store a reason when the customer declines #}
       <div class="qd-rs-box"><p class="qd-rs-label">Reason</p><p class="mut">{{ q.customer_note|default:"No reason given." }}</p></div>
+      <p class="qd-rs-text">Let the handyman know the customer declined, so they don't {% if q.quotation_type == 'material' %}buy the materials{% else %}plan the job{% endif %}.</p>
     {% endif %}
     <div class="qd-btns">
       {% if q.status == 'declined' %}
         <button class="btn o" type="button" data-close>Close</button>
+        {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+        <button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>
         <button class="btn soft-red" type="button" data-close data-seen>Mark as Closed</button>
       {% else %}
         <button class="btn o" type="button" data-close>Later</button>
@@ -181,10 +191,13 @@
           {% if q.quotation_type == 'material' %}
             {# No receipts yet: wait for the handyman. Then it opens this request's receipts pop-up #}
             {% if receipts %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}#rc-{{ q.purchase_request.pk }}" data-seen>View Receipts</a>
-            {% else %}<button class="btn soft-blue" type="button" disabled>Waiting for Receipts</button>{% endif %}
+            {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+            {% else %}<button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>{% endif %}
           {% elif other %}<a class="btn soft-blue" href="{% url 'payments:quotation_detail_admin' other.pk %}" data-seen>Go to Material Quotation</a>
-          {% else %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}" data-seen>Go to Material Quotations</a>{% endif %}
-          {% if q.ready_for_payment and other.status == 'accepted' %}<a class="btn soft-green" href="{% url 'payments:payment_record' q.pk %}" data-seen>Check Payment Status</a>{% endif %}
+          {% elif mats.state == 'requested' %}<a class="btn soft-blue" href="{% url 'payments:admin_materials' %}#mr-{{ mats.purchase_id }}" data-seen>Review Material Request</a>
+          {# BACKEND: enable once the handyman can be notified (no notification for quotations yet) #}
+          {% elif mats.state == 'waiting' %}<button class="btn soft-blue" type="button" disabled title="Not in the backend yet">Notify Handyman</button>{% endif %}
+          {% if q.ready_for_payment and other.status == 'accepted' or q.ready_for_payment and q.quotation_type == 'labour' and mats.state == 'none' %}<a class="btn soft-green" href="{% url 'accounts_admin:payment_status' q.request.pk %}" data-seen>Check Payment Status</a>{% endif %}
         {% else %}
           {# BACKEND: enable both once the estimate can be sent back to the handyman and comes back updated #}
           <button class="btn o" type="button" disabled title="Not in the backend yet">Ask Handyman to Update</button>
@@ -223,8 +236,9 @@
   </form>
 </dialog>
 {% endwith %}
+{% endwith %}
 {% endblock %}
 
 {% block page_js %}
-<script src="{% static 'payments/js/quotation_admin_detail.js' %}"></script>
+<script src="{% static 'payments/js/quotation_admin_detail.js' %}?v=2"></script>
 {% endblock %}

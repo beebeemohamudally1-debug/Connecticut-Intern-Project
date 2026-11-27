@@ -8,6 +8,7 @@
   checks (service appointments only: rows of label / value / ok, and ready), conflict (another
   confirmed booking of the handyman in this slot, or None), can_change, and the
   reschedule_url / list_url links.
+  customer_response, job_url (confirmed service appointment: its Work Progress page).
   BACKEND: there are no confirm / cancel views yet, so the Confirm and Cancel pop-ups save nothing
   (data-demo). When they exist: set each form's action to the view, remove data-demo, and after
   confirming open the "Appointment Confirmed" pop-up (for example redirect with ?confirmed=1).
@@ -21,7 +22,7 @@
 
 {% block content %}
 <link rel="stylesheet" href="{% static 'payments/css/admin_quotation_lists.css' %}">
-<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'bookings/css/admin_appointments.css' %}?v=3">
 
 <a class="back" href="{{ page.list_url }}">&larr; Back to Appointments</a>
 <div class="bar ap-bar">
@@ -36,13 +37,18 @@
     <button class="btn soft-red" type="button" data-open="modal-cancel">Cancel</button>
     <a class="btn o" href="{{ page.reschedule_url }}">Reschedule</a>
     {% endif %}
+    {% if page.job_url %}<a class="btn o ap-main" href="{{ page.job_url }}">View Job Progress</a>{% endif %}
     {% if page.status == 'pending' %}
       {% if page.conflict %}<button class="btn o ap-main" type="button" disabled title="Reschedule first: the handyman is already booked in this slot">Confirm Appointment</button>
+      {% elif page.payment_block %}<button class="btn o ap-main" type="button" disabled title="{{ page.payment_block }}">Confirm Appointment</button>
       {% else %}<button class="btn o ap-main" type="button" data-open="modal-confirm">Confirm Appointment</button>{% endif %}
     {% endif %}
   </div>
 </div>
 
+{% if page.payment_block and page.status == 'pending' %}
+<p class="ap-warn" role="alert"><strong>Not paid yet:</strong> {{ page.payment_block }} Confirm Appointment unlocks once it is.{% if page.payment_url %} <a href="{{ page.payment_url }}">View Payment Status</a>{% endif %}</p>
+{% endif %}
 {% if page.overdue %}
 <p class="ap-warn" role="alert"><strong>Date passed:</strong> this appointment was never confirmed. Reschedule it or cancel it.</p>
 {% endif %}
@@ -59,6 +65,7 @@
       <div><dt>Service</dt><dd>{{ page.service|default:"-" }} &middot; {{ page.request_ref }}</dd></div>
       <div><dt>Date &amp; time</dt><dd>{{ page.when }} <span class="mut">({{ page.slot_time }})</span></dd></div>
       <div><dt>Customer preferred</dt><dd>{{ page.preferred }}</dd></div>
+      <div><dt>Customer response</dt><dd>{% if page.status == 'pending' %}<span class="mut">{{ page.customer_response }}</span>{% else %}{{ page.customer_response }}{% endif %}</dd></div>
       {% if page.notes %}<div><dt>Note</dt><dd>{{ page.notes }}</dd></div>{% endif %}
     </dl>
   </section>
@@ -81,9 +88,14 @@
     {% else %}
     <ul class="ap-checks">
       <li class="ok"><span>Service quotation</span><strong>Not needed before an inspection</strong></li>
-      <li class="no"><span>Inspection fee</span><strong>Not recorded in the system</strong></li>
+      {% if page.fee %}<li class="{% if page.fee.row.ok %}ok{% else %}no{% endif %}"><span>{{ page.fee.row.label }}</span><strong>{{ page.fee.row.value }}</strong></li>{% endif %}
     </ul>
-    <p class="mut ap-small">The backend has no inspection fee yet, so it cannot be checked here.</p>
+    {% if page.status == 'pending' %}{% if page.fee.issue_url or page.fee.pay_url %}
+    <div class="ap-fee">
+      {% if page.fee.issue_url %}<a class="btn o ap-main" href="{{ page.fee.issue_url }}">Issue Inspection Invoice</a>{% endif %}
+      {% if page.fee.pay_url %}<a class="btn o ap-main" href="{{ page.fee.pay_url }}">Record Payment</a>{% endif %}
+    </div>
+    {% endif %}{% endif %}
     {% endif %}
   </section>
 
@@ -122,7 +134,7 @@
 {% if page.can_change %}
 <dialog class="ql-modal" id="modal-cancel" aria-labelledby="cn-title">
   {# BACKEND: action = the cancel view, then remove data-demo #}
-  <form method="post" action="#" data-demo="Not saved yet: cancelling is not in the backend (frontend demo only).">
+  <form method="post" action="#" data-demo="Not saved yet: cancelling and notifying are not in the backend (frontend demo only).">
     {% csrf_token %}
     <span class="ap-icon is-red" aria-hidden="true">!</span>
     <h2 id="cn-title" class="ap-center">Cancel Appointment</h2>
@@ -134,7 +146,11 @@
     {# BACKEND: the Appointment model has no field for the reason yet #}
     <label class="ap-label" for="cn-reason">Reason for cancelling</label>
     <textarea class="in ap-reason" id="cn-reason" name="reason" rows="2" maxlength="300" required placeholder="For example: the customer is no longer available"></textarea>
-    <p class="mut">The appointment is marked as cancelled. Let the customer and the handyman know (the system does not notify them yet).</p>
+    <p class="mut">The appointment is marked as cancelled.</p>
+    <div class="ap-notify-row">
+      <label class="ap-notify"><input type="checkbox" name="notify_customer" checked> Notify {{ page.customer }} (customer)</label>
+      <label class="ap-notify"><input type="checkbox" name="notify_handyman" checked> Notify {{ page.handyman }} (handyman)</label>
+    </div>
     <div class="ql-btns">
       <button class="btn o" type="button" data-close>Keep Appointment</button>
       <button class="btn soft-red" type="submit">Cancel Appointment</button>
@@ -156,7 +172,18 @@
       <div><dt>Customer</dt><dd>{{ page.customer }}</dd></div>
       <div><dt>Date and time</dt><dd>{{ page.when }}</dd></div>
     </dl>
-    <div class="ql-btns"><button class="btn soft-blue" type="button" data-close>View Appointment</button></div>
+    {# BACKEND: action = the notify view (sends notify_customer / notify_handyman), then remove data-demo #}
+    <form method="post" action="#" data-demo="Not sent yet: notifying the customer and handyman is not in the backend (frontend demo only).">
+      {% csrf_token %}
+      <div class="ap-notify-row">
+        <label class="ap-notify"><input type="checkbox" name="notify_customer" checked> Notify {{ page.customer }} (customer)</label>
+        <label class="ap-notify"><input type="checkbox" name="notify_handyman" checked> Notify {{ page.handyman }} (handyman)</label>
+      </div>
+      <div class="ql-btns">
+        <button class="btn o" type="button" data-close>View Appointment</button>
+        <button class="btn o ap-main" type="submit">Send Notification</button>
+      </div>
+    </form>
   </div>
 </dialog>
 {% endif %}
@@ -165,4 +192,4 @@
 {% block page_js %}
 <script src="{% static 'payments/js/admin_quotation_lists.js' %}"></script>
 <script src="{% static 'bookings/js/admin_appointments.js' %}"></script>
-{% endblock %}
+{% endblock %}

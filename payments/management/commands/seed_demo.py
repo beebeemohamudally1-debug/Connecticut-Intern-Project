@@ -21,7 +21,8 @@ from bookings.models import Appointment, HandymanProfileRequest, ServiceRequest,
 from complaints.models import Complaint, ComplaintEvidence, ComplaintLog, ComplaintMessage
 from jobs.models import Job, ProgressReport, TimeLog, WorkEvidence
 from reviews.models import Review
-from payments.models import LabourEstimate, MaterialPurchaseRequest, MaterialReceipt, Payment, Quotation
+from payments.models import (Invoice, InvoicePayment, LabourEstimate, MaterialPurchaseRequest, MaterialReceipt,
+                             Payment, Quotation, Receipt)
 
 User = get_user_model()
 BASE = 'http://127.0.0.1:8000'
@@ -77,6 +78,10 @@ class Command(BaseCommand):
 
     def reset(self):
         demo = {'request__customer__username__startswith': 'demo_'}
+        # Invoices (payments team) point to the quotations, so they go first: receipt, payment, invoice
+        Receipt.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
+        InvoicePayment.objects.filter(invoice__request__customer__username__startswith='demo_').delete()
+        Invoice.objects.filter(**demo).delete()
         Payment.objects.filter(quotation__request__customer__username__startswith='demo_').delete()
         MaterialReceipt.objects.filter(purchase_request__request__customer__username__startswith='demo_').delete()
         MaterialPurchaseRequest.objects.filter(**demo).delete()
@@ -131,8 +136,14 @@ class Command(BaseCommand):
             ('changes_requested_2', 'Deck staining', 0, 0, '4800', 'Sand the deck\nApply two coats of stain', 'approved', 'revision_requested'),
             ('changes_requested_3', 'Bathroom fan install', 3, 1, '2200', 'Cut vent\nInstall fan\nConnect wiring', 'approved', 'revision_requested'),
             ('accepted', 'Garden fence repair', 2, 0, '3000', 'Replace panels\nLevel posts\nPaint section', 'approved', 'accepted'),
+            ('labour_only', 'Light switch replacement', 2, 1, '900', 'Replace two light switches\nTest the circuit', 'approved', 'accepted'),
+            ('no_request', 'Curtain rail fitting', 1, 1, '800', 'Fit two curtain rails\nCheck the wall plugs', 'approved', 'accepted'),
+            ('ready_invoice', 'Bathroom tap replacement', 1, 0, '1600', 'Remove old taps\nFit new mixer tap\nTest for leaks', 'approved', 'accepted'),
             ('accepted_waiting', 'Gate repair', 0, 0, '2800', 'Fix hinges\nRealign gate\nOil lock', 'approved', 'accepted'),
             ('paid', 'Water heater service', 3, 1, '2400', 'Drain tank\nReplace element\nTest', 'approved', 'paid'),
+            ('paid_2', 'Kitchen sink unblocking', 0, 0, '1400', 'Clear the drain\nReplace the trap\nTest the flow', 'approved', 'paid'),
+            ('paid_3', 'Bedroom door rehang', 2, 1, '1700', 'Remove the door\nFit new hinges\nRehang and adjust', 'approved', 'paid'),
+            ('paid_4', 'Outdoor light fitting', 1, 0, '1100', 'Fit the outdoor light\nConnect to the switch\nTest', 'approved', 'paid'),
             ('declined', 'Roof gutter cleaning', 3, 0, '5700', 'Clear gutters\nFlush downpipes', 'approved', 'declined'),
             ('cancelled', 'Shower installation', 0, 1, '4200', 'Remove old unit\nInstall shower\nSeal and test', 'approved', 'cancelled'),
         ]
@@ -179,9 +190,25 @@ class Command(BaseCommand):
         # One receipt approved, one waiting for review.
         self.material(admin, handymen[0], 'accepted', '4 fence panels\n2 posts\n1 tin of wood paint', '3200', paid=False,
                       receipts=[('1850', 'approved'), ('1250', 'submitted')])
+        # Light switch: the handyman says no materials are needed (material request with cost 0): labour only.
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['labour_only']['request'], handyman=handymen[1],
+            items='No materials needed', estimated_cost=Decimal('0'))
+        # Curtain rail: labour accepted, no material request yet (the admin pages wait for it).
+        # Bathroom tap: both accepted, receipts match the material quotation (ready to invoice on Payment Status).
+        self.material(admin, handymen[0], 'ready_invoice', '1 mixer tap\n2 flexible hoses', '1300', paid=False,
+                      receipts=[('950', 'approved'), ('350', 'submitted')])
         # Water heater: both accepted and both paid (whole request paid, appointment can be scheduled).
         self.material(admin, handymen[1], 'paid', '1 heating element\n1 thermostat', '1900', paid=True,
                       receipts=[('1150', 'approved'), ('690', 'approved')])
+        # More paid requests for service appointments: sink and outdoor light with materials, door labour only.
+        self.material(admin, handymen[0], 'paid_2', '1 sink trap\n1 drain cleaner', '450', paid=True,
+                      receipts=[('430', 'approved')])
+        MaterialPurchaseRequest.objects.create(
+            request_id=self.ids['paid_3']['request'], handyman=handymen[1],
+            items='No materials needed', estimated_cost=Decimal('0'))
+        self.material(admin, handymen[0], 'paid_4', '1 outdoor wall light\n3 m outdoor cable', '1250', paid=True,
+                      receipts=[('1240', 'approved')])
         # Material Quotations: one request in every other stage
         MaterialPurchaseRequest.objects.create(
             request_id=self.ids['changes_requested']['request'], handyman=handymen[1],
@@ -228,7 +255,8 @@ class Command(BaseCommand):
         for key, status, h, days in [('paid', Job.COMPLETED, 1, 6), ('accepted', Job.ASSIGNED, 0, -3),
                                      ('accepted_waiting', Job.ASSIGNED, 0, -5),
                                      ('changes_requested', Job.IN_PROGRESS, 1, -1),
-                                     ('cancelled', Job.CANCELLED, 1, 2)]:
+                                     ('cancelled', Job.CANCELLED, 1, 2),
+                                     ('paid_3', Job.COMPLETED, 1, 4), ('paid_4', Job.ASSIGNED, 0, -6)]:
             req = ServiceRequest.objects.get(pk=self.ids[key]['request'])
             job = Job.objects.create(
                 service_request=req, customer=req.customer, handyman=handymen[h],
@@ -338,6 +366,9 @@ class Command(BaseCommand):
         rows = [
             # key, type, handyman, days from today, slot, status, note
             ('paid', A.TYPE_SERVICE, 1, 2, 'morning', A.STATUS_CONFIRMED, 'The handyman will call 30 minutes before arriving.'),
+            ('paid_2', A.TYPE_SERVICE, 0, 3, 'afternoon', A.STATUS_PENDING, ''),         # paid, waiting for the customer: Confirm works
+            ('paid_3', A.TYPE_SERVICE, 1, -4, 'morning', A.STATUS_COMPLETED, 'Door rehung and tested with the customer.'),
+            ('paid_4', A.TYPE_SERVICE, 0, 6, 'morning', A.STATUS_CONFIRMED, ''),
             ('needs_review_3', A.TYPE_INSPECTION, 1, 2, 'morning', A.STATUS_PENDING, ''),          # clashes with the one above
             ('needs_review', A.TYPE_INSPECTION, 0, 1, 'afternoon', A.STATUS_PENDING, ''),
             ('estimate_revision', A.TYPE_INSPECTION, 0, 5, 'morning', A.STATUS_CONFIRMED, ''),
@@ -353,6 +384,11 @@ class Command(BaseCommand):
             A.objects.create(service_request_id=self.ids[key]['request'], handyman=handymen[h], appointment_type=kind,
                              appointment_date=today + timedelta(days=days), time_slot=slot, status=status, notes=note,
                              confirmed_by=admin if done else None, confirmed_at=timezone.now() if done else None)
+            if done and kind == A.TYPE_INSPECTION:
+                # An inspection is confirmed only once its fee is paid: a paid fee invoice with its receipt
+                invoice = Invoice.issue_inspection(admin, ServiceRequest.objects.get(pk=self.ids[key]['request']),
+                                                   today, 'Site visit to check the work before the quotation.')
+                invoice.record_payment(admin, amount=invoice.total_amount, date_received=today, method='cash', clear=True)
 
     def profile_requests(self, admin, handymen):
         """Skills and services for the Handyman Profile (approved, pending and rejected changes)."""
@@ -562,6 +598,8 @@ class Command(BaseCommand):
         for key, service in [('needs_quote', 'Pipe leak repair'), ('draft', 'Kitchen shelf install'),
                              ('sent', 'Ceiling fan installation'), ('changes_requested', 'Wall painting'),
                              ('accepted', 'Garden fence repair'), ('accepted_waiting', 'Gate repair'),
+                             ('labour_only', 'Light switch replacement'),
+                             ('no_request', 'Curtain rail fitting'),
                              ('paid', 'Water heater service'),
                              ('declined', 'Roof gutter cleaning'), ('cancelled', 'Shower installation')]:
             req = ServiceRequest.objects.filter(customer__username__startswith='demo_', service_category=service).first()
@@ -586,7 +624,8 @@ class Command(BaseCommand):
             out(f'  {BASE}/payments/quotations/new/{i["request"]}/?estimate={i["estimate"]}')
         out('\nQuotation details')
         for key, label in [('draft', 'Draft'), ('sent', 'Sent, awaiting customer'), ('changes_requested', 'Changes requested'),
-                           ('accepted_waiting', 'Accepted, no materials'), ('accepted', 'Both accepted, unpaid'),
+                           ('accepted_waiting', 'Accepted, material request waiting'),
+                           ('labour_only', 'Accepted, no materials'), ('no_request', 'Accepted, no material request yet'), ('accepted', 'Both accepted, unpaid'),
                            ('paid', 'Both paid'), ('declined', 'Declined'), ('cancelled', 'Cancelled')]:
             if key in ids and ids[key]['quotation']:
                 out(f'  {label + ":":26} {BASE}/payments/quotations/{ids[key]["quotation"]}/')

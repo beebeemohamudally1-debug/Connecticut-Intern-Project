@@ -1,0 +1,25 @@
+{% extends "base_customer.html" %}
+{% comment %}
+  APPOINTMENTS.  URL name expected: customer_portal:appointments
+  CONTEXT: appointments [{reference, service, date, session, address, provider_name, provider_initials, status_label, status_tone, url, upcoming(bool)}]
+  Tabs filter client-side (upcoming / past); no extra request.
+{% endcomment %}
+{% block title %}Appointments | HandyConnect{% endblock %}
+{% block page %}customer-appointments{% endblock %}
+{% block content %}
+<div class="cp-head"><div><h1>Your appointments</h1><p>Visits are confirmed after the administrator verifies your offline payment.</p></div></div>
+<div class="cp-bar-controls"><div class="cp-tabs" role="group" aria-label="Filter appointments" data-cp-tabs="cp-appts"><button type="button" data-filter="all" aria-selected="true">All</button><button type="button" data-filter="upcoming" aria-selected="false">Upcoming</button><button type="button" data-filter="past" aria-selected="false">Past</button></div></div>
+<div class="cp-events" id="cp-appts" data-hook="appointment-list">
+  {% for a in appointments %}
+  <article class="cp-panel" data-cp-tab="{% if a.upcoming %}upcoming{% else %}past{% endif %}">
+    <div class="cp-panel-row"><div><h2>{{ a.service }}</h2><p class="cp-small">{{ a.reference }}</p></div>{% include "customer/_badge.html" with tone=a.status_tone label=a.status_label %}</div>
+    <div class="cp-person"><span class="cp-avatar is-lg" data-keep="1">{{ a.provider_initials }}</span><div><strong>{{ a.provider_name }}</strong><span>Verified professional · Skills checked</span></div></div>
+    <dl class="cp-details"><div class="cp-detail"><dt>Date</dt><dd>{{ a.date }}</dd></div><div class="cp-detail"><dt>Session</dt><dd>{{ a.session }}</dd></div><div class="cp-detail"><dt>Address</dt><dd>{{ a.address }}</dd></div></dl>
+    {% if a.url %}<a class="cp-btn is-light" href="{{ a.url }}">View appointment</a>{% endif %}
+  </article>
+  {% empty %}
+  <section class="cp-panel"><div class="cp-empty"><svg class="cp-ic" aria-hidden="true"><use href="#i-calendar"/></svg><strong>No appointments yet</strong><p>Once you accept a quotation and your offline payment is verified, your visit appears here.</p></div></section>
+  {% endfor %}
+  <p class="cp-small" data-cp-tab-empty hidden>No appointments in this view.</p>
+</div>
+{% endblock %}

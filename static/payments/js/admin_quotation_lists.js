@@ -65,3 +65,23 @@
     });
   });
 })();
+
+/* Lock a form after its first submit, so a double click cannot send it twice. Runs after the checks
+   above: a form they stopped (missing note, missing work) is not locked. */
+(function () {
+  document.querySelectorAll('form[data-review]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      if (e.defaultPrevented) return;
+      if (form.dataset.sent) { e.preventDefault(); return; }
+      form.dataset.sent = '1';
+      var btn = e.submitter;
+      // after the browser has read the form, so the clicked button's value is still sent
+      setTimeout(function () {
+        var all = form.querySelectorAll('button');
+        if (form.id) all = Array.prototype.concat.apply(Array.prototype.slice.call(all), document.querySelectorAll('button[form="' + form.id + '"]'));
+        Array.prototype.forEach.call(all, function (b) { if (b.type !== 'button') b.disabled = true; });
+        if (btn) btn.textContent = 'Please wait…';
+      }, 0);
+    });
+  });
+})();

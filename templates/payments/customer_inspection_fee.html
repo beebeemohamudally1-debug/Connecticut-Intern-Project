@@ -2,5 +2,35 @@
 {% block title %}Customer · Inspection fee | HandyConnect{% endblock %}
 {% block page %}invoices{% endblock %}
 {% block content %}
-<div class="bar"><div><div class="lab">Your request</div><h1>Inspection fee</h1><p class="sub">The handyman needs to see the job on site before giving a price.</p></div><span class="b ye">Awaiting payment</span></div><div class="g2"><div class="card"><h2>Fee details</h2><div class="row"><span class="mut">Invoice number</span><span>INS-2026-0009</span></div><div class="row"><span class="mut">Job</span><span>Bathroom wall repair</span></div><div class="row"><span class="mut">Reason</span><span>Cannot be priced from photos</span></div><div class="row t"><span>Inspection fee</span><span>MUR 500.00</span></div></div><div class="card"><h2>How to pay</h2><div class="row"><span class="mut">Bank</span><span>[BANK NAME]</span></div><div class="row"><span class="mut">Account</span><span>[ACCOUNT NUMBER]</span></div><div class="row"><span class="mut">Reference</span><span>INS-2026-0009</span></div><div class="row"><span class="mut">Pay before</span><span>06/11/2026</span></div><p class="sub" style="margin:16px 0 0">The visit is scheduled once the administrator records your payment.</p></div></div>
+{% include "payments/_messages.html" %}
+<div class="bar">
+  <div>
+    <div class="lab">Your request</div>
+    <h1>Inspection fee</h1>
+    <p class="sub">The handyman needs to see the job on site before giving a price.</p>
+  </div>
+  {% if invoice.status == 'paid' %}<span class="b">Paid</span>
+  {% elif invoice.is_overdue %}<span class="b ye">Overdue</span>
+  {% else %}<span class="b ye">Awaiting payment</span>{% endif %}
+</div>
+<div class="g2">
+  <div class="card">
+    <h2>Fee details</h2>
+    <div class="row"><span class="mut">Invoice number</span><span>{{ invoice.number }}</span></div>
+    <div class="row"><span class="mut">Job</span><span>{{ invoice.request.reference }}</span></div>
+    <div class="row"><span class="mut">Reason</span><span>{{ invoice.reason }}</span></div>
+    <div class="row t"><span>Inspection fee</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
+  </div>
+  <div class="card">
+    <h2>How to pay</h2>
+    <p style="font-size:14px;margin:0 0 12px">{{ invoice.payment_instructions|linebreaksbr }}</p>
+    <div class="row"><span class="mut">Reference</span><span>{{ invoice.number }}</span></div>
+    <div class="row"><span class="mut">Pay before</span><span>{{ invoice.due_date|date:"d/m/Y" }}</span></div>
+    {% if invoice.receipt %}
+    <p class="sub" style="margin:16px 0 0"><a class="btn" href="{% url 'payments:receipt_detail' invoice.receipt.pk %}">View receipt {{ invoice.receipt.number }}</a></p>
+    {% else %}
+    <p class="sub" style="margin:16px 0 0">The visit is scheduled once the administrator records your payment.</p>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
