@@ -1,0 +1,479 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Profile | HandyConnect</title>
+    <link rel="stylesheet" href="{% static 'dashboard/css/handyman_profile.css' %}">
+</head>
+<body data-page="profile" data-uid="{{ hc_uid|default:'guest' }}">
+<div class="layout">
+
+    <aside class="sidebar">
+        <a class="brand" href="{% url 'dashboard:handyman_dashboard' %}">
+            <span class="brand-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>
+            HandyConnect
+        </a>
+        <div class="workspace"><span>Workspace</span><strong>Handyman Dashboard</strong></div>
+
+        <nav class="nav" aria-label="Main">
+            <a href="{% url 'dashboard:handyman_dashboard' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+            <a href="{% url 'dashboard:assigned_jobs' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></svg>Assigned Jobs</a>
+            <a href="{% url 'dashboard:job_requests' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>Job Requests</a>
+            <a href="{% url 'dashboard:job_in_progress' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Job In Progress</a>
+            <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
+        </nav>
+
+        <a class="help-card" href="{% url 'dashboard:report_customer' %}">
+            <strong>Need a hand?</strong>
+            <span>File a complaint or contact the admin directly.</span>
+            <b>Go to complaints &rarr;</b>
+        </a>
+        <p class="copyright">HandyConnect &copy; 2026</p>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman workspace</a> / My Profile</div>
+            <div class="topbar-right">
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                    <span class="badge" id="bell-count" hidden>0</span>
+                </a>
+                <a class="user" href="{% url 'dashboard:handyman_profile' %}" aria-label="My profile"><span class="avatar">{{ hc_initials|default:"U" }}</span><span class="uname">{{ hc_name|default:"User" }}</span></a>
+            </div>
+        </header>
+
+        <main class="content" id="main" data-first="{{ request.user.first_name }}" data-last="{{ request.user.last_name }}" data-user="{{ request.user.get_username }}" data-email="{{ request.user.email }}" data-phone="{{ request.user.phone|default:'' }}" data-region="{{ request.user.region|default:'' }}">
+            <h1 class="page-title">My profile</h1>
+            <p class="page-sub">Manage your details, skills and work history. The administrator reviews every new skill.</p>
+            <div class="notice ok" id="toast" role="status" hidden><strong id="toast-t"></strong><p id="toast-p"></p></div>
+
+            <section class="card pf-head" aria-label="Profile overview">
+                <div class="pf-id">
+                    <span class="avatar xl" id="head-av" aria-hidden="true"></span>
+                    <div><h2 id="head-name"></h2><p class="muted" id="head-sub"></p><span class="b gr">Active</span></div>
+                </div>
+                <dl class="pf-stats">
+                    <div><dt>Approved skills</dt><dd id="st-skills">0</dd></div>
+                    <div><dt>Pending requests</dt><dd id="st-pend">0</dd></div>
+                    <div><dt>Completed jobs</dt><dd id="st-done">0</dd></div>
+                    <div><dt>Member since</dt><dd>{{ request.user.date_joined|date:"j M Y" }}</dd></div>
+                </dl>
+            </section>
+
+            <div class="tabs" role="tablist" aria-label="Profile sections">
+                <button type="button" role="tab" class="tab active" id="t-profile" aria-selected="true" aria-controls="tab-profile" data-tab="profile">Profile</button>
+                <button type="button" role="tab" class="tab" id="t-skills" aria-selected="false" aria-controls="tab-skills" data-tab="skills" tabindex="-1">Skills</button>
+                <button type="button" role="tab" class="tab" id="t-history" aria-selected="false" aria-controls="tab-history" data-tab="history" tabindex="-1">Work history</button>
+                <button type="button" role="tab" class="tab" id="t-plan" aria-selected="false" aria-controls="tab-plan" data-tab="plan" tabindex="-1">Subscription</button>
+            </div>
+
+            <!-- ================= Profile ================= -->
+            <section id="tab-profile" role="tabpanel" aria-labelledby="t-profile">
+                <form id="p-form" class="grid2" method="post" action="" novalidate>
+                    {% csrf_token %}
+                    <section class="card">
+                        <h2>Personal information</h2>
+                        <div class="photo-row">
+                            <span class="avatar xl" id="photo" aria-hidden="true"></span>
+                            <div>
+                                <button type="button" class="btn-o" id="photo-btn">Change photo</button>
+                                <button type="button" class="link-btn" id="photo-rm" hidden>Remove</button>
+                                <p class="muted small">JPG or PNG, up to 2 MB. It appears in the top bar of every page.</p>
+                                <input type="file" id="photo-in" accept="image/png,image/jpeg" hidden>
+                            </div>
+                        </div>
+                        <p class="err" id="photo-err" role="alert" hidden></p>
+
+                        <div class="row2">
+                            <div><label class="field" for="f-first">First name <i>*</i></label><input class="input" id="f-first" name="first_name" autocomplete="given-name" required><p class="err" id="e-first" hidden></p></div>
+                            <div><label class="field" for="f-last">Surname <i>*</i></label><input class="input" id="f-last" name="last_name" autocomplete="family-name" required><p class="err" id="e-last" hidden></p></div>
+                        </div>
+                        <div class="row2">
+                            <div><label class="field" for="f-user">Username</label><input class="input ro" id="f-user" name="username" readonly aria-describedby="h-reg"></div>
+                            <div><label class="field" for="f-email">Email</label><input class="input ro" id="f-email" name="email" type="email" readonly aria-describedby="h-reg"></div>
+                        </div>
+                        <p class="muted small hint" id="h-reg">Username and email come from your registration. Ask the administrator if they need to change.</p>
+                        <div class="row2">
+                            <div><label class="field" for="f-phone">Phone</label><input class="input" id="f-phone" name="phone" type="tel" autocomplete="tel" placeholder="+230 5xxx xxxx"><p class="err" id="e-phone" hidden></p></div>
+                            <div><label class="field" for="f-region">Service area</label><input class="input" id="f-region" name="region" placeholder="e.g. Plaines Wilhems"></div>
+                        </div>
+                        <div class="row2">
+                            <div><label class="field" for="f-exp">Years of experience</label><input class="input" id="f-exp" name="experience" type="number" min="0" max="60" inputmode="numeric"><p class="err" id="e-exp" hidden></p></div>
+                            <div><label class="field" for="f-avail">Availability</label>
+                                <select class="input" id="f-avail" name="availability"><option>Weekdays</option><option>Weekends</option><option>Weekdays and weekends</option><option>On request</option></select></div>
+                        </div>
+                        <label class="field" for="f-about">About you</label>
+                        <textarea id="f-about" name="about" rows="4" maxlength="400" placeholder="Tell customers about your work, experience and the jobs you enjoy."></textarea>
+                        <p class="muted small count"><span id="about-n">0</span>/400</p>
+                        <button class="btn big" type="submit">Save changes</button>
+                        <button class="btn-o big" type="button" id="p-reset">Reset</button>
+                    </section>
+
+                    <div class="stack">
+                        <section class="card">
+                            <h2>Account summary</h2>
+                            <div class="row"><span>Account status</span><strong class="state ok">Active</strong></div>
+                            <div class="row"><span>Assigned jobs</span><strong id="sum-assigned">0</strong></div>
+                            <div class="row"><span>Completed jobs</span><strong id="sum-done">0</strong></div>
+                            <div class="row"><span>Registered</span><strong>{{ request.user.date_joined|date:"j M Y" }}</strong></div>
+                        </section>
+                        <section class="card">
+                            <h2>Registration details</h2>
+                            <p class="muted small">Your name, username and email were recorded when you registered. Updating your name or photo here also updates the top bar.</p>
+                        </section>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ================= Skills ================= -->
+            <section id="tab-skills" role="tabpanel" aria-labelledby="t-skills" hidden>
+                <div class="grid2">
+                    <div class="stack">
+                        <section class="card">
+                            <div class="card-head"><h2>My skills</h2><span class="b" id="sk-count"></span></div>
+                            <ul class="list" id="sk-list"></ul>
+                        </section>
+                        <section class="card">
+                            <div class="card-head"><h2>My skill requests</h2><span class="b ye" id="rq-count"></span></div>
+                            <ul class="list reqs" id="rq-list"></ul>
+                        </section>
+                    </div>
+                    <section class="card">
+                        <h2>Request a new skill</h2>
+                        <p class="muted small lead">Pick a skill approved by the administrator, or add your own. The administrator reviews every request before it joins your profile.</p>
+                        <form id="s-form" method="post" action="" enctype="multipart/form-data" novalidate>
+                            {% csrf_token %}
+                            <label class="field" for="s-pick">Skill <i>*</i></label>
+                            <select class="input" id="s-pick" name="skill"></select>
+                            <button type="button" class="link-btn add" id="s-custom-btn">+ Add a custom skill</button>
+                            <p class="err" id="e-pick" hidden></p>
+                            <div id="s-custom-wrap" hidden>
+                                <label class="field" for="s-custom">Custom skill name <i>*</i></label>
+                                <input class="input" id="s-custom" name="custom_skill" maxlength="60" placeholder="e.g. House wiring">
+                                <p class="err" id="e-custom" hidden></p>
+                            </div>
+                            <label class="field" for="s-cat">Category <i>*</i></label>
+                            <select class="input" id="s-cat" name="category"></select>
+                            <label class="field" for="s-why">Justification <i>*</i></label>
+                            <textarea id="s-why" name="justification" rows="4" maxlength="300" placeholder="Years of experience, licences or qualifications."></textarea>
+                            <p class="err" id="e-why" hidden></p>
+                            <label class="field" for="s-file">Licence or certificate (optional)</label>
+                            <input class="input" id="s-file" name="evidence" type="file" accept="image/*,application/pdf">
+                            <p class="err" id="e-file" hidden></p>
+                            <button class="btn big" type="submit">Send request to admin</button>
+                            <button class="btn-o big" type="button" id="s-clear">Clear</button>
+                        </form>
+                    </section>
+                </div>
+            </section>
+
+            <!-- ================= Work history ================= -->
+            <section id="tab-history" role="tabpanel" aria-labelledby="t-history" hidden>
+                <section class="card">
+                    <div class="card-head"><h2>Reference work history</h2><span class="b" id="wh-count"></span></div>
+                    <p class="muted small lead">Completed jobs and customer references that administrators and customers can rely on.</p>
+                    <ul class="refs" id="wh-list"></ul>
+                </section>
+            </section>
+
+            <!-- ================= Subscription ================= -->
+            <section id="tab-plan" role="tabpanel" aria-labelledby="t-plan" hidden>
+                <div class="notice info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <div><strong>Plans are being finalised</strong><p>This is a preview. Subscription options and prices will be confirmed with the team, so nothing here can be selected yet.</p></div></div>
+                <div class="plans">
+                    <section class="card plan current"><span class="b gr">Current plan</span><h2>Free listing</h2><p class="price">MUR 0 <small>/ month</small></p>
+                        <ul class="ticks"><li>Profile visible to customers</li><li>Receive job requests</li><li>Standard support</li></ul>
+                        <button class="btn-o big" type="button" disabled aria-disabled="true">Current plan</button></section>
+                    <section class="card plan"><span class="b">Coming soon</span><h2>Pro</h2><p class="price">To be confirmed</p>
+                        <ul class="ticks"><li>Priority in search results</li><li>Featured profile badge</li><li>Priority support</li></ul>
+                        <button class="btn big" type="button" disabled aria-disabled="true">Not available yet</button></section>
+                    <section class="card plan"><span class="b">Coming soon</span><h2>Premium</h2><p class="price">To be confirmed</p>
+                        <ul class="ticks"><li>Everything in Pro</li><li>Monthly performance report</li><li>Early access to new features</li></ul>
+                        <button class="btn big" type="button" disabled aria-disabled="true">Not available yet</button></section>
+                </div>
+            </section>
+
+            <footer class="page-foot"><span>Secure workspace &middot; Your information stays private</span><span><a href="#">Help center</a> &middot; <a href="#">Privacy policy</a></span></footer>
+        </main>
+    </div>
+</div>
+
+<dialog class="modal" id="dlg" aria-labelledby="dlg-t" aria-describedby="dlg-p">
+    <span class="modal-icon warn" id="dlg-i" aria-hidden="true">!</span>
+    <h2 id="dlg-t"></h2><p id="dlg-p"></p>
+    <div class="modal-actions"><button type="button" class="btn-o big" id="dlg-no"></button><button type="button" class="btn big" id="dlg-yes"></button></div>
+</dialog>
+
+<script>
+/* Shared client-side state so every handyman page stays in sync (per logged-in user).
+   Replace HC.get/HC.set with real API calls when the backend is ready. */
+(function () {
+    var uid = document.body.getAttribute('data-uid') || 'guest';
+    var SEED = {
+        jobs: [
+            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
+            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
+            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
+            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
+        ],
+        requests: [
+            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
+            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
+        ],
+        notifications: [
+            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
+            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
+            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
+            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
+        ],
+        complaints: [
+            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
+              messages: [
+                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
+                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
+              ] },
+            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
+            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
+        ]
+    };
+
+    function key(n) { return 'hc:' + uid + ':' + n; }
+    var HC = window.HC = {
+        get: function (n) {
+            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
+            var s = JSON.parse(JSON.stringify(SEED[n] || []));
+            HC.set(n, s);
+            return s;
+        },
+        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
+        now: function () {
+            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
+        },
+        notify: function (type, title, text) {
+            var list = HC.get('notifications');
+            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
+            HC.set('notifications', list);
+            HC.badge();
+        },
+        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
+        badge: function () {
+            var n = HC.unread(), el = document.getElementById('bell-count');
+            if (!el) return;
+            el.textContent = n; el.hidden = n === 0;
+            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
+        }
+    };
+
+    HC.el = function (tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    };
+
+    HC.badge();
+    try {   /* show the saved profile name and photo in the header of every page */
+        var pf = JSON.parse(localStorage.getItem('hc:' + uid + ':profile') || 'null');
+        var av = document.querySelector('.user .avatar'), nm = document.querySelector('.user .uname');
+        if (pf && !Array.isArray(pf)) {
+            if (pf.photo && av) { av.textContent = ''; av.style.background = 'url(' + pf.photo + ') center/cover'; }
+            if (pf.first && nm) nm.textContent = (pf.first + ' ' + (pf.last || '')).trim();
+        }
+    } catch (e) {}
+})();
+
+</script>
+<script>
+(function () {
+    function $(id) { return document.getElementById(id); }
+    var M = $('main'), SRV = { first: M.dataset.first, last: M.dataset.last, user: M.dataset.user, email: M.dataset.email, phone: M.dataset.phone, region: M.dataset.region };
+    var CATEGORIES = ['Plumbing', 'Electrical', 'Masonry', 'Carpentry', 'Painting', 'Tiling', 'Roofing', 'HVAC', 'Other'];
+    var CATALOG = [['Plumbing', 'Plumbing'], ['Masonry', 'Masonry'], ['Electrical wiring', 'Electrical'], ['Carpentry', 'Carpentry'], ['Painting', 'Painting'], ['Tiling', 'Tiling'], ['Roofing', 'Roofing'], ['Air conditioning', 'HVAC']];
+    var REFS = [
+        { title: 'Bathroom faucet replacement', who: 'Daniel Brooks', date: 'Sep 12, 2026', stars: 5, text: 'Neat work and arrived on time. The faucet has not leaked since.' },
+        { title: 'Water heater servicing', who: 'Olivia Brown', date: 'Jun 04, 2026', stars: 5, text: 'Explained the problem clearly and left the area clean.' },
+        { title: 'Wall repair and plastering', who: 'Ethan Williams', date: 'Mar 21, 2026', stars: 4, text: 'Good finish. Took a little longer than planned.' }
+    ];
+    if (!HC.get('profileInit').length) {
+        HC.set('skills', [{ name: 'Plumbing', category: 'Plumbing' }, { name: 'Masonry', category: 'Masonry' }]);
+        HC.set('skillRequests', [{ id: 'SKR-252', skill: 'House wiring', category: 'Electrical', why: 'Five years of house wiring work and a valid electrician licence.', submitted: '23 Nov 2026', status: 'Pending review', note: '' }]);
+        HC.set('profileInit', [1]);
+    }
+    function prof() { var p = HC.get('profile'); return Array.isArray(p) ? {} : p; }
+    function val(k) { var p = prof(); return p[k] !== undefined ? p[k] : (SRV[k] || ''); }
+
+    /* ---------- feedback: toast + confirmation pop-up ---------- */
+    var toastTimer;
+    function toast(t, p) { $('toast-t').textContent = t; $('toast-p').textContent = p || ''; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { $('toast').hidden = true; }, 5000); }
+    function ask(o) {
+        return new Promise(function (res) {
+            var d = $('dlg'); $('dlg-i').className = 'modal-icon ' + (o.kind || 'warn'); $('dlg-i').textContent = o.kind === 'ok' ? '\u2713' : '!';
+            $('dlg-t').textContent = o.title; $('dlg-p').textContent = o.text; $('dlg-yes').textContent = o.yes || 'Confirm'; $('dlg-no').textContent = o.no || 'Cancel'; $('dlg-no').hidden = !!o.single;
+            function done(v) { d.close(); res(v); }
+            $('dlg-yes').onclick = function () { done(true); }; $('dlg-no').onclick = function () { done(false); }; d.oncancel = function () { res(false); };
+            d.showModal(); $('dlg-yes').focus();
+        });
+    }
+    function err(id, msg) { var e = $(id); e.textContent = msg || ''; e.hidden = !msg; return !msg; }
+
+    /* ---------- header / avatar ---------- */
+    function initials() { var f = val('first'), l = val('last'); return ((f[0] || '') + (l[0] || '') || (SRV.user || 'U').slice(0, 2)).toUpperCase(); }
+    function paintAvatar(el, photo) { el.textContent = photo ? '' : initials(); el.style.background = photo ? 'url(' + photo + ') center/cover' : ''; }
+    function paintHead() {
+        var p = prof(), name = (val('first') + ' ' + val('last')).trim() || SRV.user;
+        $('head-name').textContent = name; $('head-sub').textContent = '@' + SRV.user + (SRV.email ? ' \u00b7 ' + SRV.email : '');
+        paintAvatar($('head-av'), p.photo); paintAvatar($('photo'), p.photo); $('photo-rm').hidden = !p.photo;
+        var hv = document.querySelector('.user .avatar'), hn = document.querySelector('.user .uname');
+        if (hv) paintAvatar(hv, p.photo); if (hn) hn.textContent = name;
+    }
+    function counts() {
+        var jobs = HC.get('jobs'), done = jobs.filter(function (j) { return j.status === 'completed'; }).length;
+        $('st-skills').textContent = HC.get('skills').length; $('st-pend').textContent = HC.get('skillRequests').filter(function (r) { return r.status === 'Pending review'; }).length;
+        $('st-done').textContent = $('sum-done').textContent = done + REFS.length;
+        $('sum-assigned').textContent = jobs.filter(function (j) { return j.status !== 'completed'; }).length;
+    }
+
+    /* ---------- profile form ---------- */
+    function fillForm() {
+        $('f-first').value = val('first'); $('f-last').value = val('last'); $('f-user').value = SRV.user; $('f-email').value = SRV.email;
+        $('f-phone').value = val('phone'); $('f-region').value = val('region'); $('f-exp').value = val('exp'); $('f-avail').value = val('avail') || 'Weekdays'; $('f-about').value = val('about');
+        $('about-n').textContent = $('f-about').value.length; ['e-first', 'e-last', 'e-phone', 'e-exp'].forEach(function (i) { err(i); });
+    }
+    $('f-about').oninput = function () { $('about-n').textContent = this.value.length; };
+    $('p-reset').onclick = fillForm;
+    $('p-form').onsubmit = function (e) {
+        e.preventDefault();   /* remove when the backend view saves the profile */
+        var ok = true, ph = $('f-phone').value.trim(), ex = $('f-exp').value.trim();
+        ok = err('e-first', $('f-first').value.trim() ? '' : 'Enter your first name.') && ok;
+        ok = err('e-last', $('f-last').value.trim() ? '' : 'Enter your surname.') && ok;
+        ok = err('e-phone', !ph || /^[+\d][\d\s-]{6,17}$/.test(ph) ? '' : 'Enter a valid phone number.') && ok;
+        ok = err('e-exp', !ex || (+ex >= 0 && +ex <= 60) ? '' : 'Enter a number from 0 to 60.') && ok;
+        if (!ok) { var bad = document.querySelector('#p-form .err:not([hidden])'); if (bad) bad.previousElementSibling.focus(); return; }
+        var p = prof(); p.first = $('f-first').value.trim(); p.last = $('f-last').value.trim(); p.phone = ph; p.region = $('f-region').value.trim(); p.exp = ex; p.avail = $('f-avail').value; p.about = $('f-about').value.trim();
+        HC.set('profile', p); paintHead(); toast('Profile saved', 'Your details were updated.');
+    };
+
+    /* ---------- profile picture ---------- */
+    $('photo-btn').onclick = function () { $('photo-in').click(); };
+    $('photo-in').onchange = function () {
+        var f = this.files[0]; this.value = ''; if (!f) return;
+        if (!/^image\/(png|jpeg)$/.test(f.type)) return err('photo-err', 'Choose a JPG or PNG image.');
+        if (f.size > 2 * 1048576) return err('photo-err', 'The image is over 2 MB.');
+        err('photo-err');
+        var r = new FileReader(); r.onload = function () {
+            var img = new Image(); img.onload = function () {
+                var s = Math.min(img.width, img.height), c = document.createElement('canvas'); c.width = c.height = 256;
+                c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+                var p = prof(); p.photo = c.toDataURL('image/jpeg', 0.85); HC.set('profile', p); paintHead(); toast('Photo updated', 'It now shows in the top bar of every page.');
+            }; img.src = r.result;
+        }; r.readAsDataURL(f);
+    };
+    $('photo-rm').onclick = function () {
+        ask({ title: 'Remove your photo?', text: 'Your initials will be shown instead.', yes: 'Remove photo' }).then(function (ok) {
+            if (!ok) return; var p = prof(); delete p.photo; HC.set('profile', p); paintHead(); toast('Photo removed', '');
+        });
+    };
+
+    /* ---------- skills ---------- */
+    function badge(txt, cls) { return HC.el('span', 'b ' + (cls || ''), txt); }
+    function takenNames() {
+        return HC.get('skills').map(function (s) { return s.name.toLowerCase(); }).concat(HC.get('skillRequests').filter(function (r) { return r.status === 'Pending review'; }).map(function (r) { return r.skill.toLowerCase(); }));
+    }
+    function buildPick() {
+        var sel = $('s-pick'), taken = takenNames(), keep = sel.value; sel.innerHTML = '';
+        sel.appendChild(Object.assign(HC.el('option', '', 'Choose a skill\u2026'), { value: '' }));
+        CATALOG.forEach(function (c) {
+            var o = HC.el('option', '', c[0] + (taken.indexOf(c[0].toLowerCase()) > -1 ? ' (already on your profile)' : '')); o.value = c[0]; o.disabled = taken.indexOf(c[0].toLowerCase()) > -1; sel.appendChild(o);
+        });
+        sel.appendChild(Object.assign(HC.el('option', '', 'Custom skill\u2026'), { value: '__custom' })); sel.value = keep || '';
+        var cat = $('s-cat'); cat.innerHTML = ''; CATEGORIES.forEach(function (c) { cat.appendChild(Object.assign(HC.el('option', '', c), { value: c })); });
+    }
+    function pickChanged() {
+        var v = $('s-pick').value, custom = v === '__custom'; $('s-custom-wrap').hidden = !custom; err('e-pick');
+        if (!custom && v) { var c = CATALOG.filter(function (x) { return x[0] === v; })[0]; if (c) $('s-cat').value = c[1]; }
+    }
+    $('s-pick').onchange = pickChanged;
+    $('s-custom-btn').onclick = function () { $('s-pick').value = '__custom'; pickChanged(); $('s-custom').focus(); };
+    function clearSkill() { $('s-form').reset(); $('s-custom-wrap').hidden = true; ['e-pick', 'e-custom', 'e-why', 'e-file'].forEach(function (i) { err(i); }); }
+    $('s-clear').onclick = clearSkill;
+
+    function renderSkills() {
+        var sk = HC.get('skills'), rq = HC.get('skillRequests').slice().reverse(), ul = $('sk-list'), rl = $('rq-list');
+        $('sk-count').textContent = sk.length + ' skill' + (sk.length === 1 ? '' : 's'); ul.innerHTML = '';
+        if (!sk.length) ul.appendChild(HC.el('li', 'mut', 'No approved skills yet. Request one on the right.'));
+        sk.forEach(function (s) {
+            var li = HC.el('li'), l = HC.el('span', 'skill'); l.innerHTML = '<svg class="dia" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/><path d="M12 8l4 4-4 4-4-4z"/></svg>';
+            l.appendChild(document.createTextNode(s.name)); l.appendChild(HC.el('small', 'muted', s.category)); li.appendChild(l); li.appendChild(badge('Approved', 'gr')); ul.appendChild(li);
+        });
+        var pend = rq.filter(function (r) { return r.status === 'Pending review'; }).length; $('rq-count').textContent = pend + ' pending'; rl.innerHTML = '';
+        if (!rq.length) rl.appendChild(HC.el('li', 'mut', 'No skill requests yet.'));
+        rq.forEach(function (r) {
+            var li = HC.el('li'), t = HC.el('div', 'rq'); t.appendChild(HC.el('strong', '', r.skill));
+            t.appendChild(HC.el('small', 'muted', r.id + ' \u00b7 ' + r.category + ' \u00b7 ' + r.submitted + (r.note ? ' \u00b7 ' + r.note : ''))); li.appendChild(t);
+            var side = HC.el('div', 'rq-side'), cls = r.status === 'Approved' ? 'gr' : r.status === 'Rejected' ? 're' : r.status === 'Withdrawn' ? '' : 'ye'; side.appendChild(badge(r.status, cls));
+            if (r.status === 'Pending review') {
+                var w = HC.el('button', 'link-btn', 'Withdraw'); w.type = 'button'; w.setAttribute('aria-label', 'Withdraw request ' + r.id);
+                w.onclick = function () {
+                    ask({ title: 'Withdraw this request?', text: r.id + ' \u00b7 ' + r.skill + ' will no longer be reviewed.', yes: 'Withdraw request', no: 'Keep it' }).then(function (ok) {
+                        if (!ok) return; var all = HC.get('skillRequests'); all.forEach(function (x) { if (x.id === r.id) x.status = 'Withdrawn'; }); HC.set('skillRequests', all);
+                        renderSkills(); buildPick(); counts(); toast('Request withdrawn', r.id + ' was withdrawn.');
+                    });
+                }; side.appendChild(w);
+            }
+            li.appendChild(side); rl.appendChild(li);
+        });
+        counts();
+    }
+
+    $('s-form').onsubmit = function (e) {
+        e.preventDefault();   /* remove when the backend view saves the request */
+        var v = $('s-pick').value, custom = v === '__custom', name = (custom ? $('s-custom').value : v).trim(), why = $('s-why').value.trim(), f = $('s-file').files[0], ok = true;
+        ok = err('e-pick', v ? '' : 'Choose a skill or add a custom one.') && ok;
+        if (custom) ok = err('e-custom', name.length < 3 ? 'Enter the skill name (at least 3 letters).' : takenNames().indexOf(name.toLowerCase()) > -1 ? 'This skill is already on your profile or pending.' : '') && ok; else err('e-custom');
+        ok = err('e-why', why.length < 20 ? 'Add a short justification (at least 20 characters).' : '') && ok;
+        ok = err('e-file', f && !(/^image\//.test(f.type) || f.type === 'application/pdf') ? 'Attach an image or PDF.' : f && f.size > 10 * 1048576 ? 'The file is over 10 MB.' : '') && ok;
+        if (!ok) { var bad = document.querySelector('#s-form .err:not([hidden])'); if (bad) bad.previousElementSibling.focus(); return; }
+        var cat = $('s-cat').value;
+        ask({ title: 'Send this skill request?', text: name + ' (' + cat + ') will be sent to the administrator for review. You can withdraw it while it is pending.', yes: 'Send request' }).then(function (go) {
+            if (!go) return;
+            var all = HC.get('skillRequests'), n = Math.max.apply(null, all.map(function (r) { return parseInt(r.id.slice(4), 10) || 0; }).concat([252])) + 1, id = 'SKR-' + n;
+            all.push({ id: id, skill: name, category: cat, why: why, evidence: f ? f.name : '', submitted: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Indian/Mauritius' }), status: 'Pending review', note: '' });
+            HC.set('skillRequests', all); HC.notify('skill', 'Skill request sent', id + ' \u00b7 ' + name + ' \u00b7 Pending admin review.');
+            clearSkill(); buildPick(); renderSkills();
+            ask({ kind: 'ok', title: 'Request sent', text: id + ' is with the administrator. You will see the decision here and in Notifications.', yes: 'Done', single: true });
+        });
+    };
+
+    /* ---------- work history ---------- */
+    function renderHistory() {
+        var jobs = HC.get('jobs').filter(function (j) { return j.status === 'completed'; }), ul = $('wh-list'); ul.innerHTML = '';
+        function item(title, who, date, stars, text) {
+            var li = HC.el('li'), h = HC.el('div', 'ref-top'); h.appendChild(HC.el('strong', '', title)); h.appendChild(HC.el('span', 'stars', stars ? '\u2605'.repeat(stars) + '\u2606'.repeat(5 - stars) : 'Awaiting feedback'));
+            li.appendChild(h); li.appendChild(HC.el('p', 'muted small', who + ' \u00b7 ' + date)); if (text) li.appendChild(HC.el('p', 'ref-text', '\u201C' + text + '\u201D')); ul.appendChild(li);
+        }
+        jobs.forEach(function (j) { item(j.service, j.customer + ' \u00b7 ' + j.id, j.completedAt || j.slot, 0, ''); });
+        REFS.forEach(function (r) { item(r.title, r.who, r.date, r.stars, r.text); });
+        $('wh-count').textContent = (jobs.length + REFS.length) + ' jobs';
+    }
+
+    /* ---------- tabs (arrow keys, #hash) ---------- */
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    function show(name) {
+        tabs.forEach(function (t) { var on = t.dataset.tab === name; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('tab-' + t.dataset.tab).hidden = !on; });
+        history.replaceState(null, '', '#' + name);
+    }
+    tabs.forEach(function (t, i) {
+        t.onclick = function () { show(t.dataset.tab); };
+        t.onkeydown = function (e) {
+            var n = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1; if (n < 0) return; n = (n + tabs.length) % tabs.length; tabs[n].focus(); show(tabs[n].dataset.tab);
+        };
+    });
+
+    fillForm(); paintHead(); buildPick(); renderSkills(); renderHistory(); counts();
+    var h = location.hash.slice(1); if (tabs.some(function (t) { return t.dataset.tab === h; })) show(h);
+})();
+</script>
+</body>
+</html>

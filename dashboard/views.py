@@ -25,6 +25,8 @@ job_requests = _handyman_page('job_requests', 'dashboard/handyman_job_requests.h
 job_in_progress = _handyman_page('job_in_progress', 'dashboard/handyman_job_in_progress.html')
 job_completed = _handyman_page('job_completed', 'dashboard/handyman_job_completed.html')
 report_customer = _handyman_page('report_customer', 'dashboard/handyman_report_customer.html')
+handyman_profile = _handyman_page('handyman_profile', 'dashboard/handyman_profile.html')
+
 
 @role_required('handyman')
 def notifications(request):
