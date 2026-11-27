@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Notifications | HandyConnect</title>
     <link rel="stylesheet" href="{% static 'dashboard/css/handyman_notifs.css' %}">
+    <link rel="stylesheet" href="{% static 'css/notification_dropdown.css' %}">
+    <style>
+        .notification-dropdown > .bell {
+            background: transparent;
+            border: 0;
+            padding: 0;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body data-page="notifications" data-uid="{{ hc_uid|default:'guest' }}">
 <div class="layout">
@@ -24,6 +33,16 @@
             <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
             <a href="{% url 'payments:my_estimates' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>My Estimates</a>
             <a href="{% url 'payments:my_materials' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>My Materials</a>
+            <a class="active" href="{% url 'dashboard:notifications' %}">
+    <svg width="16" height="16" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
+    </svg>
+    Notifications
+</a>
         </nav>
 
         <a class="help-card" href="{% url 'dashboard:report_customer' %}">
@@ -38,128 +57,170 @@
         <header class="topbar">
             <div class="crumbs"><a href="{% url 'dashboard:handyman_dashboard' %}">Handyman workspace</a> / Notifications</div>
             <div class="topbar-right">
-                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-                    <span class="badge" id="bell-count" hidden>0</span>
-                </a>
+                {% url 'dashboard:notifications' as handyman_notifications_url %}
+
+                {% include "notifications/_dropdown.html" with bell_class="bell" badge_class="badge" notifications_url=handyman_notifications_url %}
                 <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
             </div>
         </header>
 
         <main class="content">
-<h1 class="page-title" id="title"></h1><p class="page-sub" id="sub"></p>
-<div class="tabs" role="group" aria-label="Filter">
-    <button class="tab active" data-f="all">All</button><button class="tab" data-f="unread">Unread</button>
-    <button class="tab" data-f="appointment">Appointments</button><button class="tab" data-f="job">Job in progress</button><button class="tab" data-f="complaint">Complaints</button>
-    <button class="btn-o" id="all" style="margin-left:auto">Mark all as read</button>
-</div>
-<section class="card"><ul style="padding:0;margin:0" id="list"></ul><p class="empty" id="none" hidden>Nothing to show here.</p></section>
-</main>
+            <h1 class="page-title">Notifications</h1>
+            <p class="page-sub" id="sub">
+                {{ unread_count }} unread · Times shown in Mauritius Time
+            </p>
+            <div class="tabs" role="group" aria-label="Filter">
+                <button type="button" class="tab active" data-f="all">
+                    All
+                </button>
+                <button type="button" class="tab" data-f="unread">
+                    Unread
+                </button>
+                <button type="button" class="tab" data-f="appointment">
+                    Appointments
+                </button>
+                <button type="button" class="tab" data-f="job">
+                    Job in progress
+                </button>
+                <button type="button" class="tab" data-f="complaint">
+                    Complaints
+                </button>
+                <button type="button" class="btn-o" id="all"
+                        style="margin-left:auto"
+                        data-url="{% url 'notifications:mark_all_as_read' %}">
+                    Mark all as read
+                </button>
+            </div>
+            <form id="notification-csrf" hidden>
+                {% csrf_token %}
+            </form>
+            <section class="card">
+                <ul style="padding:0;margin:0" id="list">
+                    {% for n in notifications %}
+                    <li class="note{% if not n.is_read %} unread{% endif %}"
+                        data-kind="{{ n.kind }}">
+                        <div>
+                            <strong>{{ n.title }}</strong>
+                            <p>{{ n.message }}</p>
+                            <small>
+                                {{ n.when }} ·
+                                {% if n.is_read %}Read{% else %}Unread{% endif %}
+                            </small>
+                        </div>
+                        {% if not n.is_read %}
+                        <button type="button"
+                                class="btn-o mark-read"
+                                data-url="{% url 'notifications:mark_as_read' n.id %}">
+                            Mark read
+                        </button>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="empty" id="none"
+                {% if notifications %}hidden{% endif %}>
+                    Nothing to show here.
+                </p>
+            </section>
+        </main>
     </div>
 </div>
 
+<script src="{% static 'js/notification_dropdown.js' %}" defer></script>
+
 <script>
-/* Shared client-side state so every handyman page stays in sync (per logged-in user).
-   Replace HC.get/HC.set with real API calls when the backend is ready. */
-(function () {
-    var uid = document.body.getAttribute('data-uid') || 'guest';
-    var SEED = {
-        jobs: [
-            { id: 'MJO-1042', customer: 'Emma Wilson', service: 'Kitchen sink leak repair', slot: 'Oct 24 \u00b7 Morning', status: 'scheduled', amount: 1850 },
-            { id: 'MJO-1043', customer: 'Noah Martin', service: 'Drain cleaning', slot: 'Oct 24 \u00b7 Afternoon', status: 'scheduled', amount: 1200 },
-            { id: 'MJO-1045', customer: 'David Brown', service: 'Faucet replacement', slot: 'Oct 25 \u00b7 Morning', status: 'scheduled', amount: 950 },
-            { id: 'MJO-1037', customer: 'Alexander Lee', service: 'Water heater repair', slot: 'Oct 23 \u00b7 Morning', status: 'completed', amount: 2400 }
-        ],
-        requests: [
-            { id: 'MJO-1051', customer: 'Olivia Brown', service: 'Leaking bathroom tap', slot: 'Sun, Oct 25 \u00b7 09:00\u201312:00', amount: 1500, state: 'pending' },
-            { id: 'MJO-1052', customer: 'Ethan Williams', service: 'Ceiling fan installation', slot: 'Mon, Oct 26 \u00b7 13:00\u201317:00', amount: 2200, state: 'pending' }
-        ],
-        notifications: [
-            { id: 1, type: 'complaint', title: 'Case C-0147 has been resolved', text: 'No-charge follow-up completed.', time: 'Oct 27 \u00b7 3:30 PM', read: false },
-            { id: 2, type: 'appointment', title: 'Follow-up appointment confirmed', text: 'AP-3128 \u00b7 Emma Wilson \u00b7 Oct 27 morning.', time: 'Oct 26 \u00b7 4:15 PM', read: false },
-            { id: 3, type: 'complaint', title: 'Your customer report was received', text: 'C-0152 \u00b7 Pending administrator review.', time: 'Oct 26 \u00b7 1:45 PM', read: false },
-            { id: 4, type: 'complaint', title: 'Private enquiry from Olivia Chen', text: 'C-0147 \u00b7 Confirm your availability.', time: 'Oct 26 \u00b7 11:20 AM', read: false }
-        ],
-        complaints: [
-            { id: 'C-0147', subject: 'Work follow-up', job: 'MJO-1042', submitted: 'Oct 25, 8:50 AM', status: 'In Progress', updated: 'Oct 25, 10:35 AM',
-              messages: [
-                { who: 'Olivia Chen \u00b7 Administrator', at: 'Oct 25 \u00b7 10:20 AM', text: 'Hi, please describe your leak test and whether any moisture remained at handover.', mine: false },
-                { who: 'You', at: 'Oct 25 \u00b7 10:35 AM', text: 'The connection stayed dry during a 10-minute test. I can return for a moisture check on Oct 27 at no charge.', mine: true }
-              ] },
-            { id: 'C-0152', subject: 'Access concern', job: 'MJO-1045', submitted: 'Oct 26, 1:45 PM', status: 'Pending', updated: 'Awaiting review', messages: [] },
-            { id: 'C-0124', subject: 'Access delay', job: 'MJO-1037', submitted: 'Oct 08, 9:30 AM', status: 'Resolved', updated: 'Oct 09, 3:00 PM', messages: [] }
-        ]
-    };
+document.addEventListener('DOMContentLoaded', function () {
 
-    function key(n) { return 'hc:' + uid + ':' + n; }
-    var HC = window.HC = {
-        get: function (n) {
-            try { var v = localStorage.getItem(key(n)); if (v) return JSON.parse(v); } catch (e) {}
-            var s = JSON.parse(JSON.stringify(SEED[n] || []));
-            HC.set(n, s);
-            return s;
-        },
-        set: function (n, v) { try { localStorage.setItem(key(n), JSON.stringify(v)); } catch (e) {} },
-        now: function () {
-            return new Date().toLocaleString('en-GB', { timeZone: 'Indian/Mauritius', month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit' });
-        },
-        notify: function (type, title, text) {
-            var list = HC.get('notifications');
-            list.unshift({ id: Date.now(), type: type, title: title, text: text, time: HC.now(), read: false });
-            HC.set('notifications', list);
-            HC.badge();
-        },
-        unread: function () { return HC.get('notifications').filter(function (n) { return !n.read; }).length; },
-        badge: function () {
-            var n = HC.unread(), el = document.getElementById('bell-count');
-            if (!el) return;
-            el.textContent = n; el.hidden = n === 0;
-            document.getElementById('bell').setAttribute('aria-label', 'Notifications, ' + n + ' unread');
-        }
-    };
+    const csrfToken = document.querySelector(
+        '#notification-csrf input[name="csrfmiddlewaretoken"]'
+    ).value;
 
-    HC.el = function (tag, cls, text) {
-        var e = document.createElement(tag);
-        if (cls) e.className = cls;
-        if (text !== undefined) e.textContent = text;
-        return e;
-    };
+    const tabs = document.querySelectorAll('.tab');
+    const notes = document.querySelectorAll('#list .note');
 
-    HC.badge();
-})();
+    function applyFilter(filter) {
+        let visible = 0;
 
-</script>
-<script>
-(function () {
-    var f = 'all';
-    function render() {
-        var all = HC.get('notifications'), n = all.filter(function (x) { return !x.read; }).length;
-        document.getElementById('title').textContent = n ? 'You\u2019re up to date. Almost.' : 'You\u2019re all caught up.';
-        document.getElementById('sub').textContent = n + ' unread \u00b7 Times shown in Mauritius Time';
-        var ul = document.getElementById('list'); ul.innerHTML = '';
-        var shown = all.filter(function (x) { return f === 'all' || (f === 'unread' ? !x.read : x.type === f); });
-        shown.forEach(function (x) {
-            var li = HC.el('li', 'note' + (x.read ? '' : ' unread')), d = document.createElement('div');
-            d.appendChild(HC.el('strong', '', x.title)); d.appendChild(HC.el('p', '', x.text)); d.appendChild(HC.el('small', '', x.time + ' \u00b7 ' + (x.read ? 'Read' : 'Unread')));
-            li.appendChild(d);
-            if (!x.read) {
-                var b = HC.el('button', 'btn-o', 'Mark read'); b.type = 'button';
-                b.onclick = function () { x.read = true; HC.set('notifications', all); HC.badge(); render(); };
-                li.appendChild(b);
-            }
-            ul.appendChild(li);
+        notes.forEach(function (note) {
+
+            const show =
+                filter === 'all' ||
+                (filter === 'unread' &&
+                    note.classList.contains('unread')) ||
+                note.dataset.kind === filter;
+
+            note.hidden = !show;
+
+            if (show) visible++;
         });
-        document.getElementById('none').hidden = shown.length > 0; HC.badge();
-    }
-    document.getElementById('all').onclick = function () {
-        var all = HC.get('notifications'); all.forEach(function (x) { x.read = true; }); HC.set('notifications', all); render();
-    };
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
-        t.onclick = function () { document.querySelector('.tab.active').classList.remove('active'); t.classList.add('active'); f = t.dataset.f; render(); };
-    });
-    render();
-})();
-</script>
 
-</body>
-</html>
+        document.getElementById('none').hidden = visible > 0;
+    }
+
+    tabs.forEach(function (tab) {
+
+        tab.addEventListener('click', function () {
+
+            tabs.forEach(function (item) {
+                item.classList.remove('active');
+            });
+
+            tab.classList.add('active');
+
+            applyFilter(tab.dataset.f);
+        });
+    });
+
+    async function markRead(button) {
+
+        button.disabled = true;
+
+        try {
+
+            const response = await fetch(button.dataset.url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (!response.ok || response.redirected) {
+                throw new Error('Unable to update notification');
+            }
+
+            window.location.reload();
+
+        } catch (error) {
+
+            alert('Unable to update notifications. Please try again.');
+            button.disabled = false;
+        }
+    }
+
+    document.querySelectorAll('.mark-read').forEach(function (button) {
+
+        button.addEventListener('click', function () {
+            markRead(button);
+        });
+    });
+
+    document.getElementById('all').addEventListener('click', function () {
+        markRead(this);
+    });
+
+    const dropdown = document.querySelector('[data-notification-dropdown]');
+
+    if (dropdown) {
+        dropdown.addEventListener('click', function (event) {
+            if (event.target.closest('[data-notification-read-all]') ||
+                event.target.closest('.notification-popup-item')) {
+                // The shared dropdown handles its own database updates.
+                // Refresh the page manually to synchronise the full list.
+            }
+        });
+    }
+
+    applyFilter('all');
+});
+</script>

@@ -2,7 +2,7 @@
 Every view is customer-only (role_required) and only ever reads or writes the signed-in customer's own data."""
 import re
 from datetime import date
-
+from zoneinfo import ZoneInfo
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
@@ -179,7 +179,7 @@ def appointments(request):
 def notifications(request):
     items = request.user.notifications.all()[:100]
     rows = [{'id': n.pk, 'title': n.title, 'detail': n.message, 'unread': not n.is_read, 'kind': _kind(n),
-             'when': timezone.localtime(n.created_at).strftime('%b %d · %I:%M %p'),
+             'when': timezone.localtime(n.created_at, ZoneInfo('Indian/Mauritius')).strftime('%b %d · %I:%M %p'),
              'url': reverse('customer_portal:notification_open', args=[n.pk])} for n in items]
     prefs = request.session.get('cp_prefs', {})
     return render(request, 'customer/notifications.html', {'notifications': rows, 'prefs': prefs})
