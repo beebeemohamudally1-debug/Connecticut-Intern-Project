@@ -29,16 +29,6 @@
         .pill.forwarded{background:#dcf3e5;color:var(--green)}
     </style>
     {% block extra_head %}{% endblock %}
-    <link rel="stylesheet" href="{% static 'css/notification_dropdown.css' %}">
-
-<style>
-    .notification-dropdown > .bell {
-        background: transparent;
-        border: 0;
-        padding: 0;
-        cursor: pointer;
-    }
-</style>
 </head>
 <body data-page="{% block page %}{% endblock %}" data-uid="{{ hc_uid|default:'guest' }}">
 {% with url_name=request.resolver_match.url_name %}
@@ -59,16 +49,7 @@
             <a href="{% url 'dashboard:job_completed' %}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></svg>Job Completion</a>
             <a href="{% url 'payments:my_estimates' %}"{% if url_name == 'my_estimates' or url_name == 'estimate_submit' or url_name == 'estimate_resubmit' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>My Estimates</a>
             <a href="{% url 'payments:my_materials' %}"{% if url_name == 'my_materials' or url_name == 'material_request_submit' or url_name == 'receipt_upload' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>My Materials</a>
-            <a href="{% url 'dashboard:notifications' %}">
-    <svg width="16" height="16" viewBox="0 0 24 24"
-         fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.7 21a2 2 0 0 1-3.4 0"/>
-    </svg>
-    Notifications
-</a>
+            <a href="{% url 'payments:my_subscription' %}"{% if url_name == 'my_subscription' or url_name == 'subscription_receipt' %} class="active" aria-current="page"{% endif %}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>My Subscription</a>
         </nav>
 
         <a class="help-card" href="{% url 'dashboard:report_customer' %}">
@@ -83,23 +64,22 @@
         <header class="topbar">
             <div class="crumbs">Handyman workspace</div>
             <div class="topbar-right">
-                {% url 'dashboard:notifications' as handyman_notifications_url %}
-
-{% include "notifications/_dropdown.html" with bell_class="bell" badge_class="badge" notifications_url=handyman_notifications_url %}
-
-<form hidden>
-    {% csrf_token %}
-</form>
+                <a class="bell" href="{% url 'dashboard:notifications' %}" id="bell" aria-label="Notifications">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+                </a>
                 <div class="user"><span class="avatar">{{ hc_initials|default:"U" }}</span><span>{{ hc_name|default:"User" }}</span></div>
             </div>
         </header>
 
         <main class="content">
+            {% if hc_subscription.show_banner and url_name != 'my_subscription' %}
+            <div class="notice"><strong>{{ hc_subscription.banner_title }}</strong><p>{{ hc_subscription.banner_text }} <a href="{% url 'payments:my_subscription' %}"><b>Open my subscription</b></a></p></div>
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>
 </div>
 {% endwith %}
-<script src="{% static 'js/notification_dropdown.js' %}" defer></script>
 </body>
 </html>
+

@@ -10,8 +10,13 @@
     <form method="post">{% csrf_token %}
       {{ form.non_field_errors }}
       <div class="f2">
+        {% if invoice.is_subscription %}
+        <div><label>Invoice for</label><input class="in" value="{{ invoice.get_subscription_plan_display }} subscription" readonly></div>
+        <div><label>Handyman</label><input class="in" value="{{ invoice.subscription.handyman.get_full_name|default:invoice.subscription.handyman.username }}" readonly></div>
+        {% else %}
         <div><label>Job reference</label><input class="in" value="{{ invoice.request.reference }}" readonly></div>
         <div><label>Customer</label><input class="in" value="{{ invoice.request.customer.get_full_name|default:invoice.request.customer.username }}" readonly></div>
+        {% endif %}
         <div><label for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>{{ form.amount }}{{ form.amount.errors }}</div>
         <div><label for="{{ form.date_received.id_for_label }}">{{ form.date_received.label }}</label>{{ form.date_received }}{{ form.date_received.errors }}</div>
         <div><label for="{{ form.method.id_for_label }}">{{ form.method.label }}</label>{{ form.method }}{{ form.method.errors }}</div>
@@ -27,7 +32,9 @@
   </div>
   <div class="card">
     <h2>Invoice {{ invoice.number }}</h2>
-    {% if invoice.is_inspection %}
+    {% if invoice.is_subscription %}
+    <div class="row t"><span>{{ invoice.get_subscription_plan_display }} subscription</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
+    {% elif invoice.is_inspection %}
     <div class="row"><span class="mut">Inspection fee</span><span>MUR {{ invoice.total_amount|floatformat:"2g" }}</span></div>
     {% else %}
     <div class="row"><span class="mut">Quoted work</span><span>MUR {{ invoice.labour_amount|floatformat:"2g" }}</span></div>

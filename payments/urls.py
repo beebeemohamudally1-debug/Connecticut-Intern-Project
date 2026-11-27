@@ -1,5 +1,6 @@
 from django.urls import path
 from .payout_urls import urlpatterns as payout_urlpatterns
+from .subscription_urls import urlpatterns as subscription_urlpatterns
 from . import views
 
 app_name = 'payments'
@@ -44,3 +45,4 @@ urlpatterns = [
 ]
 
 urlpatterns += payout_urlpatterns
+urlpatterns += subscription_urlpatterns
