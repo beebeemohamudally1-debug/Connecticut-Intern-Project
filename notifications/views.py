@@ -1,35 +1,13 @@
-
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import get_object_or_404
+
 from .models import Notification
 
 
-def is_admin_user(user):
-    return (
-        user.is_authenticated
-        and user.is_staff
-        and (user.is_superuser or user.role == 'admin')
-    )
-    
-
-
-def admin_required(view_func):
-    @login_required
-    def wrapper(request, *args, **kwargs):
-        if not is_admin_user(request.user):
-            return JsonResponse(
-                {'error': 'Access denied'},
-                status=403
-            )
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
 @require_GET
-@admin_required
+@login_required
 def notification_list(request):
     notifications = Notification.objects.filter(
         recipient=request.user
@@ -52,7 +30,7 @@ def notification_list(request):
 
 
 @require_GET
-@admin_required
+@login_required
 def unread_count(request):
     count = Notification.objects.filter(
         recipient=request.user,
@@ -63,7 +41,7 @@ def unread_count(request):
 
 
 @require_POST
-@admin_required
+@login_required
 def mark_as_read(request, notification_id):
     notification = get_object_or_404(
         Notification,
@@ -78,7 +56,7 @@ def mark_as_read(request, notification_id):
 
 
 @require_POST
-@admin_required
+@login_required
 def mark_all_as_read(request):
     updated = Notification.objects.filter(
         recipient=request.user,
@@ -89,4 +67,3 @@ def mark_all_as_read(request):
         'success': True,
         'updated': updated
     })
-

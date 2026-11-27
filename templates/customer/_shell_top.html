@@ -44,7 +44,7 @@
       <button type="button" class="cp-burger" data-cp-open-nav aria-controls="cp-side" aria-expanded="false" aria-label="Open menu"><svg class="cp-ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
       <div class="cp-crumb">Customer workspace &nbsp;/&nbsp; <b><span data-cp-crumb>{{ crumb|default:'Portal' }}</span></b></div>
       <div class="cp-account">
-        <a class="cp-bell" href="{{ u_notifs }}" aria-label="Notifications{% if unread_count %}, {{ unread_count }} unread{% endif %}" data-hook="unread-badge"><svg class="cp-ic" aria-hidden="true"><use href="#i-bell"/></svg>{% if unread_count %}<span class="cp-bell-count">{{ unread_count }}</span>{% endif %}</a>
+        {% include "notifications/_dropdown.html" with bell_class="cp-bell" badge_class="cp-bell-count" notifications_url=u_notifs %}
         <details class="cp-user" data-cp-menu>
           <summary aria-label="Account menu"><span class="cp-avatar" data-cp-initials>{% firstof user_initials display|slice:":2" %}</span><span class="cp-user-name">{{ display }}</span><svg class="cp-ic" aria-hidden="true"><use href="#i-chev-down"/></svg></summary>
           <div class="cp-menu">
