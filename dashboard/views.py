@@ -28,6 +28,7 @@ report_customer = _handyman_page('report_customer', 'dashboard/handyman_report_c
 handyman_profile = _handyman_page('handyman_profile', 'dashboard/handyman_profile.html')
 notifications = _handyman_page('notifications', 'dashboard/handyman_notifs.html')
 
+
 @role_required('handyman')
 def notifications(request):
     items = Notification.objects.filter(
